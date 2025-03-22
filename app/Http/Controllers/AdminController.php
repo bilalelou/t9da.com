@@ -208,4 +208,14 @@ public function update_category(Request $request)
     $category->save();
     return redirect()->route('admin.categories')->with('status','Record has been updated successfully !');
 }
+
+public function delete_category($id)
+{
+    $category = Category::find($id);
+    if (File::exists(public_path('uploads/categories').'/'.$category->image)) {
+        File::delete(public_path('uploads/categories').'/'.$category->image);
+    }
+    $category->delete();
+    return redirect()->route('admin.categories')->with('status','Record has been deleted successfully !');
+}
 }
