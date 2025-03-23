@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\Brand;
 use App\Models\Category;
+use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\File;
@@ -209,13 +210,27 @@ public function update_category(Request $request)
     return redirect()->route('admin.categories')->with('status','Record has been updated successfully !');
 }
 
-public function delete_category($id)
-{
-    $category = Category::find($id);
-    if (File::exists(public_path('uploads/categories').'/'.$category->image)) {
-        File::delete(public_path('uploads/categories').'/'.$category->image);
+    public function delete_category($id)
+    {
+        $category = Category::find($id);
+        if (File::exists(public_path('uploads/categories').'/'.$category->image)) {
+            File::delete(public_path('uploads/categories').'/'.$category->image);
+        }
+        $category->delete();
+        return redirect()->route('admin.categories')->with('status','Record has been deleted successfully !');
     }
-    $category->delete();
-    return redirect()->route('admin.categories')->with('status','Record has been deleted successfully !');
-}
+
+    public function products()
+    {
+        $products = Product::orderBy('id','DESC')->paginate(10);
+        return view("admin.products",compact('products'));
+    }
+
+    public function add_product()
+    {
+        $categories = Category::Select('id','name')->orderBy('name')->get();
+        $brands = Brand::Select('id','name')->orderBy('name')->get();
+
+        return view("admin.product-add",compact('categories','brands'));
+    }
 }
