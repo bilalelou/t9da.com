@@ -38,7 +38,7 @@
                 <div class="wg-table table-all-user">
                     <div class="table-responsive">
                         @if (Session::has('stuts'))
-                        <p class="alert alert-success">{{Session::get('status') }}</p>
+                            <p class="alert alert-success">{{ Session::get('status') }}</p>
                         @endif
                         <table class="table table-striped table-bordered">
                             <thead>
@@ -72,7 +72,8 @@
                                                         <i class="icon-edit-3"></i>
                                                     </div>
                                                 </a>
-                                                <form action="{{route('admin.brand.delete',['id' => $brand->id])}}" method="POST">
+                                                <form action="{{ route('admin.brand.delete', ['id' => $brand->id]) }}"
+                                                    method="POST">
                                                     @csrf
                                                     @method('DELETE')
                                                     <div class="item text-danger delete">
@@ -99,8 +100,8 @@
 
 @push('scripts')
     <script>
-        $(function(){
-            $(".delete").on('click',function(e){
+        $(function() {
+            $(".delete").on('click', function(e) {
                 e.preventDefault();
                 var selectedForm = $(this).closest('form');
                 swal({
@@ -109,7 +110,7 @@
                     type: "warning",
                     buttons: ["No!", "Yes!"],
                     confirmButtonColor: '#dc3545'
-                }).then(function (result) {
+                }).then(function(result) {
                     if (result) {
                         selectedForm.submit();
                     }
