@@ -172,7 +172,7 @@
                         </fieldset>
                     </div>
                     <div class="cols gap10">
-                        <button class="tf-button w-full" type="submit">Save product</button>
+                        <button class="tf-button w-full" type="submit">Update product</button>
                     </div>
                 </div>
             </form>

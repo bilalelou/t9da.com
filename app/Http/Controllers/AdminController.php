@@ -100,7 +100,6 @@ class AdminController extends Controller
     {
         $destinationPath = public_path('/images/brands');
 
-        // Initialize ImageManager with GD driver
         $manager = new ImageManager(new Driver());
 
         $realPath = $image->getRealPath();
@@ -388,7 +387,7 @@ public function update_product(Request $request)
         'stock_status'=>'required',
         'featured'=>'required',
         'quantity'=>'required',
-        'image'=>'required|mimes:png,jpg,jpeg|max:2048'
+        'image'=>'mimes:png,jpg,jpeg|max:2048'
     ]);
 
     $product = Product::find($request->id);
@@ -438,6 +437,13 @@ public function update_product(Request $request)
 
     $product->save();
     return redirect()->route('admin.products')->with('status','Record has been updated successfully !');
+}
+
+public function delete_product($id)
+{
+    $product = Product::find($id);
+    $product->delete();
+    return redirect()->route('admin.products')->with('status','Record has been deleted successfully !');
 }
 
 }
