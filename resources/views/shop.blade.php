@@ -99,7 +99,6 @@
           </div>
         </div>
 
-
         <div class="accordion" id="size-filters">
           <div class="accordion-item mb-4 pb-3">
             <h5 class="accordion-header" id="accordion-heading-size">
@@ -158,9 +157,7 @@
                   <option value="5">Zara</option>
                 </select>
                 <div class="search-field__input-wrapper mb-3">
-                  <input type="text" name="search_text"
-                    class="search-field__input form-control form-control-sm border-light border-2"
-                    placeholder="Search" />
+                  <input type="text" name="search_text"class="search-field__input form-control form-control-sm border-light border-2" placeholder="Search" />
                 </div>
                 <ul class="multi-select__list list-unstyled">
                   <li class="search-suggestion__item multi-select__item text-primary js-search-select js-multi-select">
@@ -389,10 +386,21 @@
                       <use href="#icon_next_sm" />
                     </svg></span>
                 </div>
-                <button
-                  class="pc__atc btn anim_appear-bottom btn position-absolute border-0 text-uppercase fw-medium js-add-cart js-open-aside"
-                  data-aside="cartDrawer" title="Add To Cart">Add To Cart</button>
-              </div>
+                    @if(Cart::instance("cart")->content()->Where('id',$product->id)->count()>0)
+                <a href="{{route('cart.index')}}" class="pc__atc btn anim_appear-bottom btn position-absolute border-0 text-uppercase fw-medium js-add-cart btn-warning">Go to Cart</a>
+            @else
+            <form name="addtocart-form" method="POST" action="{{route('cart.add')}}">
+                @csrf
+                <div class="product-single__addtocart">
+                    <input type="hidden" name="id" value="{{$product->id}}" />
+                    <input type="hidden" name="name" value="{{$product->name}}" />
+                    <input type="hidden" name="quantity" value="1"/>
+                    <input type="hidden" name="price" value="{{$product->sale_price == '' ? $product->regular_price:$product->sale_price}}" />
+                    <button type="submit" class="pc__atc btn anim_appear-bottom btn position-absolute border-0 text-uppercase fw-medium js-add-cart">Add to Cart</button>
+                </div>
+            </form>
+@endif
+            </div>
 
               <div class="pc__info position-relative">
                 <p class="pc__category">{{$product->category->name}}</p>

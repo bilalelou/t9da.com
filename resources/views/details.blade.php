@@ -101,10 +101,10 @@
                 <div class="product-single__short-desc">
                     <p>{{$product->short_description}}</p>
                 </div>
-                {{-- @if(Cart::instance("cart")->content()->Where('id',$product->id)->count()>0)
+                @if(Cart::instance("cart")->content()->Where('id',$product->id)->count()>0)
                     <a href="{{route('cart.index')}}" class="btn btn-warning mb-3">Go to Cart</a>
-                @else --}}
-                {{-- <form name="addtocart-form" method="POST" action="#">
+                @else
+                <form name="addtocart-form" method="POST" action="{{route('cart.add')}}">
                     @csrf
                     <div class="product-single__addtocart">
                         <div class="qty-control position-relative">
@@ -117,8 +117,8 @@
                         <input type="hidden" name="price" value="{{$product->sale_price == '' ? $product->regular_price:$product->sale_price}}" />
                         <button type="submit" class="btn btn-primary">Add to Cart</button>
                     </div>
-                </form> --}}
-                {{-- @endif --}}
+                </form>
+                @endif
                 <div class="product-single__addtolinks">
                     <a href="#" class="menu-link menu-link_us-s add-to-wishlist"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <use href="#icon_heart" />
@@ -374,7 +374,9 @@
                                 <img loading="lazy" src="{{asset('uploads/products')}}/{{trim(explode(",",$rproduct->images)[0])}}" width="330" height="400" alt="Cropped Faux leather Jacket" class="pc__img pc__img-second">
                                 @endif
                             </a>
-                            <button class="pc__atc btn anim_appear-bottom btn position-absolute border-0 text-uppercase fw-medium js-add-cart js-open-aside" data-aside="cartDrawer" title="Add To Cart">Add To Cart</button>
+                            {{-- add check here after --}}
+                            <button class="pc__atc btn anim_appear-bottom btn position-absolute border-0 text-uppercase fw-medium js-add-cart js-open-aside" data-aside="cartDrawer" title="Add To Cart"> Add To Cart</button>
+                            
                         </div>
                         <div class="pc__info position-relative">
                             <p class="pc__category">d</p>
