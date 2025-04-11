@@ -1,5 +1,26 @@
 @extends('layouts.app')
 @section('content')
+    <style>
+        .category-list li,
+        .category-list li {
+            line-height: 40px;
+        }
+
+        .brand-list li .chk-brand,
+        .category-list li .chk-category {
+            width: 1rem;
+            height: 1rem;
+            color: #e04e4e;
+            border: 0.125rem solid currentColor;
+            border-radius: 0;
+            margin-right: 0.75rem;
+        }
+
+        .filled-heart {
+            color: orange;
+        }
+    </style>
+
     <main class="pt-90">
         <section class="shop-main container d-flex pt-4 pt-xl-5">
             <div class="shop-sidebar side-sticky bg-body" id="shopFilter">
@@ -12,55 +33,38 @@
 
                 <div class="accordion" id="categories-list">
                     <div class="accordion-item mb-4 pb-3">
-                        <h5 class="accordion-header" id="accordion-heading-1">
-                            <button class="accordion-button p-0 border-0 fs-5 text-uppercase" type="button"
-                                data-bs-toggle="collapse" data-bs-target="#accordion-filter-1" aria-expanded="true"
-                                aria-controls="accordion-filter-1">
-                                Product Categories
-                                <svg class="accordion-button__icon type2" viewBox="0 0 10 6"
-                                    xmlns="http://www.w3.org/2000/svg">
-                                    <g aria-hidden="true" stroke="none" fill-rule="evenodd">
-                                        <path
-                                            d="M5.35668 0.159286C5.16235 -0.053094 4.83769 -0.0530941 4.64287 0.159286L0.147611 5.05963C-0.0492049 5.27473 -0.049205 5.62357 0.147611 5.83813C0.344427 6.05323 0.664108 6.05323 0.860924 5.83813L5 1.32706L9.13858 5.83867C9.33589 6.05378 9.65507 6.05378 9.85239 5.83867C10.0492 5.62357 10.0492 5.27473 9.85239 5.06018L5.35668 0.159286Z" />
-                                    </g>
-                                </svg>
-                            </button>
-                        </h5>
-                        <div id="accordion-filter-1" class="accordion-collapse collapse show border-0"
-                            aria-labelledby="accordion-heading-1" data-bs-parent="#categories-list">
-                            <div class="accordion-body px-0 pb-0 pt-3">
-                                <ul class="list list-inline mb-0">
-                                    <li class="list-item">
-                                        <a href="#" class="menu-link py-1">Dresses</a>
-                                    </li>
-                                    <li class="list-item">
-                                        <a href="#" class="menu-link py-1">Shorts</a>
-                                    </li>
-                                    <li class="list-item">
-                                        <a href="#" class="menu-link py-1">Sweatshirts</a>
-                                    </li>
-                                    <li class="list-item">
-                                        <a href="#" class="menu-link py-1">Swimwear</a>
-                                    </li>
-                                    <li class="list-item">
-                                        <a href="#" class="menu-link py-1">Jackets</a>
-                                    </li>
-                                    <li class="list-item">
-                                        <a href="#" class="menu-link py-1">T-Shirts & Tops</a>
-                                    </li>
-                                    <li class="list-item">
-                                        <a href="#" class="menu-link py-1">Jeans</a>
-                                    </li>
-                                    <li class="list-item">
-                                        <a href="#" class="menu-link py-1">Trousers</a>
-                                    </li>
-                                    <li class="list-item">
-                                        <a href="#" class="menu-link py-1">Men</a>
-                                    </li>
-                                    <li class="list-item">
-                                        <a href="#" class="menu-link py-1">Jumpers & Cardigans</a>
-                                    </li>
-                                </ul>
+                        <div class="accordion" id="categories-list">
+                            <div class="accordion-item mb-4 pb-3">
+                                <h5 class="accordion-header" id="accordion-heading-1">
+                                    <button class="accordion-button p-0 border-0 fs-5 text-uppercase" type="button"
+                                        data-bs-toggle="collapse" data-bs-target="#accordion-filter-1" aria-expanded="true"
+                                        aria-controls="accordion-filter-1">
+                                        Product Categories
+                                        <svg class="accordion-button__icon type2" viewBox="0 0 10 6"
+                                            xmlns="http://www.w3.org/2000/svg">
+                                            <g aria-hidden="true" stroke="none" fill-rule="evenodd">
+                                                <path
+                                                    d="M5.35668 0.159286C5.16235 -0.053094 4.83769 -0.0530941 4.64287 0.159286L0.147611 5.05963C-0.0492049 5.27473 -0.049205 5.62357 0.147611 5.83813C0.344427 6.05323 0.664108 6.05323 0.860924 5.83813L5 1.32706L9.13858 5.83867C9.33589 6.05378 9.65507 6.05378 9.85239 5.83867C10.0492 5.62357 10.0492 5.27473 9.85239 5.06018L5.35668 0.159286Z" />
+                                            </g>
+                                        </svg>
+                                    </button>
+                                </h5>
+                                <div id="accordion-filter-1" class="accordion-collapse collapse show border-0"
+                                    aria-labelledby="accordion-heading-1" data-bs-parent="#categories-list">
+                                    <div class="accordion-body px-0 pb-0 pt-3">
+                                        <ul class="list list-inline mb-0 category-list">
+                                            @foreach ($categories as $category)
+                                                <li class="list-item">
+                                                    <span class="menu-link py-1"> <input type="checkbox" name="categories"
+                                                            value="{{ $category->id }}" class="chk-category"
+                                                            @if (in_array($category->id, explode(',', $f_categories))) checked="checked" @endif />
+                                                        {{ $category->name }}</span> <span
+                                                        class="text-right float-end">{{ $category->products()->count() }}</span>
+                                                </li>
+                                            @endforeach
+                                        </ul>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -216,7 +220,7 @@
                                 <ul class="list-inline mb-0 brand-list">
                                     @foreach ($brands as $brand)
                                         <li class="list-item">
-                                        <span class="menu-link py-1"> <input type="checkbox" name="brands"
+                                            <span class="menu-link py-1"> <input type="checkbox" name="brands"
                                                     value="{{ $brand->id }}" class="chk-brand"
                                                     @if (in_array($brand->id, explode(',', $f_brands))) checked="checked" @endif />
                                                 {{ $brand->name }}
@@ -252,16 +256,16 @@
                         <div id="accordion-filter-price" class="accordion-collapse collapse show border-0"
                             aria-labelledby="accordion-heading-price" data-bs-parent="#price-filters">
                             <input class="price-range-slider" type="text" name="price_range" value=""
-                                data-slider-min="10" data-slider-max="1000" data-slider-step="5"
-                                data-slider-value="[250,450]" data-currency="$" />
+                                data-slider-min="1" data-slider-max="1000" data-slider-step="5"
+                                data-slider-value="[{{ $min_price }},{{ $max_price }}]" data-currency="$" />
                             <div class="price-range__info d-flex align-items-center mt-2">
                                 <div class="me-auto">
                                     <span class="text-secondary">Min Price: </span>
-                                    <span class="price-range__min">$250</span>
+                                    <span class="price-range__min">$1</span>
                                 </div>
                                 <div>
                                     <span class="text-secondary">Max Price: </span>
-                                    <span class="price-range__max">$450</span>
+                                    <span class="price-range__max">$1000</span>
                                 </div>
                             </div>
                         </div>
@@ -388,7 +392,7 @@
 
                         <select class="shop-acs_select form-select w-auto border-0 py-0 order-md-0"
                             aria-label="Sort Items" name="orderby" id="orderby">
-           f                 <option value="-1" {{ $order == -1 ? 'selected' : '' }}>Default</option>
+                            f <option value="-1" {{ $order == -1 ? 'selected' : '' }}>Default</option>
 
                             <option value="1" {{ $order == 1 ? 'selected' : '' }}>Dates, New To Old</option>
                             <option value="2" {{ $order == 2 ? 'selected' : '' }}>Dates, Old To New</option>
@@ -519,15 +523,38 @@
                                         </div>
                                         <span class="reviews-note text-lowercase text-secondary ms-1">8k+ reviews</span>
                                     </div>
+                                    @if (Cart::instance('wishlist')->content()->where('id', $product->id)->count() > 0)
+                                        <form action="{{ route('wishlist.remove', ['rowId' => Cart::instance('wishlist')->content()->where('id', $product->id)->first()->rowId]) }}" method="POST">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit"
+                                                class="pc__btn-wl position-absolute top-0 end-0 bg-transparent border-0 js-add-wishlist filled-heart"
+                                                title="Already in Wishlist">
+                                                <svg width="16" height="16" viewBox="0 0 20 20" fill="none"
+                                                    xmlns="http://www.w3.org/2000/svg">
+                                                    <use href="#icon_heart" />
+                                                </svg>
+                                            </button>
+                                        </form>
+                                    @else
+                                        <form method="POST" action="{{ route('wishlist.add') }}">
+                                            @csrf
+                                            <input type="hidden" name="id" value="{{ $product->id }}" />
+                                            <input type="hidden" name="name" value="{{ $product->name }}" />
+                                            <input type="hidden" name="price"
+                                                value="{{ $product->sale_price == '' ? $product->regular_price : $product->sale_price }}" />
+                                            <input type="hidden" name="quantity" value="1" />
+                                            <button type="submit"
+                                                class="pc__btn-wl position-absolute top-0 end-0 bg-transparent border-0 js-add-wishlist"
+                                                title="Add To Wishlist">
+                                                <svg width="16" height="16" viewBox="0 0 20 20" fill="none"
+                                                    xmlns="http://www.w3.org/2000/svg">
+                                                    <use href="#icon_heart" />
+                                                </svg>
+                                            </button>
+                                        </form>
+                                    @endif
 
-                                    <button
-                                        class="pc__btn-wl position-absolute top-0 end-0 bg-transparent border-0 js-add-wishlist"
-                                        title="Add To Wishlist">
-                                        <svg width="16" height="16" viewBox="0 0 20 20" fill="none"
-                                            xmlns="http://www.w3.org/2000/svg">
-                                            <use href="#icon_heart" />
-                                        </svg>
-                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -568,6 +595,9 @@
         <input type="hidden" name="size" value="{{ $size }}">
         <input type="hidden" name="orderby" value="{{ $order }}">
         <input type="hidden" name="brands" id="hdnBrands" />
+        <input type="hidden" name="categories" id="hdnCategories" />
+        <input type="hidden" name="min" id="hdnMinPrice" value="{{ $min_price }}" />
+        <input type="hidden" name="max" id="hdnMaxPrice" value="{{ $max_price }}" />
 
     </form>
 @endsection
@@ -593,6 +623,31 @@
             });
             $("#hdnBrands").val(brands);
             $("#frmfilter").submit();
+        });
+        $("input[name='categories']").on("change", function() {
+            var categories = "";
+            $("input[name='categories']:checked").each(function() {
+                if (categories == "") {
+                    categories += $(this).val();
+                } else {
+                    categories += "," + $(this).val();
+                }
+            });
+            $("#hdnCategories").val(categories);
+            $("#frmfilter").submit();
+
+        });
+
+        $("[name='price_range']").on("change", function() {
+            var min = $(this).val().split(',')[0];
+            var max = $(this).val().split(',')[1];
+            console.log(min);
+            console.log(max);
+            $("#hdnMinPrice").val(min);
+            $("#hdnMaxPrice").val(max);
+            setTimeout(() => {
+                $("#frmfilter").submit();
+            }, 2000);
         });
     </script>
 @endpush
