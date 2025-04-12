@@ -22,6 +22,9 @@ Route::put('/cart/reduce-qunatity/{rowId}',[CartController::class,'reduce_item_q
 Route::delete('/cart/remove/{rowId}',[CartController::class,'remove_item_from_cart'])->name('cart.remove');
 Route::delete('/cart/clear',[CartController::class,'empty_cart'])->name('cart.empty');
 Route::post('/cart/apply-coupon',[CartController::class,'apply_coupon_code'])->name('cart.coupon.apply');
+Route::get('/checkout',[CartController::class,'checkout'])->name('cart.checkout');
+Route::post('/place-order',[CartController::class,'place_order'])->name('cart.place.order');
+Route::get('/order-confirmation',[CartController::class,'confirmation'])->name('cart.confirmation');
 
 Route::post('/wishlist/add',[WishlistController::class,'add_to_wishlist'])->name('wishlist.add');
 Route::get('/wishlist',[WishlistController::class,'index'])->name('wishlist.index');
