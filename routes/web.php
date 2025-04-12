@@ -21,6 +21,7 @@ Route::put('/cart/increase-qunatity/{rowId}',[CartController::class,'increase_it
 Route::put('/cart/reduce-qunatity/{rowId}',[CartController::class,'reduce_item_quantity'])->name('cart.reduce.qty');
 Route::delete('/cart/remove/{rowId}',[CartController::class,'remove_item_from_cart'])->name('cart.remove');
 Route::delete('/cart/clear',[CartController::class,'empty_cart'])->name('cart.empty');
+Route::post('/cart/apply-coupon',[CartController::class,'apply_coupon_code'])->name('cart.coupon.apply');
 
 Route::post('/wishlist/add',[WishlistController::class,'add_to_wishlist'])->name('wishlist.add');
 Route::get('/wishlist',[WishlistController::class,'index'])->name('wishlist.index');
@@ -57,6 +58,12 @@ Route::middleware(['auth',AuthAdmin::class])->group(function(){
     Route::delete('/admin/product/{id}/delete',[AdminController::class,'delete_product'])->name('admin.product.delete');
 
     Route::get('/admin/coupons',[AdminController::class,'coupons'])->name('admin.coupons');
+    Route::get('/admin/coupon/add',[AdminController::class,'add_coupon'])->name('admin.coupon.add');
+    Route::post('/admin/coupon/store',[AdminController::class,'add_coupon_store'])->name('admin.coupon.store');
+    Route::get('/admin/coupon/{id}/edit',[AdminController::class,'coupon_edit'])->name('admin.coupon.edit');
+    Route::put('/admin/coupon/update',[AdminController::class,'update_coupon'])->name('admin.coupon.update');
+    Route::delete('/admin/coupon/{id}/delete',[AdminController::class,'delete_coupon'])->name('admin.coupon.delete');
+
 
 
 });

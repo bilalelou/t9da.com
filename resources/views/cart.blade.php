@@ -1,5 +1,7 @@
 @extends('layouts.app');
 @section('content')
+
+
     <main class="pt-90">
         <div class="mb-4 pb-4"></div>
         <section class="shop-checkout container">
@@ -105,16 +107,31 @@
                             </tbody>
                         </table>
                         <div class="cart-table-footer">
-                            <form action="#" class="position-relative bg-body">
-                                <input class="form-control" type="text" name="coupon_code" placeholder="Coupon Code">
-                                <input class="btn-link fw-medium position-absolute top-0 end-0 h-100 px-4" type="submit"
-                                    value="APPLY COUPON">
-                            </form>
+                            @if (!Session::has('coupon'))
+                                <form class="position-relative bg-body" method="POST"
+                                    action="{{ route('cart.coupon.apply') }}">
+                                    @csrf
+                                    <input class="form-control" type="text" name="coupon_code" placeholder="Coupon Code">
+                                    <input class="btn-link fw-medium position-absolute top-0 end-0 h-100 px-4"
+                                        type="submit" value="APPLY COUPON">
+                                </form>
+                            @endif
                             <form class="position-relative bg-body" method="POST" action="{{ route('cart.empty') }}">
                                 @csrf
                                 @method('DELETE')
                                 <button class="btn btn-light" type="submit">CLEAR CART</button>
                             </form>
+                        </div>
+                        <div>
+                            @if (Session::has('success'))
+                                <div class="alert alert-success">
+                                    {{ Session::get('success') }}
+                                </div>
+                            @elseif(Session::has('error'))
+                                <div class="alert alert-danger">
+                                    {{ Session::get('error') }}
+                                </div>
+                            @endif
                         </div>
                     </div>
                     <div class="shopping-cart__totals-wrapper">
