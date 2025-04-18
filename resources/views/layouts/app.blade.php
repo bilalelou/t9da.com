@@ -20,6 +20,8 @@
     <link rel="stylesheet" href="{{ asset('assets/css/plugins/swiper.min.css') }}" type="text/css" />
     <link rel="stylesheet" href="{{ asset('assets/css/style.css') }}" type="text/css" />
     <link rel="stylesheet" href="{{ asset('assets/css/custom.css') }}" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="{{ asset('css/sweetalert.min.css') }}">
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"
         integrity="sha512-SfTiTlX6kk+qitfevl/7LibUOeJWlt9rbyDn92a1DqWOw9vWG2MFoays0sgObmWazO5BQPiFucnnEAjpAB+/Sw=="
         crossorigin="anonymous" referrerpolicy="no-referrer">
@@ -494,7 +496,7 @@
 
                     @endguest
 
-                    <a href="{{route('wishlist.index')}}" class="header-tools__item header-tools__cart">
+                    <a href="{{ route('wishlist.index') }}" class="header-tools__item header-tools__cart">
                         <svg width="20" height="20" viewBox="0 0 20 20" fill="none"
                             xmlns="http://www.w3.org/2000/svg">
                             <use href="#icon_heart" />
@@ -706,6 +708,8 @@
     <script src="{{ asset('assets/js/plugins/swiper.min.js') }}"></script>
     <script src="{{ asset('assets/js/plugins/countdown.js') }}"></script>
     <script src="{{ asset('assets/js/theme.js') }}"></script>
+    <script src="{{ asset('js/sweetalert.min.js') }}"></script>
+
     @stack('scripts')
 </body>
 

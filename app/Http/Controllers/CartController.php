@@ -4,6 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Address;
 use App\Models\Coupon;
+use App\Models\Order;
+use App\Models\OrderItem;
+use App\Models\Transaction;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Session;
@@ -146,12 +149,11 @@ class CartController extends Controller
         }
         $this->setAmountForCheckout();
         $order = new Order();
-        $order = new Order();
         $order->user_id = $user_id;
-        $order->subtotal = session()->get('checkout')['subtotal'];
-        $order->discount = session()->get('checkout')['discount'];
-        $order->tax = session()->get('checkout')['tax'];
-        $order->total = session()->get('checkout')['total'];
+        $order->subtotal = Session::get('checkout')['subtotal'];
+        $order->discount = Session::get('checkout')['discount'];
+        $order->tax = Session::get('checkout')['tax'];
+        $order->total = Session::get('checkout')['total'];
         $order->name = $address->name;
         $order->phone = $address->phone;
         $order->locality = $address->locality;
@@ -192,9 +194,10 @@ class CartController extends Controller
 
 
         Cart::instance('cart')->destroy();
-        session()->forget('checkout');
-        session()->forget('coupon');
-        session()->forget('discounts');
+        Session::forget('checkout');
+        Session::forget('coupon');
+        Session::forget('discounts');
+        Session::put('order_id', $order->id);
         return redirect()->route('cart.confirmation');
 
     }
@@ -227,6 +230,12 @@ class CartController extends Controller
     }
     public function confirmation()
     {
-        return view('order-confirmation');
+        if(Session::has('order_id'))
+        {
+            $order = Order::where('id', Session::get('order_id'))->first();
+            return view('confirmation', compact('order', 'transaction'));
+        }
+
+        return redirect()->route('cart.index');
     }
 }

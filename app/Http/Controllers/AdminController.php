@@ -6,7 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Coupon;
+use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\Product;
+use App\Models\Slide;
+use App\Models\Transaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\File;
@@ -506,9 +510,98 @@ public function update_category(Request $request)
 
     public function delete_coupon($id)
     {
-            $coupon = Coupon::find($id);
-            $coupon->delete();
-            return redirect()->route('admin.coupons')->with('status','Record has been deleted successfully !');
+        $coupon = Coupon::find($id);
+        $coupon->delete();
+        return redirect()->route('admin.coupons')->with('status','Record has been deleted successfully !');
     }
+
+    public function orders()
+    {
+        $orders = Order::orderBy('created_at','DESC')->paginate(12);
+        return view("admin.orders",compact('orders'));
+    }
+
+    public function Order_details($order_id)
+    {
+        $order = Order::findOrFail($order_id);
+        $orderItems = OrderItem::where('order_id', $order_id)->orderBy('id')->paginate(12);
+        $transaction = Transaction::where('order_id', $order_id)->first();
+
+        return view('admin.order-details', compact('order', 'orderItems', 'transaction'));
+    }
+
+    public function update_order_status(Request $request){
+        $order = Order::find($request->order_id);
+        $order->status = $request->order_status;
+        if($request->order_status == 'delivered')
+        {
+            $order->delivered_date = Carbon::now();
+        }
+        elseif($request->order_status =='canceled')
+        {
+            $order->canceled_date = Carbon::now();
+        }
+        $order->save();
+        if($request->order_status == 'delivered')
+        {
+            $transaction = Transaction::where('order_id', $request->order_id)->first();
+            $transaction->status = 'approved';
+            $transaction->save();
+        }
+
+        return back()->with("status", "status changed successfully!");
+    }
+
+    public function slides()
+    {
+        $slides = Slide::orderBy('id', 'DESC')->paginate(12);
+        return view('admin.slides', compact('slides'));
+    }
+    public function slide_add()
+    {
+        return view('admin.slide-add');
+    }
+
+    public function slide_store(Request $request)
+    {
+        $request->validate([
+            'tagline'   => 'required',
+            'title'     => 'required',
+            'subtitle'  => 'required',
+            'link'      => 'required',
+            'status'    => 'required',
+            'image'     => 'required|mimes:png,jpg,jpeg|max:2048',
+        ]);
+
+        $slide = new Slide();
+        $slide->tagline  = $request->tagline;
+        $slide->title    = $request->title;
+        $slide->subtitle = $request->subtitle;
+        $slide->link     = $request->link;
+        $slide->status   = $request->status;
+
+        $image = $request->file('image');
+        $file_extension = $request->file('image')->extension();
+        $file_name = Carbon::now()->timestamp . '.' . $file_extension;
+
+        $this->GenerateSlideThumbnailsImage($image, $file_name);
+        $slide->image = $file_name;
+
+        $slide->save();
+        return redirect()->route('admin.slides')->with('status', 'Record has been added successfully!');
+    }
+
+    public function GenerateSlideThumbnailsImage($image, $imageName)
+{
+    $destinationPath = public_path('uploads/slides');
+    $img = Image::read($image->path());
+    $img->cover(400, 690, 'top');
+    $img->resize(400, 690, function ($constraint) {
+        $constraint->aspectRatio();
+    })->save($destinationPath . '/' . $imageName);
+}
+
+
+
 
 }
