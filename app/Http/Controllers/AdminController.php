@@ -710,4 +710,15 @@ public function update_category(Request $request)
 
         return redirect()->route('admin.slides')->with("status", "Slide deleted successfully!");
     }
+
+    public function contacts()
+    {
+        $contacts = DB::table('contacts')->orderBy('id', 'DESC')->paginate(12);
+        return view('admin.contacts', compact('contacts'));
+    }
+    public function contact_delete($id)
+    {
+        DB::table('contacts')->where('id', $id)->delete();
+        return redirect()->route('admin.contacts')->with('status', 'Record has been deleted successfully !');
+    }
 }
