@@ -51,9 +51,11 @@ class HomeController extends Controller
 
     public function search(Request $request)
     {
-        $search = $request->input('search');
-        $products = Product::where('name', 'LIKE', "%{$search}%")->paginate(10);
-        return view('shop.search', compact('products', 'search'));
+        info($request->all());
+        $search = $request->input('query'); // بدّلها ل query باش تطابق JS
+        $products = Product::where('name', 'LIKE', "%{$search}%")->get(); // استعمل get() بدل paginate()
+        info($products);
+        return response()->json($products);
     }
 
 }

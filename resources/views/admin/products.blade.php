@@ -62,7 +62,7 @@
                                     <td>{{ $product->id }}</td>
                                     <td class="pname">
                                         <div class="image">
-                                            <img src="{{ asset('uploads\products\thumbnails') }}/{{ $product->name }}"
+                                            <img src="{{ asset('\images\products\thumbnails') }}/{{ $product->name }}"
                                                 alt="{{ $product->name }}" class="image">
                                         </div>
                                         <div class="name">

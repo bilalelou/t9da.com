@@ -56,7 +56,7 @@
                                         <td>{{ $brand->id }}</td>
                                         <td class="pname">
                                             <div class="image">
-                                                <img src="{{ asset('uploads/brands') }}/{{ $brand->image }}"
+                                                <img src="{{ asset('/images/brands') }}/{{ $brand->image }}"
                                                     alt="{{ $brand->image }}" class="image">
                                             </div>
                                             <div class="name">

@@ -102,7 +102,7 @@
                             @foreach ($categories as $category)
                                 <div class="swiper-slide">
                                     <img loading="lazy" class="w-100 h-auto mb-3"
-                                        src="{{ asset('uploads/categories/' . $category->image) }}" width="124"
+                                        src="{{ asset('/images/categories' . $category->image) }}" width="124"
                                         height="124" alt="" />
 
                                     <div class="text-center">

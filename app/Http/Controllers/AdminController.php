@@ -11,6 +11,7 @@ use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\Slide;
 use App\Models\Transaction;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\File;
@@ -103,7 +104,6 @@ class AdminController extends Controller
         if ($request->hasFile('image')) {
             $image = $request->file('image');
 
-            // ✅ تأكد أن `$image->getRealPath()` يعيد `string`
             $realPath = $image->getRealPath();
             if (!is_string($realPath)) {
                 throw new \Exception('Invalid file path.');
@@ -112,7 +112,6 @@ class AdminController extends Controller
             $file_extension = $image->extension();
             $file_name = Carbon::now()->timestamp . '.' . $file_extension;
 
-            // ✅ تمرير `image` و `file_name` كوسيطين
             $this->GenerateBrandThumbnailImage($image, $file_name);
 
             $brand->image = $file_name;
@@ -361,11 +360,9 @@ public function update_category(Request $request)
 
     public function GenerateThumbnailImage($image, $imageName)
     {
-        // مسارات الحفظ
         $destinationPathThumbnails = public_path('/uploads/products/thumbnails');
         $destinationPath = public_path('/uploads/products');
 
-        // إنشاء المجلدات إذا لم تكن موجودة
         if (!file_exists($destinationPath)) {
             mkdir($destinationPath, 0777, true);
         }
@@ -373,7 +370,6 @@ public function update_category(Request $request)
             mkdir($destinationPathThumbnails, 0777, true);
         }
 
-        // الحصول على نوع الصورة
         $imageType = exif_imagetype($image->path());
 
         // تحميل الصورة بناءً على نوعها
@@ -721,4 +717,49 @@ public function update_category(Request $request)
         DB::table('contacts')->where('id', $id)->delete();
         return redirect()->route('admin.contacts')->with('status', 'Record has been deleted successfully !');
     }
+
+    public function search(Request $request)
+    {
+        $query = $request->input('query');
+        info($query);
+
+        $results = Product::where('name', 'LIKE', "%{$query}%")
+                    ->take(8)
+                    ->get();
+        info($results);
+
+        return response()->json($results);
+    }
+
+    public function users()
+    {
+        $users = User::orderBy('id', 'DESC')->paginate(12);
+        info($users);
+        return view('admin.users', compact('users'));
+    }
+    public function user_edit($id)
+    {
+        $user = User::find($id);
+        return view('admin.user-edit', compact('user'));
+    }
+    // public function user_update(Request $request)
+    // {
+    //     $request->validate([
+    //         'name' => 'required',
+    //         'email' => 'required|email|unique:users,email,' . $request->id,
+    //         'password' => 'nullable|min:6',
+    //         'role' => 'required'
+    //     ]);
+
+    //     $user = User::find($request->id);
+    //     $user->name = $request->name;
+    //     $user->email = $request->email;
+    //     if ($request->password) {
+    //         $user->password = bcrypt($request->password);
+    //     }
+    //     $user->role = $request->role;
+    //     $user->save();
+
+    //     return redirect()->route('admin.users')->with('status', 'Record has been updated successfully !');
+    // }
 }
