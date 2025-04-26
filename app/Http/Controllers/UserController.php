@@ -44,4 +44,9 @@ class UserController extends Controller
         return back()->with('status', 'Order has been cancelled successfully!');
     }
 
+    public function user_address(){
+
+        return view('user.address');
+    }
+
 }
