@@ -45,7 +45,7 @@ Route::middleware(['auth'])->group(function(){
     Route::get('/account-orders',[UserController::class,'orders'])->name('user.orders');
     Route::get('/account-order/{order_id}/details',[UserController::class,'order_details'])->name('user.order.details');
     Route::post('/account-order/cancel',[UserController::class,'order_cancel'])->name('user.order.cancel');
-    Route::get('/account-profile',[UserController::class,'user_profile'])->name('user.profile');
+    Route::get('/user-address',[UserController::class,'user_address'])->name('user.address');
 
 });
 Route::middleware(['auth',AuthAdmin::class])->group(function(){
