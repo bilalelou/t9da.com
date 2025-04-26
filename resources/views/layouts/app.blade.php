@@ -552,7 +552,7 @@
                         </a>
                     </div>
                     <p class="footer-address">123 Beach Avenue, Surfside City, CA 00000</p>
-                    <p class="m-0"><strong class="fw-medium">contact@surfsidemedia.in</strong></p>
+                    <p class="m-0"><strong class="fw-medium">contact@t9da.com</strong></p>
                     <p><strong class="fw-medium">+1 000-000-0000</strong></p>
 
                     <ul class="social-links list-unstyled d-flex flex-wrap mb-0">
