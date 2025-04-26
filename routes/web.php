@@ -34,6 +34,8 @@ Route::post('/wishlist/move-to-cart/{rowId}',[WishlistController::class,'move_to
                         //contact route//
 Route::get('/contact-us',[HomeController::class,'contact'])->name('home.contact');
 Route::post('/contact/store',[HomeController::class,'contact_store'])->name('home.contact.store');
+                        //about route//
+Route::get('/about-us',[HomeController::class,'about'])->name('home.about');
 
                         //search route//
 Route::get('/search',[HomeController::class,'search'])->name('home.search');
@@ -93,4 +95,5 @@ Route::middleware(['auth',AuthAdmin::class])->group(function(){
     Route::get('/admin/settings', [AdminController::class, 'settings'])->name('admin.settings');
                         //users route//
     Route::get('/admin/users', [AdminController::class, 'users'])->name('admin.users');
+
 });

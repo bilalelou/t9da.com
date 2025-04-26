@@ -58,4 +58,9 @@ class HomeController extends Controller
         return response()->json($products);
     }
 
+    public function about()
+    {
+        return view('about');
+    }
+
 }
