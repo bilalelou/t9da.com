@@ -1,5 +1,24 @@
 @extends('layouts.app')
 @section('content')
+<style>
+.category-circle {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    overflow: hidden;
+    background-color: #f5f5f5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+}
+.category-circle img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+</style>
+
     <main>
 
         <section class="swiper-container js-swiper-slider swiper-number-pagination slideshow"
@@ -97,24 +116,23 @@
                 }
               }
             }'>
+
                         <div class="swiper-wrapper">
-
                             @foreach ($categories as $category)
-                                <div class="swiper-slide">
-                                    <img loading="lazy" class="w-100 h-auto mb-3"
-                                        src="{{ asset('/images/categories' . $category->image) }}" width="124"
-                                        height="124" alt="" />
-
-                                    <div class="text-center">
-                                        <a href="{{ route('shop.index', ['categories' => $category->id]) }}"
-                                            class="menu-link fw-medium">
-                                            {{ $category->name }}
-                                        </a>
+                                <div class="swiper-slide text-center">
+                                    <div class="category-circle mb-2">
+                                        <img loading="lazy" src="{{ asset('/images/categories/' . $category->image) }}"
+                                            alt="{{ $category->name }}" />
                                     </div>
+                                    <a href="{{ route('shop.index', ['categories' => $category->id]) }}"
+                                        class="menu-link fw-medium d-block mt-2">
+                                        {{ $category->name }}
+                                    </a>
                                 </div>
                             @endforeach
+                        </div>
 
-                        </div><!-- /.swiper-wrapper -->
+
                     </div><!-- /.swiper-container js-swiper-slider -->
 
                     <div
@@ -277,9 +295,8 @@
                 <div class="row">
                     <div class="col-md-6">
                         <div class="category-banner__item border-radius-10 mb-5">
-                            <img loading="lazy" class="h-auto"
-                                src="{{ asset('assets/images/home/demo3/category_9.jpg') }}" width="690"
-                                height="665" alt="" />
+                            <img loading="lazy" class="h-auto" src="{{ asset('assets/images/home/demo3/category_9.jpg') }}"
+                                width="690" height="665" alt="" />
                             <div class="category-banner__item-mark">
                                 Starting at $19
                             </div>
