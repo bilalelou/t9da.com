@@ -57,8 +57,11 @@
                                     <td>{{ $slide->id }}</td>
                                     <td class="pname">
                                         <div class="image">
-                                            <img src="{{ asset('uploads/slides/' . $slide->image) }}" alt=""
-                                                class="{{ $slide->title }}">
+                                            @if($slide->image)
+                                                <img src="{{ asset('storage/uploads/' . $slide->image) }}" alt="{{ $slide->title }}" width="100">
+                                            @else
+                                                <img src="https://placehold.co/100x100/EFEFEF/AAAAAA?text=No+Image" alt="No Image" width="100">
+                                            @endif
                                         </div>
                                     </td>
                                     <td>{{ $slide->tagline }}</td>

@@ -62,8 +62,13 @@
                             <td>{{$category->id}}</td>
                             <td class="pname">
                                 <div class="image">
-                                    <img src="{{asset('/images/categories')}}/{{$category->image}}" alt="" class="image">
-                                </div>
+                                    @if($category->image)
+                                        <img src="{{ asset('storage/uploads/categories/' . $category->image) }}"
+                                             alt="{{ $category->name }}" class="image" width="60">
+                                    @else
+                                         <img src="https://placehold.co/60x60/EFEFEF/AAAAAA?text=No+Image"
+                                             alt="No Image" class="image" width="60">
+                                    @endif                                </div>
                                 <div class="name">
                                     <a href="#" class="body-title-2">{{$category->name}}</a>
                                 </div>

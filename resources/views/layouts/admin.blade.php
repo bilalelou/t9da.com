@@ -169,14 +169,12 @@
                                 </li>
 
                                 <li class="menu-item">
-                                    <form method="POST" action="{{ route('logout') }}" id="logout-form">
+                                    <a href="{{ route('logout') }}" onclick="event.preventDefault(); document.getElementById('logout-form-sidebar').submit();">
+                                        <div class="icon"><i class="icon-log-out"></i></div>
+                                        <div class="text">Logout</div>
+                                    </a>
+                                    <form id="logout-form-sidebar" method="POST" action="{{ route('logout') }}" style="display: none;">
                                         @csrf
-
-                                        <a href="{{ route('logout') }}" class=""
-                                            onclick="event.preventDefault();document.getElementById('logout-form').submit();">
-                                            <div class="icon"><i class="icon-settings"></i></div>
-                                            <div class="text">Logout</div>
-                                        </a>
                                     </form>
                                 </li>
                             </ul>
@@ -338,13 +336,14 @@
                                                     <div class="body-title-2">Support</div>
                                                 </a>
                                             </li>
-                                            <li>
-                                                <a href="login.html" class="user-item">
-                                                    <div class="icon">
-                                                        <i class="icon-log-out"></i>
-                                                    </div>
+                                                <li>
+                                                <a href="{{ route('logout') }}" class="user-item" onclick="event.preventDefault(); document.getElementById('logout-form-header').submit();">
+                                                    <div class="icon"><i class="icon-log-out"></i></div>
                                                     <div class="body-title-2">Log out</div>
                                                 </a>
+                                                <form id="logout-form-header" method="POST" action="{{ route('logout') }}" style="display: none;">
+                                                    @csrf
+                                                </form>
                                             </li>
                                         </ul>
                                     </div>

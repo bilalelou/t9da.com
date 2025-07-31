@@ -56,8 +56,13 @@
                                         <td>{{ $brand->id }}</td>
                                         <td class="pname">
                                             <div class="image">
-                                                <img src="{{ asset('/images/brands') }}/{{ $brand->image }}"
-                                                    alt="{{ $brand->image }}" class="image">
+                                                @if($brand->image)
+                                                    <img src="{{ asset('storage/uploads/brands/' . $brand->image) }}"
+                                                         alt="{{ $brand->name }}" class="image" width="60">
+                                                @else
+                                                     <img src="https://placehold.co/60x60/EFEFEF/AAAAAA?text=No+Image"
+                                                         alt="No Image" class="image" width="60">
+                                                @endif
                                             </div>
                                             <div class="name">
                                                 <a href="#" class="body-title-2">{{ $brand->name }}</a>

@@ -74,12 +74,12 @@
                         <div class="body-title">Upload images <span class="tf-color-1">*</span>
                         </div>
                         <div class="upload-image flex-grow">
-                            @if ($slide->image)
-                                <div class="item" id="imgpreview">
-                                    <img src="{{ asset('uploads/slides/' . $slide->image) }}" class="effect8"
-                                        alt="">
-                                </div>
-                            @endif
+                               @if ($slide->image)
+                            <div class="item" id="imgpreview">
+                                <img src="{{ asset('storage/uploads/' . $slide->image) }}" class="effect8"
+                                    alt="{{ $slide->title }}" style="max-width: 150px; height: auto;">
+                            </div>
+                        @endif
 
                             <div class="item up-load">
                                 <label class="uploadfile" for="myFile">
