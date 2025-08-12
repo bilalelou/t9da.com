@@ -129,7 +129,7 @@
                                             </a>
                                         </li>
                                         <li class="sub-menu-item">
-                                            <a href="order-tracking.html" class="">
+                                            <a href="{{ route('admin.order.tracking') }}" class="">
                                                 <div class="text">Order tracking</div>
                                             </a>
                                         </li>

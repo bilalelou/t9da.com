@@ -54,53 +54,70 @@ class CartController extends Controller
 
     public function apply_coupon_code(Request $request)
     {
-        $coupon_code = $request->coupon_code;
+        $request->validate([
+            'coupon_code' => 'required'
+        ]);
 
-        if (isset($coupon_code)) {
-            $coupon = Coupon::where('code', $coupon_code)
-                ->where('expiry_date', '>=', \Carbon\Carbon::today())
-                ->where('cart_value', '<=', Cart::instance('cart')->subtotal())
-                ->first();
 
-            if (!$coupon) {
-                return redirect()->back()->with('error', 'Invalid coupon code!');
-            } else {
-                Session::put('coupon', [
-                    'code'       => $coupon->code,
-                    'type'       => $coupon->type,
-                    'value'      => $coupon->value,
-                    'cart_value' => $coupon->cart_value,
-                ]);
-                $this->calculateDiscount();
-                return redirect()->back()->with('status', 'Coupon code applied successfully!');
-            }
+        $coupon = Coupon::where('code', $request->coupon_code)
+            ->where('expiry_date', '>=', now()) // now() هي اختصار لـ Carbon::now()
+            ->where('cart_value', '<=', Cart::instance('cart')->subtotal())
+            ->first();
+
+        // 3. تحقق واش لقيتي الكوبون ولا لا
+        if ($coupon) {
+            // إلا لقيتيه، حطو فـ Session
+            Session::put('coupon', [
+                'code'       => $coupon->code,
+                'type'       => $coupon->type,
+                'value'      => $coupon->value,
+                'cart_value' => $coupon->cart_value,
+            ]);
+
+            $this->calculateDiscount();
+
+            // رجع برسالة ديال النجاح
+            // لاحظ أني استعملت 'success' باش تبان بالأخضر كيف داير فالـ view
+            return redirect()->back()->with('success', 'Coupon code applied successfully!');
         } else {
-            return redirect()->back()->with('error', 'Invalid coupon code!');
+            // إلا ملقيتيهش، رجع برسالة ديال الخطأ
+            return redirect()->back()->with('error', 'Invalid or expired coupon code!');
         }
     }
-
+    public function remove_coupon()
+    {
+        if (Session::has('coupon')) {
+            Session::forget('coupon');
+            Session::forget('checkout'); // تأكد من حذف بيانات الخصم أيضاً
+        }
+        return redirect()->back()->with('success', 'Coupon has been removed successfully!');
+    }
     public function calculateDiscount()
     {
-        $discount = 0;
-
         if (Session::has('coupon')) {
             $coupon = Session::get('coupon');
+            $subtotal = floatval(str_replace(',', '', Cart::instance('cart')->subtotal()));
 
+            $discount = 0;
             if ($coupon['type'] == 'fixed') {
-                $discount = $coupon['value'];
+                $discount = floatval($coupon['value']);
             } else {
-                $discount = (Cart::instance('cart')->subtotal() * $coupon['value']) / 100;
+                $discount = ($subtotal * floatval($coupon['value'])) / 100;
             }
 
-            $subtotalAfterDiscount = Cart::instance('cart')->subtotal() - $discount;
+            if ($discount > $subtotal) {
+                $discount = $subtotal;
+            }
+
+            $subtotalAfterDiscount = $subtotal - $discount;
             $taxAfterDiscount = ($subtotalAfterDiscount * config('cart.tax')) / 100;
             $totalAfterDiscount = $subtotalAfterDiscount + $taxAfterDiscount;
 
-            Session::put('discounts', [
-                'discount' => number_format(floatval($discount), 2, '.', ''),
-                'subtotal' => number_format(floatval($subtotalAfterDiscount), 2, '.', ''),
-                'tax' => number_format(floatval($taxAfterDiscount), 2, '.', ''),
-                'total' => number_format(floatval($totalAfterDiscount), 2, '.', '')
+            Session::put('checkout', [
+                'discount' => number_format($discount, 2, '.', ''),
+                'subtotal' => number_format($subtotalAfterDiscount, 2, '.', ''),
+                'tax' => number_format($taxAfterDiscount, 2, '.', ''),
+                'total' => number_format($totalAfterDiscount, 2, '.', '')
             ]);
         }
     }
@@ -118,9 +135,10 @@ class CartController extends Controller
 
     public function place_an_order(Request $request)
     {
-        $user_id = Auth::user()->id;
-        $address = Address::where('user_id', $user_id)->where('isdefault', true)->first();
+        $user = Auth::user();
+        $address = Address::where('user_id', $user->id)->where('isdefault', true)->first();
 
+        // إذا لم يكن هناك عنوان محفوظ، قم بالتحقق من البيانات وإنشاء عنوان جديد
         if(!$address)
         {
             $request->validate([
@@ -135,38 +153,48 @@ class CartController extends Controller
             ]);
 
             $address = new Address();
-            $address->name = $request->name;
-            $address->phone = $request->phone;
-            $address->zip = $request->zip;
-            $address->state = $request->state;
-            $address->city = $request->city;
-            $address->address = $request->address;
-            $address->locality = $request->locality;
-            $address->landmark = $request->landmark;
-            $address->country = 'Maroc';
+            $address->user_id = $user->id;
+            $address->fill($request->all()); // تعبئة البيانات تلقائياً
+            $address->country = 'Morocco';
             $address->isdefault = true;
             $address->save();
         }
-        $this->setAmountForCheckout();
+
+        // إنشاء الطلب
         $order = new Order();
-        $order->user_id = $user_id;
-        $order->subtotal = Session::get('checkout')['subtotal'];
-        $order->discount = Session::get('checkout')['discount'];
-        $order->tax = Session::get('checkout')['tax'];
-        $order->total = Session::get('checkout')['total'];
+        $order->user_id = $user->id;
+
+        if (Session::has('checkout')) {
+            $order->subtotal = Session::get('checkout')['subtotal'];
+            $order->discount = Session::get('checkout')['discount'];
+            $order->tax = Session::get('checkout')['tax'];
+            $order->total = Session::get('checkout')['total'];
+        } else {
+            $order->subtotal = Cart::instance('cart')->subtotal(2, '.', '');
+            $order->discount = 0;
+            $order->tax = Cart::instance('cart')->tax(2, '.', '');
+            $order->total = Cart::instance('cart')->total(2, '.', '');
+        }
+
+        // =======================================================
+        // تم إصلاح هذا الجزء بإضافة جميع الحقول من جدول الطلبات
+        // =======================================================
         $order->name = $address->name;
         $order->phone = $address->phone;
-        $order->locality = $address->locality;
         $order->address = $address->address;
         $order->city = $address->city;
         $order->state = $address->state;
-        $order->country = $address->country;
-        $order->landmark = $address->landmark;
         $order->zip = $address->zip;
+        $order->locality = $address->locality;
+        $order->landmark = $address->landmark;
+        $order->country = $address->country;
+        $order->status = 'ordered';
+        $order->is_shipping_different = false; // <-- تم إضافة الحقل الناقص
+        $order->type = 'cod';                  // <-- تم إضافة الحقل الناقص
         $order->save();
 
-        foreach(Cart::instance('cart')->content() as $item)
-        {
+        // إضافة المنتجات للطلب
+        foreach(Cart::instance('cart')->content() as $item) {
             $orderitem = new OrderItem();
             $orderitem->product_id = $item->id;
             $orderitem->order_id = $order->id;
@@ -174,33 +202,24 @@ class CartController extends Controller
             $orderitem->quantity = $item->qty;
             $orderitem->save();
         }
-        if($request->mode == 'card')
-        {
-            //
-        }
-        elseif($request->mode == 'paypal')
-        {
-            //
-        }
-        elseif( $request->mode == 'cod')
-        {
-            $transaction = new Transaction();
-            $transaction->user_id = $user_id;
-            $transaction->order_id = $order->id;
-            $transaction->mode = $request->mode;
-            $transaction->status = "pending";
-            $transaction->save();
-        }
 
+        // إنشاء معاملة الدفع
+        $transaction = new Transaction();
+        $transaction->user_id = $user->id;
+        $transaction->order_id = $order->id;
+        $transaction->mode = $request->mode;
+        $transaction->status = "pending";
+        $transaction->save();
 
+        // مسح السلة والجلسات
         Cart::instance('cart')->destroy();
-        Session::forget('checkout');
-        Session::forget('coupon');
-        Session::forget('discounts');
+        Session::forget(['coupon', 'checkout']);
         Session::put('order_id', $order->id);
-        return redirect()->route('cart.confirmation');
 
+        return redirect()->route('cart.confirmation');
     }
+
+
     public function setAmountForCheckout()
     {
         if(!Cart::instance('cart')->content()->count() > 0)
@@ -228,14 +247,19 @@ class CartController extends Controller
             ]);
         }
     }
+
     public function confirmation()
     {
-        if(Session::has('order_id'))
-        {
-            $order = Order::where('id', Session::get('order_id'))->first();
-            return view('confirmation', compact('order', 'transaction'));
+        if(!Session::has('order_id')) {
+            return redirect()->route('cart.index');
         }
 
-        return redirect()->route('cart.index');
+        $order_id = Session::get('order_id');
+        Session::forget('order_id');
+
+        $order = Order::findOrFail($order_id);
+        $transaction = Transaction::where('order_id', $order_id)->first();
+
+        return view('order-confirmation', compact('order', 'transaction'));
     }
 }

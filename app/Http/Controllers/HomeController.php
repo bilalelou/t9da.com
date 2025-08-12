@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
+use App\Models\Brand;
 use App\Models\Contact;
 use App\Models\Product;
 use App\Models\Slide;
@@ -16,14 +17,18 @@ class HomeController extends Controller
 
         $categories = Category::orderBy('name')->get();
 
+        $brands = Brand::orderBy('name')->get();
+
+
         $sproducts = Product::whereNotNull('sale_price')
                     ->where('sale_price', '<>', "")
                     ->inRandomOrder()
                     ->take(8)
                     ->get();
         $fproducts = Product::where('featured', 1)->take(8)->get();
+        info($sproducts);
+        return view('index', compact('slides', 'categories', 'brands', 'sproducts', 'fproducts'));
 
-        return view('index', compact('slides', 'categories', 'sproducts', 'fproducts'));
     }
     public function contact()
     {
@@ -54,7 +59,6 @@ class HomeController extends Controller
         info($request->all());
         $search = $request->input('query'); // بدّلها ل query باش تطابق JS
         $products = Product::where('name', 'LIKE', "%{$search}%")->get(); // استعمل get() بدل paginate()
-        info($products);
         return response()->json($products);
     }
 

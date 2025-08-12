@@ -221,7 +221,7 @@
 
                         <div class="divider"></div>
                         <div class="flex items-center justify-between flex-wrap gap10 wgp-pagination">
-                            {{ $orderitems->links('pagination::bootstrap-5') }}
+                                {{ $orderItems->links('pagination::bootstrap-5') }}
                         </div>
                     </div>
                     <div class="wg-box mt-5">

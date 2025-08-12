@@ -1,416 +1,455 @@
 @extends('layouts.app')
+
 @section('content')
 <style>
-.category-circle {
-    width: 120px;
-    height: 120px;
-    border-radius: 50%;
-    overflow: hidden;
-    background-color: #f5f5f5;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto;
-}
-.category-circle img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
+    /* General Style Improvements */
+    body {
+        background-color: #ffffff; /* Clean white background */
+        color: #212529;
+    }
+    .section-padding {
+        padding: 80px 0;
+    }
+    .section-title {
+        font-weight: 800; /* Bolder title */
+        font-size: 2.5rem;
+        position: relative;
+        padding-bottom: 20px;
+        margin-bottom: 60px;
+    }
+    .section-title:after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 100px;
+        height: 4px;
+        background-color: #000;
+        border-radius: 2px;
+    }
+
+    /* Features Section */
+    .feature-item {
+        text-align: center;
+        padding: 20px;
+        transition: transform 0.3s ease;
+    }
+    .feature-item:hover {
+        transform: translateY(-5px);
+    }
+    .feature-item .icon {
+        font-size: 3rem;
+        margin-bottom: 20px;
+        color: #000;
+    }
+
+    /* ======================================================= */
+    /* تم تعديل تصميم قسم الفئات ليصبح دائرياً */
+    /* ======================================================= */
+    .category-item-circle {
+        text-align: center;
+        text-decoration: none;
+        color: #333;
+        display: block;
+    }
+    .category-item-circle .image-wrapper {
+        width: 140px;
+        height: 140px;
+        border-radius: 50%;
+        overflow: hidden;
+        margin: 0 auto 15px;
+        border: 3px solid #f0f0f0;
+        transition: border-color 0.3s ease, transform 0.3s ease;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    }
+    .category-item-circle:hover .image-wrapper {
+        border-color: #000;
+        transform: translateY(-5px) scale(1.05);
+    }
+    .category-item-circle img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .category-item-circle .category-title {
+        font-weight: 600;
+        transition: color 0.3s ease;
+    }
+    .category-item-circle:hover .category-title {
+        color: #000;
+    }
+
+    /* Premium Product Card */
+    .product-card {
+        background-color: #fff;
+        border: 1px solid #e9e9e9;
+        border-radius: 15px;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+    .product-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 20px 40px rgba(0,0,0,0.12);
+    }
+    .pc__img-wrapper {
+        position: relative;
+    }
+    .pc__img-second {
+        position: absolute;
+        top: 0;
+        left: 0;
+        opacity: 0;
+        transition: opacity 0.4s ease;
+    }
+    .product-card:hover .pc__img-second {
+        opacity: 1;
+    }
+    .pc__info { padding: 20px; text-align: center; }
+    .pc__title a { color: #212529; font-weight: 600; text-decoration: none; }
+    .product-card__price .price-old { color: #999; text-decoration: line-through; margin-left: 8px; }
+    .product-card__price .price-sale { color: #d9534f; font-weight: bold; }
+    .product-card-actions {
+        position: absolute;
+        bottom: -60px; /* Start off-screen */
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 10px;
+        transition: bottom 0.3s ease;
+        width: 100%;
+        justify-content: center;
+        padding: 10px;
+    }
+    .product-card:hover .product-card-actions {
+        bottom: 10px; /* Slide in on hover */
+    }
+    .product-card-actions .btn-action {
+        width: 45px; height: 45px; border-radius: 50%; background-color: #fff;
+        border: 1px solid #eee; display: flex; align-items: center; justify-content: center;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1); color: #333; cursor: pointer;
+        transition: background-color 0.3s ease, color 0.3s ease;
+    }
+    .product-card-actions .btn-action:hover { background-color: #000; color: #fff; }
+
+    /* Testimonials */
+    .testimonial-card {
+        background: #fff;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        text-align: center;
+    }
+    .testimonial-card img {
+        width: 80px; height: 80px; border-radius: 50%; margin-bottom: 15px;
+    }
+
+    /* Newsletter & Brands */
+    .newsletter-section, .brands-section {
+        background-color: #e9ecef;
+    }
+    /* ======================================================= */
+    /* تم إضافة هذا الجزء لجعل الماركات دائرية */
+    /* ======================================================= */
+    .brand-circle {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        background-color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 15px;
+        margin: 0 auto;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .brand-circle:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    }
+    .brand-logo {
+        max-width: 100%;
+        max-height: 100%;
+        filter: grayscale(100%);
+        opacity: 0.6;
+        transition: filter 0.3s ease, opacity 0.3s ease;
+    }
+    .brand-circle:hover .brand-logo {
+        filter: grayscale(0%);
+        opacity: 1;
+    }
+
+    /* Scroll Animation */
+    .reveal-on-scroll {
+        opacity: 0;
+        transform: translateY(40px);
+        transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+    }
+    .reveal-on-scroll.is-visible {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    @media (max-width: 767px) {
+        .section-padding {
+            padding: 40px 0;
+        }
+        .section-title {
+            font-size: 1.8rem;
+            margin-bottom: 40px;
+        }
+        .slideshow-text h2 {
+            font-size: 2rem;
+        }
+        .category-item-circle .image-wrapper {
+            width: 100px;
+            height: 100px;
+        }
+        .brand-circle {
+            width: 100px;
+            height: 100px;
+        }
+    }
 </style>
 
-    <main>
-
-        <section class="swiper-container js-swiper-slider swiper-number-pagination slideshow"
-            data-settings='{
-        "autoplay": {
-          "delay": 5000
-        },
-        "slidesPerView": 1,
-        "effect": "fade",
-        "loop": true
-      }'>
-            <div class="swiper-wrapper">
-                @foreach ($slides as $slide)
-                    <div class="swiper-slide">
-                        <div class="overflow-hidden position-relative h-100">
-                            <div class="slideshow-character position-absolute bottom-0 pos_right-center">
-                                <img loading="lazy" src="{{ asset('uploads/slides/' . $slide->image) }}" width="542"
-                                    height="733" alt="Woman Fashion 1"
-                                    class="slideshow-character_img animate animate_fade animate_btt animate_delay-9 w-auto h-auto" />
-                                <div class="character_markup type2">
-                                    <p
-                                        class="text-uppercase font-sofia mark-grey-color animate animate_fade animate_btt animate_delay-10 mb-0">
-                                        {{ $slide->tagline }}
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div class="slideshow-text container position-absolute start-50 top-50 translate-middle">
-                                <h6
-                                    class="text_dash text-uppercase fs-base fw-medium animate animate_fade animate_btt animate_delay-3">
-                                    New Arrivals
-                                </h6>
-                                <h2 class="h1 fw-normal mb-0 animate animate_fade animate_btt animate_delay-5">
-                                    {{ $slide->title }}</h2>
-                                <h2 class="h1 fw-bold animate animate_fade animate_btt animate_delay-5">
-                                    {{ $slide->subtitle }}</h2>
-                                <a href="{{ $slide->link }}"
-                                    class="btn-link btn-link_lg default-underline fw-medium animate animate_fade animate_btt animate_delay-7">
-                                    Shop Now
-                                </a>
-                            </div>
+<main>
+    {{-- 1. Hero Slider Section --}}
+    <section class="swiper-container js-swiper-slider swiper-number-pagination slideshow"
+        data-settings='{"autoplay": {"delay": 5000}, "slidesPerView": 1, "effect": "fade", "loop": true}'>
+        <div class="swiper-wrapper">
+            @foreach ($slides as $slide)
+                <div class="swiper-slide">
+                    <div class="overflow-hidden position-relative h-100">
+                        <div class="slideshow-character position-absolute bottom-0 pos_right-center">
+                            <img loading="lazy" src="{{ asset('storage/uploads/' . $slide->image) }}" width="542"
+                                height="733" alt="{{ $slide->title }}"
+                                class="slideshow-character_img animate animate_fade animate_btt animate_delay-9 w-auto h-auto" />
                         </div>
-                    </div>
-                @endforeach
-
-            </div>
-
-            <div class="container">
-                <div
-                    class="slideshow-pagination slideshow-number-pagination d-flex align-items-center position-absolute bottom-0 mb-5">
-                </div>
-            </div>
-        </section>
-        <div class="container mw-1620 bg-white border-radius-10">
-            <div class="mb-3 mb-xl-5 pt-1 pb-4"></div>
-            <section class="category-carousel container">
-                <h2 class="section-title text-center mb-3 pb-xl-2 mb-xl-4">You Might Like</h2>
-
-                <div class="position-relative">
-                    <div class="swiper-container js-swiper-slider"
-                        data-settings='{
-              "autoplay": {
-                "delay": 5000
-              },
-              "slidesPerView": 8,
-              "slidesPerGroup": 1,
-              "effect": "none",
-              "loop": true,
-              "navigation": {
-                "nextEl": ".products-carousel__next-1",
-                "prevEl": ".products-carousel__prev-1"
-              },
-              "breakpoints": {
-                "320": {
-                  "slidesPerView": 2,
-                  "slidesPerGroup": 2,
-                  "spaceBetween": 15
-                },
-                "768": {
-                  "slidesPerView": 4,
-                  "slidesPerGroup": 4,
-                  "spaceBetween": 30
-                },
-                "992": {
-                  "slidesPerView": 6,
-                  "slidesPerGroup": 1,
-                  "spaceBetween": 45,
-                  "pagination": false
-                },
-                "1200": {
-                  "slidesPerView": 8,
-                  "slidesPerGroup": 1,
-                  "spaceBetween": 60,
-                  "pagination": false
-                }
-              }
-            }'>
-
-                        <div class="swiper-wrapper">
-                            @foreach ($categories as $category)
-                                <div class="swiper-slide text-center">
-                                    <div class="category-circle mb-2">
-                                        <img loading="lazy" src="{{ asset('/images/categories/' . $category->image) }}"
-                                            alt="{{ $category->name }}" />
-                                    </div>
-                                    <a href="{{ route('shop.index', ['categories' => $category->id]) }}"
-                                        class="menu-link fw-medium d-block mt-2">
-                                        {{ $category->name }}
-                                    </a>
-                                </div>
-                            @endforeach
-                        </div>
-
-
-                    </div><!-- /.swiper-container js-swiper-slider -->
-
-                    <div
-                        class="products-carousel__prev products-carousel__prev-1 position-absolute top-50 d-flex align-items-center justify-content-center">
-                        <svg width="25" height="25" viewBox="0 0 25 25" xmlns="http://www.w3.org/2000/svg">
-                            <use href="#icon_prev_md" />
-                        </svg>
-                    </div><!-- /.products-carousel__prev -->
-                    <div
-                        class="products-carousel__next products-carousel__next-1 position-absolute top-50 d-flex align-items-center justify-content-center">
-                        <svg width="25" height="25" viewBox="0 0 25 25" xmlns="http://www.w3.org/2000/svg">
-                            <use href="#icon_next_md" />
-                        </svg>
-                    </div><!-- /.products-carousel__next -->
-                </div><!-- /.position-relative -->
-            </section>
-
-            <div class="mb-3 mb-xl-5 pt-1 pb-4"></div>
-
-            <section class="hot-deals container">
-                <h2 class="section-title text-center mb-3 pb-xl-3 mb-xl-4">Hot Deals</h2>
-                <div class="row">
-                    <div
-                        class="col-md-6 col-lg-4 col-xl-20per d-flex align-items-center flex-column justify-content-center py-4 align-items-md-start">
-                        <h2>Summer Sale</h2>
-                        <h2 class="fw-bold">Up to 60% Off</h2>
-
-                        <div class="position-relative d-flex align-items-center text-center pt-xxl-4 js-countdown mb-3"
-                            data-date="18-3-2024" data-time="06:50">
-                            <div class="day countdown-unit">
-                                <span class="countdown-num d-block"></span>
-                                <span class="countdown-word text-uppercase text-secondary">Days</span>
-                            </div>
-
-                            <div class="hour countdown-unit">
-                                <span class="countdown-num d-block"></span>
-                                <span class="countdown-word text-uppercase text-secondary">Hours</span>
-                            </div>
-
-                            <div class="min countdown-unit">
-                                <span class="countdown-num d-block"></span>
-                                <span class="countdown-word text-uppercase text-secondary">Mins</span>
-                            </div>
-
-                            <div class="sec countdown-unit">
-                                <span class="countdown-num d-block"></span>
-                                <span class="countdown-word text-uppercase text-secondary">Sec</span>
-                            </div>
-                        </div>
-
-                        <a href="{{ route('shop.index') }}"
-                            class="btn-link default-underline text-uppercase fw-medium mt-3">View All</a>
-                    </div>
-                    <div class="col-md-6 col-lg-8 col-xl-80per">
-                        <div class="position-relative">
-                            <div class="swiper-container js-swiper-slider"
-                                data-settings='{
-                  "autoplay": {
-                    "delay": 5000
-                  },
-                  "slidesPerView": 4,
-                  "slidesPerGroup": 4,
-                  "effect": "none",
-                  "loop": false,
-                  "breakpoints": {
-                    "320": {
-                      "slidesPerView": 2,
-                      "slidesPerGroup": 2,
-                      "spaceBetween": 14
-                    },
-                    "768": {
-                      "slidesPerView": 2,
-                      "slidesPerGroup": 3,
-                      "spaceBetween": 24
-                    },
-                    "992": {
-                      "slidesPerView": 3,
-                      "slidesPerGroup": 1,
-                      "spaceBetween": 30,
-                      "pagination": false
-                    },
-                    "1200": {
-                      "slidesPerView": 4,
-                      "slidesPerGroup": 1,
-                      "spaceBetween": 30,
-                      "pagination": false
-                    }
-                  }
-                }'>
-                                <div class="swiper-wrapper">
-                                    {{-- @foreach ($sproducts as $sproduct)
-                                        <div class="swiper-slide product-card product-card_style3">
-                                            <div class="pc__img-wrapper">
-                                                <a href="details.html">
-                                                    <img loading="lazy"
-                                                        src="{{ asset('assets/images/home/demo3/product-0-1.jpg') }}"
-                                                        width="258" height="313" alt="Cropped Faux leather Jacket"
-                                                        class="pc__img">
-                                                    <img loading="lazy"
-                                                        src="{{ asset('assets/images/home/demo3/product-0-2.jpg') }}"
-                                                        width="258" height="313" alt="Cropped Faux leather Jacket"
-                                                        class="pc__img pc__img-second">
-                                                </a>
-                                            </div>
-                                            <div class="pc__info position-relative">
-                                                <h6 class="pc__title"><a href="details.html">{{$sproduct->name}}</a>
-                                                </h6>
-                                                <div class="product-card__price d-flex">
-                                                    <span class="money price text-secondary">
-                                                        $29
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    @endforeach --}}
-                                    @foreach ($sproducts as $product)
-                                        <div class="swiper-slide product-card product-card_style3">
-                                            <div class="pc__img-wrapper">
-                                                <a
-                                                    href="{{ route('shop.product.details', ['product_slug' => $product->slug]) }}">
-                                                    <img loading="lazy"
-                                                        src="{{ asset('uploads/products/' . $product->image) }}"
-                                                        width="258" height="313" alt="{{ $product->name }}"
-                                                        class="pc__img" />
-                                                </a>
-                                            </div>
-
-                                            <div class="pc__info position-relative">
-                                                <h6 class="pc__title">
-                                                    <a
-                                                        href="{{ route('shop.product.details', ['product_slug' => $product->slug]) }}">
-                                                        {{ $product->name }}
-                                                    </a>
-                                                </h6>
-                                                <div class="product-card__price d-flex">
-                                                    <span class="money price text-secondary">
-                                                        @if ($product->sale_price)
-                                                            <s>${{ $product->regular_price }}</s>
-                                                            ${{ $product->sale_price }}
-                                                        @else
-                                                            ${{ $product->regular_price }}
-                                                        @endif
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    @endforeach
-
-
-                                </div><!-- /.swiper-wrapper -->
-                            </div><!-- /.swiper-container js-swiper-slider -->
-                        </div><!-- /.position-relative -->
-                    </div>
-                </div>
-            </section>
-
-            <div class="mb-3 mb-xl-5 pt-1 pb-4"></div>
-
-            <section class="category-banner container">
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="category-banner__item border-radius-10 mb-5">
-                            <img loading="lazy" class="h-auto" src="{{ asset('assets/images/home/demo3/category_9.jpg') }}"
-                                width="690" height="665" alt="" />
-                            <div class="category-banner__item-mark">
-                                Starting at $19
-                            </div>
-                            <div class="category-banner__item-content">
-                                <h3 class="mb-0">Blazers</h3>
-                                <a href="#" class="btn-link default-underline text-uppercase fw-medium">Shop Now</a>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="category-banner__item border-radius-10 mb-5">
-                            <img loading="lazy" class="h-auto"
-                                src="{{ asset('assets/images/home/demo3/category_10.jpg') }}" width="690"
-                                height="665" alt="" />
-                            <div class="category-banner__item-mark">
-                                Starting at $19
-                            </div>
-                            <div class="category-banner__item-content">
-                                <h3 class="mb-0">Sportswear</h3>
-                                <a href="#" class="btn-link default-underline text-uppercase fw-medium">Shop Now</a>
-                            </div>
+                        <div class="slideshow-text container position-absolute start-50 top-50 translate-middle">
+                            <h6 class="text_dash text-uppercase fs-base fw-medium animate animate_fade animate_btt animate_delay-3">
+                                {{ $slide->tagline }}
+                            </h6>
+                            <h2 class="h1 fw-normal mb-0 animate animate_fade animate_btt animate_delay-5">
+                                {{ $slide->title }}</h2>
+                            <h2 class="h1 fw-bold animate animate_fade animate_btt animate_delay-5">
+                                {{ $slide->subtitle }}</h2>
+                            <a href="{{ $slide->link }}"
+                                class="btn btn-dark btn-lg mt-3 animate animate_fade animate_btt animate_delay-7">
+                                Shop Now
+                            </a>
                         </div>
                     </div>
                 </div>
-            </section>
-
-            <div class="mb-3 mb-xl-5 pt-1 pb-4"></div>
-
-            <section class="products-grid container">
-                <h2 class="section-title text-center mb-3 pb-xl-3 mb-xl-4">Featured Products</h2>
-
-                <div class="row">
-                    @foreach ($fproducts as $fproduct)
-                        <div class="col-6 col-md-4 col-lg-3">
-                            <div class="product-card product-card_style3 mb-3 mb-md-4 mb-xxl-5">
-                                <div class="pc__img-wrapper">
-                                    <a href="{{ route('shop.product.details', ['product_slug' => $fproduct->slug]) }}">
-                                        <img loading="lazy" src="{{ asset('uploads/products/' . $fproduct->image) }}"
-                                            width="330" height="400" alt="{{ $fproduct->name }}"
-                                            class="pc__img" />
-                                    </a>
-                                </div>
-
-                                <div class="pc__info position-relative">
-                                    <h6 class="pc__title">
-                                        <a
-                                            href="{{ route('shop.product.details', ['product_slug' => $fproduct->slug]) }}">
-                                            {{ $fproduct->name }}
-                                        </a>
-                                    </h6>
-
-                                    <div class="product-card__price d-flex align-items-center">
-                                        <span class="money price text-secondary">
-                                            @if ($fproduct->sale_price)
-                                                <s>${{ $fproduct->regular_price }}</s> ${{ $fproduct->sale_price }}
-                                            @else
-                                                ${{ $fproduct->regular_price }}
-                                            @endif
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    @endforeach
-
-                    {{-- <div class="col-6 col-md-4 col-lg-3">
-                        <div class="product-card product-card_style3 mb-3 mb-md-4 mb-xxl-5">
-                            <div class="pc__img-wrapper">
-                                <a href="details.html">
-                                    <img loading="lazy" src="{{ asset('assets/images/home/demo3/product-4.jpg') }}"
-                                        width="330" height="400" alt="Cropped Faux leather Jacket" class="pc__img">
-                                </a>
-                            </div>
-
-                            <div class="pc__info position-relative">
-                                <h6 class="pc__title"><a href="details.html">Cropped Faux Leather Jacket</a></h6>
-                                <div class="product-card__price d-flex align-items-center">
-                                    <span class="money price text-secondary">$29</span>
-                                </div>
-
-                                <div
-                                    class="anim_appear-bottom position-absolute bottom-0 start-0 d-none d-sm-flex align-items-center bg-body">
-                                    <button
-                                        class="btn-link btn-link_lg me-4 text-uppercase fw-medium js-add-cart js-open-aside"
-                                        data-aside="cartDrawer" title="Add To Cart">Add To Cart</button>
-                                    <button class="btn-link btn-link_lg me-4 text-uppercase fw-medium js-quick-view"
-                                        data-bs-toggle="modal" data-bs-target="#quickView" title="Quick view">
-                                        <span class="d-none d-xxl-block">Quick View</span>
-                                        <span class="d-block d-xxl-none"><svg width="18" height="18"
-                                                viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                <use href="#icon_view" />
-                                            </svg></span>
-                                    </button>
-                                    <button class="pc__btn-wl bg-transparent border-0 js-add-wishlist"
-                                        title="Add To Wishlist">
-                                        <svg width="16" height="16" viewBox="0 0 20 20" fill="none"
-                                            xmlns="http://www.w3.org/2000/svg">
-                                            <use href="#icon_heart" />
-                                        </svg>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div> --}}
-                </div><!-- /.row -->
-
-                <div class="text-center mt-2">
-                    <a class="btn-link btn-link_lg default-underline text-uppercase fw-medium" href="#">Load
-                        More</a>
-                </div>
-            </section>
+            @endforeach
         </div>
+        <div class="container">
+            <div class="slideshow-pagination slideshow-number-pagination d-flex align-items-center position-absolute bottom-0 mb-5"></div>
+        </div>
+    </section>
 
-        <div class="mb-3 mb-xl-5 pt-1 pb-4"></div>
+    {{-- 2. Features Section --}}
+    <section class="container section-padding">
+        <div class="row">
+            <div class="col-md-3">
+                <div class="feature-item">
+                    <div class="icon"><i class="icon-shipping"></i></div>
+                    <h5>Free Shipping</h5>
+                    <p class="text-muted">On all orders over $99</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="feature-item">
+                    <div class="icon"><i class="icon-headphone"></i></div>
+                    <h5>24/7 Support</h5>
+                    <p class="text-muted">Get help when you need it</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="feature-item">
+                    <div class="icon"><i class="icon-shield"></i></div>
+                    <h5>Secure Payments</h5>
+                    <p class="text-muted">100% secure payment</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="feature-item">
+                    <div class="icon"><i class="icon-gift"></i></div>
+                    <h5>Easy Returns</h5>
+                    <p class="text-muted">30-day money back guarantee</p>
+                </div>
+            </div>
+        </div>
+    </section>
 
-    </main>
+    {{-- 3. Categories Section --}}
+    <section class="category-carousel container section-padding reveal-on-scroll">
+        <h2 class="section-title text-center">Shop By Category</h2>
+        <div class="row">
+            @foreach ($categories->take(6) as $category)
+                <div class="col-6 col-md-4 col-lg-2 mb-4">
+                    <a href="{{ route('shop.index', ['categories' => $category->id]) }}" class="category-item-circle">
+                        <div class="image-wrapper">
+                            <img loading="lazy" src="{{ asset('storage/uploads/categories/' . $category->image) }}" alt="{{ $category->name }}" />
+                        </div>
+                        <h5 class="category-title">{{ $category->name }}</h5>
+                    </a>
+                </div>
+            @endforeach
+        </div>
+    </section>
+
+    {{-- 4. Featured Products Section --}}
+    <section class="products-grid container section-padding reveal-on-scroll">
+        <h2 class="section-title text-center">Featured Products</h2>
+        <div class="row">
+            @foreach ($fproducts as $fproduct)
+                <div class="col-6 col-md-4 col-lg-3 mb-4">
+                    <div class="product-card">
+                        <div class="pc__img-wrapper">
+                            <a href="{{ route('shop.product.details', ['product_slug' => $fproduct->slug]) }}">
+                                <img loading="lazy" src="{{ asset('storage/uploads/' . $fproduct->image) }}" width="330" height="400" alt="{{ $fproduct->name }}" class="pc__img" />
+                            </a>
+                            <div class="product-card-actions">
+                                 <form method="POST" action="{{ route('wishlist.add') }}" class="d-inline">@csrf<input type="hidden" name="id" value="{{ $fproduct->id }}"><input type="hidden" name="name" value="{{ $fproduct->name }}"><input type="hidden" name="price" value="{{ $fproduct->sale_price ?? $fproduct->regular_price }}"><button type="submit" class="btn-action" title="Add to Wishlist"><i class="icon-heart"></i></button></form>
+                                <form method="POST" action="{{ route('cart.add') }}" class="d-inline">@csrf<input type="hidden" name="id" value="{{ $fproduct->id }}"><input type="hidden" name="name" value="{{ $fproduct->name }}"><input type="hidden" name="price" value="{{ $fproduct->sale_price ?? $fproduct->regular_price }}"><input type="hidden" name="quantity" value="1"><button type="submit" class="btn-action" title="Add to Cart"><i class="icon-shopping-cart"></i></button></form>
+                            </div>
+                        </div>
+                        <div class="pc__info position-relative">
+                            <h6 class="pc__title"><a href="{{ route('shop.product.details', ['product_slug' => $fproduct->slug]) }}">{{ $fproduct->name }}</a></h6>
+                            <div class="product-card__price d-flex justify-content-center">
+                                @if ($fproduct->sale_price)
+                                    <span class="money price-sale">${{ $fproduct->sale_price }}</span>
+                                    <span class="money price-old">${{ $fproduct->regular_price }}</span>
+                                @else
+                                    <span class="money price text-secondary">${{ $fproduct->regular_price }}</span>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endforeach
+        </div>
+    </section>
+
+    {{-- 5. New Arrivals Section --}}
+    <section class="hot-deals container section-padding reveal-on-scroll">
+        <h2 class="section-title text-center">New Arrivals</h2>
+        <div class="row">
+            @foreach ($sproducts as $product)
+                <div class="col-6 col-md-4 col-lg-3 mb-4">
+                    <div class="product-card">
+                        <div class="pc__img-wrapper">
+                            <a href="{{ route('shop.product.details', ['product_slug' => $product->slug]) }}">
+                                <img loading="lazy" src="{{ asset('storage/uploads/' . $product->image) }}"
+                                    width="330" height="400" alt="{{ $product->name }}" class="pc__img" />
+                            </a>
+                            <div class="product-card-actions">
+                                <form method="POST" action="{{ route('wishlist.add') }}" class="d-inline">@csrf<input type="hidden" name="id" value="{{ $product->id }}"><input type="hidden" name="name" value="{{ $product->name }}"><input type="hidden" name="price" value="{{ $product->sale_price ?? $product->regular_price }}"><button type="submit" class="btn-action" title="Add to Wishlist"><i class="icon-heart"></i></button></form>
+                                <form method="POST" action="{{ route('cart.add') }}" class="d-inline">@csrf<input type="hidden" name="id" value="{{ $product->id }}"><input type="hidden" name="name" value="{{ $product->name }}"><input type="hidden" name="price" value="{{ $product->sale_price ?? $product->regular_price }}"><input type="hidden" name="quantity" value="1"><button type="submit" class="btn-action" title="Add to Cart"><i class="icon-shopping-cart"></i></button></form>
+                            </div>
+                        </div>
+                        <div class="pc__info position-relative">
+                            <h6 class="pc__title"><a href="{{ route('shop.product.details', ['product_slug' => $product->slug]) }}">{{ $product->name }}</a></h6>
+                            <div class="product-card__price d-flex justify-content-center">
+                                @if ($product->sale_price)
+                                    <span class="money price-sale">${{ $product->sale_price }}</span>
+                                    <span class="money price-old">${{ $product->regular_price }}</span>
+                                @else
+                                    <span class="money price text-secondary">${{ $product->regular_price }}</span>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endforeach
+        </div>
+    </section>
+
+    {{-- 6. Testimonials Section --}}
+    <section class="container section-padding reveal-on-scroll">
+        <h2 class="section-title text-center">What Our Customers Say</h2>
+        <div class="row">
+            <div class="col-md-4">
+                <div class="testimonial-card">
+                    <img src="https://placehold.co/80x80" alt="Customer">
+                    <p class="fst-italic">"Amazing quality and fast shipping! I'm very happy with my purchase and will definitely shop here again."</p>
+                    <h6 class="mt-3 mb-0">Fatima Zahra</h6>
+                    <small class="text-muted">Casablanca</small>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="testimonial-card">
+                    <img src="https://placehold.co/80x80" alt="Customer">
+                    <p class="fst-italic">"The customer service was excellent. They helped me choose the perfect size. Highly recommended!"</p>
+                    <h6 class="mt-3 mb-0">Youssef Ahmed</h6>
+                    <small class="text-muted">Rabat</small>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="testimonial-card">
+                    <img src="https://placehold.co/80x80" alt="Customer">
+                    <p class="fst-italic">"I love the variety of products available. It's my new favorite online store for everything I need."</p>
+                    <h6 class="mt-3 mb-0">Amina Khalid</h6>
+                    <small class="text-muted">Marrakech</small>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    {{-- 7. Brands Section --}}
+    <section class="brands-section section-padding reveal-on-scroll">
+        <div class="container">
+            <h2 class="section-title text-center">Our Brands</h2>
+            <div class="row align-items-center">
+                @foreach($brands->take(6) as $brand)
+                <div class="col-6 col-md-2 text-center mb-4">
+                    <div class="brand-circle">
+                        <img src="{{ asset('storage/uploads/brands/' . $brand->image) }}" alt="{{ $brand->name }}" class="img-fluid brand-logo">
+                    </div>
+                </div>
+                @endforeach
+            </div>
+        </div>
+    </section>
+
+    {{-- 8. Newsletter Section --}}
+    <section class="newsletter-section section-padding reveal-on-scroll">
+        <div class="container text-center">
+            <h2 class="section-title">Join Our Newsletter</h2>
+            <p class="lead">Sign up now to receive exclusive offers and the latest news.</p>
+            <form class="d-flex justify-content-center mt-4">
+                <input type="email" class="form-control w-100 w-md-50 me-2" placeholder="Enter your email address">
+                <button type="submit" class="btn btn-dark">Subscribe</button>
+            </form>
+        </div>
+    </section>
+</main>
 @endsection
+
+@push('scripts')
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const observerOptions = {
+            root: null,
+            rootMargin: "0px",
+            threshold: 0.1
+        };
+
+        const observer = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('is-visible');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, observerOptions);
+
+        const elementsToReveal = document.querySelectorAll('.reveal-on-scroll');
+        elementsToReveal.forEach(el => {
+            observer.observe(el);
+        });
+    });
+</script>
+@endpush

@@ -63,7 +63,7 @@
                                     </td>
                                     <td>{{$user->mobile}}</td>
                                     <td>{{$user->email}}</td>
-                                    <td class="text-center"><a href="#" target="_blank">0</a></td>
+                                    <td class="text-center"><a href="#" target="_blank">{{$user->orders_count}}</a></td>
                                     <td>
                                         <div class="list-icon-function">
                                             <a href="#">

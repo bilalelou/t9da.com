@@ -80,9 +80,9 @@
                                                     <span class="badge bg-warning">Ordered</span>
                                                 @endif
                                             </td>
-                                            <td class="text-center">${{ $order->created_at }}</td>
-                                            <td class="text-center">${{ $order->orderItems->count() }}</td>
-                                            <td class="text-center">${{ $order->delivered_date }}</td>
+                                            <td class="text-center">{{ $order->created_at }}</td>
+                                            <td class="text-center">{{ $order->orderItems->count() }}</td>
+                                            <td class="text-center">{{ $order->delivered_date }}</td>
 
                                             <td class="text-center">
                                                 <a href="{{ route('user.order.details', ['order_id' => $order->id]) }}">
