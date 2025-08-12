@@ -9,6 +9,7 @@ use App\Models\Coupon;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
+use App\Models\ProductReview;
 use App\Models\Slide;
 use App\Models\Transaction;
 use App\Models\User;
@@ -700,4 +701,22 @@ class AdminController extends Controller
         return view('admin.user-edit', compact('user'));
     }
 
+    // Reviews
+    public function reviews()
+    {
+        $reviews = ProductReview::with(['user', 'product'])->orderBy('created_at', 'DESC')->paginate(10);
+        return view('admin.reviews', compact('reviews'));
+    }
+
+    public function approveReview(ProductReview $review)
+    {
+        $review->update(['is_approved' => true]);
+        return redirect()->route('admin.reviews')->with('status', 'Review has been approved successfully!');
+    }
+
+    public function deleteReview(ProductReview $review)
+    {
+        $review->delete();
+        return redirect()->route('admin.reviews')->with('status', 'Review has been deleted successfully!');
+    }
 }
