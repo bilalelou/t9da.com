@@ -29,7 +29,16 @@ class Product extends Model
         'images',
         'category_id',
         'brand_id',
+        'has_variants',
     ];
+
+    /**
+     * Get the variants for the product.
+     */
+    public function variants()
+    {
+        return $this->hasMany(ProductVariant::class);
+    }
 
     /**
      * Get the category that owns the product.

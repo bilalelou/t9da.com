@@ -126,20 +126,37 @@
                     </fieldset>
                     @error("images") <span class="alert alert-danger text-center">{{$message}}</span> @enderror
 
-                    <div class="cols gap22">
-                        <fieldset class="name">
-                            <div class="body-title mb-10">Regular Price <span class="tf-color-1">*</span></div>
-                            <input class="mb-10" type="text" placeholder="Enter regular price" name="regular_price" tabindex="0" value="" aria-required="true">
-                        </fieldset>
-                        @error("regular_price") <span class="alert alert-danger text-center">{{$message}}</span> @enderror
+                    <fieldset class="name">
+                        <div class="body-title mb-10">Product Type</div>
+                        <div class="flex items-center gap-10">
+                            <input type="checkbox" name="has_variants" id="has_variants">
+                            <label for="has_variants">This product has variants (e.g., sizes, colors)</label>
+                        </div>
+                    </fieldset>
 
-                        <fieldset class="name">
-                            <div class="body-title mb-10">Sale Price <span class="tf-color-1">*</span></div>
-                            <input class="mb-10" type="text" placeholder="Enter sale price" name="sale_price" tabindex="0" value="" aria-required="true">
-                        </fieldset>
-                        @error("sale_price") <span class="alert alert-danger text-center">{{$message}}</span> @enderror
+                    <div id="simple-product-fields">
+                        <div class="cols gap22">
+                            <fieldset class="name">
+                                <div class="body-title mb-10">Regular Price <span class="tf-color-1">*</span></div>
+                                <input class="mb-10" type="text" placeholder="Enter regular price" name="regular_price" tabindex="0" value="" aria-required="true">
+                            </fieldset>
+                            @error("regular_price") <span class="alert alert-danger text-center">{{$message}}</span> @enderror
+
+                            <fieldset class="name">
+                                <div class="body-title mb-10">Quantity <span class="tf-color-1">*</span></div>
+                                <input class="mb-10" type="text" placeholder="Enter quantity" name="quantity" tabindex="0" value="" aria-required="true">
+                            </fieldset>
+                            @error("quantity") <span class="alert alert-danger text-center">{{$message}}</span> @enderror
+                        </div>
                     </div>
 
+                    <div id="variable-product-fields" style="display: none;">
+                        <div class="body-title mb-10">Product Variants</div>
+                        <div id="variants-container">
+                            <!-- Variant rows will be added here -->
+                        </div>
+                        <button type="button" id="add-variant-btn" class="tf-button mt-10">Add Variant</button>
+                    </div>
 
                     <div class="cols gap22">
                         <fieldset class="name">
@@ -149,10 +166,10 @@
                         @error("SKU") <span class="alert alert-danger text-center">{{$message}}</span> @enderror
 
                         <fieldset class="name">
-                            <div class="body-title mb-10">Quantity <span class="tf-color-1">*</span></div>
-                            <input class="mb-10" type="text" placeholder="Enter quantity" name="quantity" tabindex="0" value="" aria-required="true">
+                            <div class="body-title mb-10">Sale Price</div>
+                            <input class="mb-10" type="text" placeholder="Enter sale price" name="sale_price" tabindex="0" value="">
                         </fieldset>
-                        @error("quantity") <span class="alert alert-danger text-center">{{$message}}</span> @enderror
+                        @error("sale_price") <span class="alert alert-danger text-center">{{$message}}</span> @enderror
                     </div>
 
                     <div class="cols gap22">
@@ -191,37 +208,71 @@
     <!-- /main-content-wrap -->
 @endsection
 @push("scripts")
-    <script>
-            $(function(){
-                $("#myFile").on("change",function(e){
-                    const photoInp = $("#myFile");
-                    const [file] = this.files;
-                    if (file) {
-                        $("#imgpreview img").attr('src',URL.createObjectURL(file));
-                        $("#imgpreview").show();
-                    }
-                });
-
-
-                $("#gFile").on("change",function(e){
-                    $(".gitems").remove();
-                    const gFile = $("gFile");
-                    const gphotos = this.files;
-                    $.each(gphotos,function(key,val){
-                        $("#galUpload").prepend(`<div class="item gitems"><img src="${URL.createObjectURL(val)}" alt=""></div>`);
-                    });
-                });
-
-
-                $("input[name='name']").on("change",function(){
-                    $("input[name='slug']").val(StringToSlug($(this).val()));
-                });
-
-            });
-            function StringToSlug(Text) {
-                return Text.toLowerCase()
-                .replace(/[^\w ]+/g, "")
-                .replace(/ +/g, "-");
+<script>
+    $(function() {
+        // Toggle fields based on checkbox
+        $('#has_variants').on('change', function() {
+            if ($(this).is(':checked')) {
+                $('#simple-product-fields').hide();
+                $('#variable-product-fields').show();
+                $('input[name="regular_price"]').prop('required', false);
+                $('input[name="quantity"]').prop('required', false);
+            } else {
+                $('#simple-product-fields').show();
+                $('#variable-product-fields').hide();
+                $('input[name="regular_price"]').prop('required', true);
+                $('input[name="quantity"]').prop('required', true);
             }
-    </script>
+        });
+
+        let variantIndex = 0;
+
+        // Add new variant row
+        $('#add-variant-btn').on('click', function() {
+            const variantHtml = `
+                <div class="variant-row cols gap22 mb-10">
+                    <input type="text" name="variants[${variantIndex}][size]" placeholder="Size (e.g., M)" class="flex-grow" required>
+                    <input type="text" name="variants[${variantIndex}][color]" placeholder="Color (e.g., Red)" class="flex-grow" required>
+                    <input type="number" name="variants[${variantIndex}][price]" placeholder="Price" class="flex-grow" required>
+                    <input type="number" name="variants[${variantIndex}][quantity]" placeholder="Quantity" class="flex-grow" required>
+                    <button type="button" class="tf-button remove-variant-btn">Remove</button>
+                </div>
+            `;
+            $('#variants-container').append(variantHtml);
+            variantIndex++;
+        });
+
+        // Remove variant row
+        $('#variants-container').on('click', '.remove-variant-btn', function() {
+            $(this).closest('.variant-row').remove();
+        });
+
+        // Other existing scripts
+        $("#myFile").on("change", function(e) {
+            const [file] = this.files;
+            if (file) {
+                $("#imgpreview img").attr('src', URL.createObjectURL(file));
+                $("#imgpreview").show();
+            }
+        });
+
+        $("#gFile").on("change", function(e) {
+            $(".gitems").remove();
+            const gphotos = this.files;
+            $.each(gphotos, function(key, val) {
+                $("#galUpload").prepend(`<div class="item gitems"><img src="${URL.createObjectURL(val)}" alt=""></div>`);
+            });
+        });
+
+        $("input[name='name']").on("change", function() {
+            $("input[name='slug']").val(StringToSlug($(this).val()));
+        });
+    });
+
+    function StringToSlug(Text) {
+        return Text.toLowerCase()
+            .replace(/[^\w ]+/g, "")
+            .replace(/ +/g, "-");
+    }
+</script>
 @endpush
