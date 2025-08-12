@@ -106,40 +106,82 @@
                         </div>
                         <span class="reviews-note text-lowercase text-secondary ms-1">8k+ reviews</span>
                     </div>
-                    <div class="product-single__price">
-                        <span class="current-price">
-                            @if ($product->sale_price)
-                                <s>${{ $product->regular_price }}</s> ${{ $product->sale_price }}
-                                {{ round((($product->regular_price - $product->sale_price) * 100) / $product->regular_price) }}
-                                %
-                                OFF
-                            @else
-                                {{ $product->regular_price }}
-                            @endif
-                        </span>
-                    </div>
-                    <div class="product-single__short-desc">
-                        <p>{{ $product->short_description }}</p>
-                    </div>
-                    @if (Cart::instance('cart')->content()->Where('id', $product->id)->count() > 0)
-                        <a href="{{ route('cart.index') }}" class="btn btn-warning mb-3">Go to Cart</a>
-                    @else
-                        <form name="addtocart-form" method="POST" action="{{ route('cart.add') }}">
+                    @if($product->has_variants)
+                        <div class="product-single__variants">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="variant-size">Size</label>
+                                        <select name="size" id="variant-size" class="form-control">
+                                            <option value="">Select Size</option>
+                                            @foreach($product->variants->unique('size') as $variant)
+                                                <option value="{{ $variant->size }}">{{ $variant->size }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="variant-color">Color</label>
+                                        <select name="color" id="variant-color" class="form-control" disabled>
+                                            <option value="">Select Color</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="product-single__price mt-3">
+                            <span class="current-price" id="variant-price"></span>
+                        </div>
+                        <div class="product-single__short-desc">
+                            <p>{{ $product->short_description }}</p>
+                        </div>
+
+                        <form name="addtocart-form" method="POST" action="{{ route('cart.add') }}" id="add-to-cart-form">
                             @csrf
                             <div class="product-single__addtocart">
                                 <div class="qty-control position-relative">
-                                    <input type="number" name="quantity" value="1" min="1"
-                                        class="qty-control__number text-center">
+                                    <input type="number" name="quantity" value="1" min="1" class="qty-control__number text-center">
                                     <div class="qty-control__reduce">-</div>
                                     <div class="qty-control__increase">+</div>
-                                </div><!-- .qty-control -->
-                                <input type="hidden" name="id" value="{{ $product->id }}" />
-                                <input type="hidden" name="name" value="{{ $product->name }}" />
-                                <input type="hidden" name="price"
-                                    value="{{ $product->sale_price == '' ? $product->regular_price : $product->sale_price }}" />
-                                <button type="submit" class="btn btn-primary">Add to Cart</button>
+                                </div>
+                                <input type="hidden" name="id" value="{{ $product->id }}">
+                                <input type="hidden" name="variant_id" id="selected-variant-id" value="">
+                                <button type="submit" class="btn btn-primary" id="add-to-cart-btn" disabled>Add to Cart</button>
                             </div>
                         </form>
+                    @else
+                        <div class="product-single__price">
+                            <span class="current-price">
+                                @if ($product->sale_price)
+                                    <s>${{ $product->regular_price }}</s> ${{ $product->sale_price }}
+                                @else
+                                    ${{ $product->regular_price }}
+                                @endif
+                            </span>
+                        </div>
+                        <div class="product-single__short-desc">
+                            <p>{{ $product->short_description }}</p>
+                        </div>
+                        @if (Cart::instance('cart')->content()->Where('id', $product->id)->count() > 0)
+                            <a href="{{ route('cart.index') }}" class="btn btn-warning mb-3">Go to Cart</a>
+                        @else
+                            <form name="addtocart-form" method="POST" action="{{ route('cart.add') }}">
+                                @csrf
+                                <div class="product-single__addtocart">
+                                    <div class="qty-control position-relative">
+                                        <input type="number" name="quantity" value="1" min="1" class="qty-control__number text-center">
+                                        <div class="qty-control__reduce">-</div>
+                                        <div class="qty-control__increase">+</div>
+                                    </div>
+                                    <input type="hidden" name="id" value="{{ $product->id }}" />
+                                    <input type="hidden" name="name" value="{{ $product->name }}" />
+                                    <input type="hidden" name="price" value="{{ $product->sale_price ?? $product->regular_price }}" />
+                                    <button type="submit" class="btn btn-primary">Add to Cart</button>
+                                </div>
+                            </form>
+                        @endif
                     @endif
                     <div class="product-single__addtolinks">
                         @if (Cart::instance('wishlist')->content()->where('id', $product->id)->count() > 0)
@@ -514,3 +556,60 @@
         </section><!-- /.products-carousel container -->
     </main>
 @endsection
+
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const productVariants = @json($product->variants);
+        const sizeSelector = document.getElementById('variant-size');
+        const colorSelector = document.getElementById('variant-color');
+        const priceDisplay = document.getElementById('variant-price');
+        const addToCartButton = document.getElementById('add-to-cart-btn');
+        const selectedVariantIdField = document.getElementById('selected-variant-id');
+
+        if (sizeSelector) {
+            sizeSelector.addEventListener('change', function() {
+                const selectedSize = this.value;
+                colorSelector.innerHTML = '<option value="">Select Color</option>';
+                colorSelector.disabled = true;
+                priceDisplay.textContent = '';
+                addToCartButton.disabled = true;
+                selectedVariantIdField.value = '';
+
+                if (selectedSize) {
+                    const availableColors = [...new Set(productVariants
+                        .filter(v => v.size === selectedSize)
+                        .map(v => v.color))];
+
+                    availableColors.forEach(color => {
+                        const option = document.createElement('option');
+                        option.value = color;
+                        option.textContent = color;
+                        colorSelector.appendChild(option);
+                    });
+                    colorSelector.disabled = false;
+                }
+            });
+        }
+
+        if (colorSelector) {
+            colorSelector.addEventListener('change', function() {
+                const selectedSize = sizeSelector.value;
+                const selectedColor = this.value;
+                priceDisplay.textContent = '';
+                addToCartButton.disabled = true;
+                selectedVariantIdField.value = '';
+
+                if (selectedSize && selectedColor) {
+                    const selectedVariant = productVariants.find(v => v.size === selectedSize && v.color === selectedColor);
+                    if (selectedVariant) {
+                        priceDisplay.textContent = `$${selectedVariant.price}`;
+                        selectedVariantIdField.value = selectedVariant.id;
+                        addToCartButton.disabled = false;
+                    }
+                }
+            });
+        }
+    });
+</script>
+@endpush

@@ -9,6 +9,7 @@ use App\Models\Coupon;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Models\Slide;
 use App\Models\Transaction;
 use App\Models\User;
@@ -265,23 +266,34 @@ class AdminController extends Controller
             'brand_id' => 'required|exists:brands,id',
             'short_description' => 'required',
             'description' => 'required',
-            'regular_price' => 'required|numeric|min:0',
-             'sale_price' => 'required|numeric',
+            'regular_price' => 'nullable|required_if:has_variants,false|numeric|min:0',
+            'sale_price' => 'nullable|numeric',
             'SKU' => 'required',
             'stock_status' => 'required',
             'featured' => 'required',
-            'quantity' => 'required|integer',
+            'quantity' => 'nullable|required_if:has_variants,false|integer',
             'image' => 'required|image|mimes:png,jpg,jpeg|max:2048',
             'images.*' => 'nullable|image|mimes:png,jpg,jpeg|max:2048',
+            'has_variants' => 'boolean',
+            'variants' => 'nullable|required_if:has_variants,true|array',
+            'variants.*.size' => 'required|string',
+            'variants.*.color' => 'required|string',
+            'variants.*.price' => 'required|numeric|min:0',
+            'variants.*.quantity' => 'required|integer|min:0',
         ]);
 
-        $product = new Product();
-        $product->fill($request->except('image', 'images'));
-        $product->slug = Str::slug($request->name);
+        $productData = $request->except(['image', 'images', 'variants']);
+        $productData['slug'] = Str::slug($request->name);
+        $productData['has_variants'] = $request->has('has_variants');
+
+        if ($productData['has_variants']) {
+            $productData['regular_price'] = null;
+            $productData['quantity'] = null;
+        }
 
         if ($request->hasFile('image')) {
             $path = $request->file('image')->store('products', 'public_uploads');
-            $product->image = $path;
+            $productData['image'] = $path;
         }
 
         if ($request->hasFile('images')) {
@@ -290,10 +302,16 @@ class AdminController extends Controller
                 $path = $file->store('products', 'public_uploads');
                 $gallery_paths[] = $path;
             }
-            $product->images = implode(',', $gallery_paths);
+            $productData['images'] = implode(',', $gallery_paths);
         }
 
-        $product->save();
+        $product = Product::create($productData);
+
+        if ($productData['has_variants'] && $request->has('variants')) {
+            foreach ($request->variants as $variantData) {
+                $product->variants()->create($variantData);
+            }
+        }
 
         return redirect()->route('admin.products')->with('status', 'Product has been added successfully!');
     }
@@ -367,47 +385,46 @@ class AdminController extends Controller
 
     public function update_product(Request $request)
     {
+        $product = Product::findOrFail($request->id);
+
         $request->validate([
             'name' => 'required|string|max:255',
-            'slug' => 'required|unique:products,slug,' . $request->id,
+            'slug' => 'required|unique:products,slug,' . $product->id,
             'category_id' => 'required|exists:categories,id',
             'brand_id' => 'required|exists:brands,id',
             'short_description' => 'required|string|max:500',
             'description' => 'required|string',
-            'regular_price' => 'required|numeric|min:0',
+            'regular_price' => 'nullable|required_if:has_variants,false|numeric|min:0',
             'sale_price' => 'nullable|numeric|min:0',
             'SKU' => 'required|string|max:100',
             'stock_status' => 'required|in:instock,outofstock',
             'featured' => 'required|boolean',
-            'quantity' => 'required|integer|min:0',
+            'quantity' => 'nullable|required_if:has_variants,false|integer|min:0',
             'image' => 'nullable|image|mimes:png,jpg,jpeg|max:2048',
-            'images.*' => 'nullable|image|mimes:png,jpg,jpeg|max:2048'
+            'images.*' => 'nullable|image|mimes:png,jpg,jpeg|max:2048',
+            'has_variants' => 'boolean',
+            'variants' => 'nullable|required_if:has_variants,true|array',
+            'variants.*.size' => 'required|string',
+            'variants.*.color' => 'required|string',
+            'variants.*.price' => 'required|numeric|min:0',
+            'variants.*.quantity' => 'required|integer|min:0',
         ]);
 
-        $product = Product::findOrFail($request->id); // استخدام findOrFail أفضل
+        $productData = $request->except(['image', 'images', 'variants', '_method', '_token', 'id']);
+        $productData['slug'] = Str::slug($request->name);
+        $productData['has_variants'] = $request->has('has_variants');
 
-        $product->name = $request->name;
-        $product->slug = Str::slug($request->name); // يمكنك استخدام slug من الـ request مباشرة
-        $product->short_description = $request->short_description;
-        $product->description = $request->description;
-        $product->regular_price = $request->regular_price;
-        $product->sale_price = $request->sale_price;
-        $product->SKU = $request->SKU;
-        $product->stock_status = $request->stock_status;
-        $product->featured = $request->featured;
-        $product->quantity = $request->quantity;
-        $product->category_id = $request->category_id;
-        $product->brand_id = $request->brand_id;
+        if ($productData['has_variants']) {
+            $productData['regular_price'] = null;
+            $productData['quantity'] = null;
+        }
 
         if ($request->hasFile('image')) {
             if ($product->image && Storage::disk('public_uploads')->exists($product->image)) {
                 Storage::disk('public_uploads')->delete($product->image);
             }
-
-            $image_file = $request->file('image');
-            $file_name = time() . '.' . $image_file->getClientOriginalExtension();
-            $path = $image_file->storeAs('products', $file_name, 'public_uploads');
-            $product->image = $path; // $path سيكون 'products/filename.jpg'
+            $path = $request->file('image')->store('products', 'public_uploads');
+            $productData['image'] = $path;
         }
 
         if ($request->hasFile('images')) {
@@ -419,19 +436,24 @@ class AdminController extends Controller
                     }
                 }
             }
-
             $gallery_paths = [];
-            $counter = 1;
             foreach ($request->file('images') as $file) {
-                $gfilename = time() . '-' . $counter . '.' . $file->getClientOriginalExtension();
-                $gpath = $file->storeAs('products', $gfilename, 'public_uploads');
-                $gallery_paths[] = $gpath;
-                $counter++;
+                $path = $file->store('products', 'public_uploads');
+                $gallery_paths[] = $path;
             }
-            $product->images = implode(',', $gallery_paths); // استخدام فاصلة فقط بدون مسافة
+            $productData['images'] = implode(',', $gallery_paths);
         }
 
-        $product->save();
+        $product->update($productData);
+
+        // Delete old variants and add new ones
+        $product->variants()->delete();
+
+        if ($productData['has_variants'] && $request->has('variants')) {
+            foreach ($request->variants as $variantData) {
+                $product->variants()->create($variantData);
+            }
+        }
 
         return redirect()->route('admin.products')->with('status', 'Product has been updated successfully!');
     }
