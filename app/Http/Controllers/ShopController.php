@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Brand;
 use App\Models\Category;
+use App\Models\Order;
 use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class ShopController extends Controller
 {
@@ -61,9 +63,21 @@ class ShopController extends Controller
 
     public function product_details($product_slug)
     {
-        $product = Product::with('variants')->where("slug", $product_slug)->firstOrFail();
-        $rproducts = Product::where("slug", "<>", $product_slug)->inRandomOrder()->take(8)->get();
+    $product = Product::with('variants')->where("slug", $product_slug)->firstOrFail();
+    
+    $rproducts = Product::where("slug", "<>", $product_slug)->inRandomOrder()->take(8)->get();
 
-        return view('details', compact("product", "rproducts"));
+    $hasPurchased = false;
+    if (Auth::check()) {
+        $user = Auth::user();
+        $hasPurchased = Order::where('user_id', $user->id)
+            ->where('status', 'delivered')
+            ->whereHas('orderItems', function ($query) use ($product) {
+                $query->where('product_id', $product->id);
+            })
+            ->exists();
+    }
+
+    return view('details', compact('product', 'rproducts', 'hasPurchased'));
     }
 }

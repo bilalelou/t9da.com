@@ -6,6 +6,7 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ShopController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WishlistController;
+use App\Http\Controllers\ProductReviewController;
 use App\Http\Middleware\AuthAdmin;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -61,6 +62,8 @@ Route::middleware(['auth'])->group(function(){
     Route::post('/account-details/profile', [UserController::class, 'update_profile'])->name('user.profile.update');
     Route::post('/account-details/password', [UserController::class, 'update_password'])->name('user.password.update');
 
+    // Product Reviews
+    Route::post('/reviews/{product}', [ProductReviewController::class, 'store'])->name('reviews.store');
 });
 
 Route::middleware(['auth',AuthAdmin::class])->group(function(){
@@ -113,4 +116,8 @@ Route::middleware(['auth',AuthAdmin::class])->group(function(){
                         //users route//
     Route::get('/admin/users', [AdminController::class, 'users'])->name('admin.users');
 
+    // Product Reviews
+    Route::get('/admin/reviews', [AdminController::class, 'reviews'])->name('admin.reviews');
+    Route::post('/admin/reviews/approve/{review}', [AdminController::class, 'approveReview'])->name('admin.reviews.approve');
+    Route::delete('/admin/reviews/delete/{review}', [AdminController::class, 'deleteReview'])->name('admin.reviews.delete');
 });
