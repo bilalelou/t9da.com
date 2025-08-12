@@ -128,26 +128,53 @@
                         </div>
                     </fieldset>
 
-                    <div class="cols gap22">
-                        <fieldset class="name">
-                            <div class="body-title mb-10">Regular Price <span class="tf-color-1">*</span></div>
-                            <input class="mb-10" type="text" placeholder="Enter regular price" name="regular_price" tabindex="0" value="{{$product->regular_price}}" aria-required="true" required="">
-                        </fieldset>
-                        <fieldset class="name">
-                            <div class="body-title mb-10">Sale Price <span class="tf-color-1">*</span></div>
-                            <input class="mb-10" type="text" placeholder="Enter sale price" name="sale_price" tabindex="0" value="{{$product->sale_price}}" aria-required="true" required="">
-                        </fieldset>
+                    <fieldset class="name">
+                        <div class="body-title mb-10">Product Type</div>
+                        <div class="flex items-center gap-10">
+                            <input type="checkbox" name="has_variants" id="has_variants" {{ $product->has_variants ? 'checked' : '' }}>
+                            <label for="has_variants">This product has variants (e.g., sizes, colors)</label>
+                        </div>
+                    </fieldset>
+
+                    <div id="simple-product-fields" style="{{ $product->has_variants ? 'display: none;' : '' }}">
+                        <div class="cols gap22">
+                            <fieldset class="name">
+                                <div class="body-title mb-10">Regular Price <span class="tf-color-1">*</span></div>
+                                <input class="mb-10" type="text" placeholder="Enter regular price" name="regular_price" tabindex="0" value="{{$product->regular_price}}">
+                            </fieldset>
+                            <fieldset class="name">
+                                <div class="body-title mb-10">Quantity <span class="tf-color-1">*</span></div>
+                                <input class="mb-10" type="text" placeholder="Enter quantity" name="quantity" tabindex="0" value="{{$product->quantity}}">
+                            </fieldset>
+                        </div>
                     </div>
 
+                    <div id="variable-product-fields" style="{{ !$product->has_variants ? 'display: none;' : '' }}">
+                        <div class="body-title mb-10">Product Variants</div>
+                        <div id="variants-container">
+                            @if($product->has_variants)
+                                @foreach($product->variants as $index => $variant)
+                                <div class="variant-row cols gap22 mb-10">
+                                    <input type="text" name="variants[{{$index}}][size]" placeholder="Size" value="{{$variant->size}}" required>
+                                    <input type="text" name="variants[{{$index}}][color]" placeholder="Color" value="{{$variant->color}}" required>
+                                    <input type="number" name="variants[{{$index}}][price]" placeholder="Price" value="{{$variant->price}}" required>
+                                    <input type="number" name="variants[{{$index}}][quantity]" placeholder="Quantity" value="{{$variant->quantity}}" required>
+                                    <button type="button" class="tf-button remove-variant-btn">Remove</button>
+                                </div>
+                                @endforeach
+                            @endif
+                        </div>
+                        <button type="button" id="add-variant-btn" class="tf-button mt-10">Add Variant</button>
+                    </div>
 
                     <div class="cols gap22">
                         <fieldset class="name">
                             <div class="body-title mb-10">SKU <span class="tf-color-1">*</span></div>
-                            <input class="mb-10" type="text" placeholder="Enter SKU" name="SKU" tabindex="0" value="{{$product->SKU}}" aria-required="true" required="">
+                            <input class="mb-10" type="text" placeholder="Enter SKU" name="SKU" tabindex="0" value="{{$product->SKU}}" required>
                         </fieldset>
                         <fieldset class="name">
-                            <div class="body-title mb-10">Quantity <span class="tf-color-1">*</span></div>
-                            <input class="mb-10" type="text" placeholder="Enter quantity" name="quantity" tabindex="0" value="{{$product->quantity}}" aria-required="true" required="">
+                            <div class="body-title mb-10">Sale Price</div>
+                            <input class="mb-10" type="text" placeholder="Enter sale price" name="sale_price" tabindex="0" value="{{$product->sale_price}}">
                         </fieldset>
                     </div>
 
@@ -184,37 +211,68 @@
 @endsection
 
 @push("scripts")
-    <script>
-            $(function(){
-                $("#myFile").on("change",function(e){
-                    const photoInp = $("#myFile");
-                    const [file] = this.files;
-                    if (file) {
-                        $("#imgpreview img").attr('src',URL.createObjectURL(file));
-                        $("#imgpreview").show();
-                    }
-                });
-
-
-                $("#gFile").on("change",function(e){
-                    $(".gitems").remove();
-                    const gFile = $("gFile");
-                    const gphotos = this.files;
-                    $.each(gphotos,function(key,val){
-                        $("#galUpload").prepend(`<div class="item gitems"><img src="${URL.createObjectURL(val)}" alt=""></div>`);
-                    });
-                });
-
-
-                $("input[name='name']").on("change",function(){
-                    $("input[name='slug']").val(StringToSlug($(this).val()));
-                });
-
-            });
-            function StringToSlug(Text) {
-                return Text.toLowerCase()
-                .replace(/[^\w ]+/g, "")
-                .replace(/ +/g, "-");
+<script>
+    $(function() {
+        // Toggle fields based on checkbox
+        $('#has_variants').on('change', function() {
+            if ($(this).is(':checked')) {
+                $('#simple-product-fields').hide();
+                $('#variable-product-fields').show();
+            } else {
+                $('#simple-product-fields').show();
+                $('#variable-product-fields').hide();
             }
-    </script>
+        });
+
+        // Initialize variantIndex based on existing variants
+        let variantIndex = {{ $product->variants->count() }};
+
+        // Add new variant row
+        $('#add-variant-btn').on('click', function() {
+            const variantHtml = `
+                <div class="variant-row cols gap22 mb-10">
+                    <input type="text" name="variants[${variantIndex}][size]" placeholder="Size (e.g., M)" class="flex-grow" required>
+                    <input type="text" name="variants[${variantIndex}][color]" placeholder="Color (e.g., Red)" class="flex-grow" required>
+                    <input type="number" name="variants[${variantIndex}][price]" placeholder="Price" class="flex-grow" required>
+                    <input type="number" name="variants[${variantIndex}][quantity]" placeholder="Quantity" class="flex-grow" required>
+                    <button type="button" class="tf-button remove-variant-btn">Remove</button>
+                </div>
+            `;
+            $('#variants-container').append(variantHtml);
+            variantIndex++;
+        });
+
+        // Remove variant row
+        $('#variants-container').on('click', '.remove-variant-btn', function() {
+            $(this).closest('.variant-row').remove();
+        });
+
+        // Other existing scripts
+        $("#myFile").on("change", function(e) {
+            const [file] = this.files;
+            if (file) {
+                $("#imgpreview img").attr('src', URL.createObjectURL(file));
+                $("#imgpreview").show();
+            }
+        });
+
+        $("#gFile").on("change", function(e) {
+            $(".gitems").remove();
+            const gphotos = this.files;
+            $.each(gphotos, function(key, val) {
+                $("#galUpload").prepend(`<div class="item gitems"><img src="${URL.createObjectURL(val)}" alt=""></div>`);
+            });
+        });
+
+        $("input[name='name']").on("change", function() {
+            $("input[name='slug']").val(StringToSlug($(this).val()));
+        });
+    });
+
+    function StringToSlug(Text) {
+        return Text.toLowerCase()
+            .replace(/[^\w ]+/g, "")
+            .replace(/ +/g, "-");
+    }
+</script>
 @endpush

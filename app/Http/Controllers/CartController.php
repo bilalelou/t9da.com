@@ -22,8 +22,24 @@ class CartController extends Controller
     }
     public function addToCart(Request $request)
     {
-        Cart::instance('cart')->add($request->id,$request->name,$request->quantity,$request->price)->associate('App\Models\Product');
-        return redirect()->back();
+        if ($request->has('variant_id')) {
+            $variant = \App\Models\ProductVariant::findOrFail($request->variant_id);
+            $product = $variant->product;
+            $id = $variant->id;
+            $name = $product->name . ' (' . $variant->size . ', ' . $variant->color . ')';
+            $price = $variant->price;
+
+            Cart::instance('cart')->add($id, $name, $request->quantity, $price, ['product_id' => $product->id])->associate('App\Models\ProductVariant');
+        } else {
+            $product = \App\Models\Product::findOrFail($request->id);
+            $id = $product->id;
+            $name = $product->name;
+            $price = $product->sale_price ?? $product->regular_price;
+
+            Cart::instance('cart')->add($id, $name, $request->quantity, $price)->associate('App\Models\Product');
+        }
+
+        return redirect()->back()->with('success', 'Product added to cart!');
     }
 
     public function increase_item_quantity($rowId)
