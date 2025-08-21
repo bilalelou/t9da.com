@@ -157,112 +157,7 @@ const sampleProducts: Product[] = [
   }
 ];
 
-// Header Component
-const Header = () => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  return (
-    <header className="bg-white shadow-sm sticky top-0 z-40">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2 space-x-reverse">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-lg">م</span>
-            </div>
-            <span className="text-xl font-bold text-gray-900">متجري</span>
-          </Link>
-
-          {/* Navigation */}
-          <nav className="hidden md:flex items-center space-x-8 space-x-reverse">
-            <Link href="/" className="text-gray-700 hover:text-blue-600 transition-colors">
-              الرئيسية
-            </Link>
-            <Link href="/products" className="text-blue-600 font-semibold">
-              المنتجات
-            </Link>
-            <Link href="/about" className="text-gray-700 hover:text-blue-600 transition-colors">
-              من نحن
-            </Link>
-            <Link href="/contact" className="text-gray-700 hover:text-blue-600 transition-colors">
-              اتصل بنا
-            </Link>
-          </nav>
-
-          {/* Actions */}
-          <div className="flex items-center space-x-4 space-x-reverse">
-            {/* Search Icon */}
-            <button className="p-2 text-gray-700 hover:text-blue-600 transition-colors">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </button>
-
-            {/* Wishlist Icon */}
-            <button className="p-2 text-gray-700 hover:text-red-600 transition-colors relative">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-              </svg>
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                2
-              </span>
-            </button>
-
-            {/* Shopping Cart Icon */}
-            <button className="p-2 text-gray-700 hover:text-blue-600 transition-colors relative">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m0 0h8m-8 0a2 2 0 100 4 2 2 0 000-4zm8 0a2 2 0 100 4 2 2 0 000-4z" />
-              </svg>
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                3
-              </span>
-            </button>
-
-            <Link href="/login" className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-              تسجيل الدخول
-            </Link>
-          </div>
-
-          {/* Mobile menu button */}
-          <button
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="md:hidden p-2 text-gray-700"
-          >
-            {isMenuOpen ? (
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            ) : (
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            )}
-          </button>
-        </div>
-
-        {/* Mobile menu */}
-        {isMenuOpen && (
-          <div className="md:hidden py-4 border-t border-gray-200">
-            <nav className="flex flex-col space-y-2">
-              <Link href="/" className="py-2 text-gray-700 hover:text-blue-600 transition-colors">
-                الرئيسية
-              </Link>
-              <Link href="/products" className="py-2 text-blue-600 font-semibold">
-                المنتجات
-              </Link>
-              <Link href="/about" className="py-2 text-gray-700 hover:text-blue-600 transition-colors">
-                من نحن
-              </Link>
-              <Link href="/contact" className="py-2 text-gray-700 hover:text-blue-600 transition-colors">
-                اتصل بنا
-              </Link>
-            </nav>
-          </div>
-        )}
-      </div>
-    </header>
-  );
-};
 
 // Main Products Page Component
 export default function ProductsPage() {
@@ -372,10 +267,7 @@ export default function ProductsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50" dir="rtl">
-      <Header />
-
-      <main className="py-6 sm:py-8 lg:py-12">
+    <div className="py-6 sm:py-8 lg:py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Breadcrumb */}
           <nav className="flex items-center space-x-2 space-x-reverse text-sm text-gray-500 mb-6 sm:mb-8">
@@ -1011,8 +903,7 @@ export default function ProductsPage() {
               </div>
             </div>
           )}
-        </div>
-      </main>
+      </div>
     </div>
   );
 }

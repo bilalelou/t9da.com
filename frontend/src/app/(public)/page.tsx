@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ShoppingCart, Search, Menu, X, Star, ChevronRight, Truck, ShieldCheck, Award } from 'lucide-react';
+import { ShoppingCart } from 'lucide-react';
 
 // --- Define a type for our Product and Category data ---
 interface Product {
@@ -18,44 +18,7 @@ interface Category {
   icon: string;
 }
 
-// --- 1. Navbar Component ---
-const Navbar = () => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  return (
-    <nav className="bg-white/80 backdrop-blur-md shadow-sm sticky top-0 z-50">
-      <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20">
-          <Link href="/" className="text-3xl font-bold text-gray-900 hover:text-indigo-600 transition-colors">متجري</Link>
-          <div className="hidden lg:flex lg:items-center lg:space-x-10">
-            <a href="/" className="text-gray-700 hover:text-indigo-600 font-semibold transition-colors duration-300">الرئيسية</a>
-            <a href="#" className="text-gray-700 hover:text-indigo-600 font-semibold transition-colors duration-300">التصنيفات</a>
-            <a href="#" className="text-gray-700 hover:text-indigo-600 font-semibold transition-colors duration-300">الأكثر مبيعاً</a>
-            <a href="#" className="text-gray-700 hover:text-indigo-600 font-semibold transition-colors duration-300">تواصل معنا</a>
-          </div>
-          <div className="flex items-center space-x-5">
-            <button className="text-gray-500 hover:text-indigo-600 transition-colors duration-300"><Search size={22} /></button>
-            <button className="text-gray-500 hover:text-indigo-600 relative transition-colors duration-300">
-              <ShoppingCart size={22} />
-              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">3</span>
-            </button>
-            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="lg:hidden text-gray-600 hover:text-indigo-600">
-              {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
-          </div>
-        </div>
-      </div>
-      {isMenuOpen && (
-        <div className="lg:hidden px-4 pt-2 pb-4 space-y-2 border-t">
-          <a href="/" className="block text-gray-700 hover:text-indigo-600 font-semibold py-2">الرئيسية</a>
-          <a href="#" className="block text-gray-700 hover:text-indigo-600 font-semibold py-2">التصنيفات</a>
-          <a href="#" className="block text-gray-700 hover:text-indigo-600 font-semibold py-2">الأكثر مبيعاً</a>
-          <a href="#" className="block text-gray-700 hover:text-indigo-600 font-semibold py-2">تواصل معنا</a>
-        </div>
-      )}
-    </nav>
-  );
-};
 
 // --- 2. Hero Section Component ---
 const HeroSection = () => {
@@ -179,26 +142,15 @@ const FeaturedProducts = () => {
   );
 };
 
-// --- 8. Footer Component ---
-const Footer = () => (
-    <footer className="bg-gray-900 text-white">
-      <div className="max-w-screen-xl mx-auto py-12 px-4 sm:px-6 lg:px-8 text-center">
-        <p>&copy; {new Date().getFullYear()} متجري. جميع الحقوق محفوظة.</p>
-      </div>
-    </footer>
-);
+
 
 // --- Main Home Page ---
 export default function HomePage() {
   return (
-    <div className="font-sans bg-white">
-      <Navbar />
-      <main>
-        <HeroSection />
-        <CategoriesSection />
-        <FeaturedProducts />
-      </main>
-      <Footer />
+    <div className="font-sans">
+      <HeroSection />
+      <CategoriesSection />
+      <FeaturedProducts />
     </div>
   );
 }
