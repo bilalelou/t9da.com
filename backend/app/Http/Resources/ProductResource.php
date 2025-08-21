@@ -18,7 +18,7 @@ class ProductResource extends JsonResource
             // (FINAL FIX) Decode the JSON string from the database
             // نقوم بتحويل النص الذي يحتوي على JSON إلى مصفوفة حقيقية
             'images' => json_decode($this->images) ?? [], // إذا فشل التحويل، نرجع مصفوفة فارغة
-            'created_at' => $this->created_at ? $this->created_at->format('Y-m-d H:i:s') : null,
+            'created_at' => $this->created_at->format('Y-m-d H:i:s'),
         ];
     }
 }
