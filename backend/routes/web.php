@@ -115,4 +115,9 @@ Route::middleware(['auth',AuthAdmin::class])->group(function(){
     Route::get('/admin/users', [AdminController::class, 'users'])->name('admin.users');
 
     Route::get('/shipping-fees', [ShippingFeeController::class, 'index'])->name('admin.shipping_fees');
+    Route::get('/shipping-fees/add', [ShippingFeeController::class, 'create'])->name('admin.shipping_fees.add');
+    Route::post('/shipping-fees/store', [ShippingFeeController::class, 'store'])->name('admin.shipping_fees.store');
+    Route::get('/shipping-fees/{id}/edit', [ShippingFeeController::class, 'edit'])->name('admin.shipping_fees.edit');
+    Route::put('/shipping-fees/{id}/update', [ShippingFeeController::class, 'update'])->name('admin.shipping_fees.update');
+    Route::delete('/shipping-fees/{id}/delete', [ShippingFeeController::class, 'destroy'])->name('admin.shipping_fees.destroy');
 });

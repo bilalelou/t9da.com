@@ -1,16 +1,49 @@
 @extends('layouts.admin')
 
 @section('content')
-    <div class="main-content">
-        <div class="container-fluid">
-            <div class="row">
-                <div class="col-md-12">
-                    <div class="d-flex justify-content-between align-items-center mb-4">
-                        <h4 class="box-title">Shipping Fees Management</h4>
-                        {{-- You can add a button here if needed --}}
-                    </div>
+<div class="main-content-inner">
+    <div class="main-content-wrap">
+        {{-- Header and Breadcrumbs --}}
+        <div class="flex items-center flex-wrap justify-between gap20 mb-27">
+            <h3>Shipping Fees</h3>
+            <ul class="breadcrumbs flex items-center flex-wrap justify-start gap10">
+                <li>
+                    <a href="{{ route('admin.index') }}">
+                        <div class="text-tiny">Dashboard</div>
+                    </a>
+                </li>
+                <li>
+                    <i class="icon-chevron-right"></i>
+                </li>
+                <li>
+                    <div class="text-tiny">Shipping Fees</div>
+                </li>
+            </ul>
+        </div>
 
-                    {{-- Session Messages for Success/Error --}}
+        {{-- Main Content Box --}}
+        <div class="wg-box">
+            <div class="flex items-center justify-between gap10 flex-wrap">
+                <div class="wg-filter flex-grow">
+                    {{-- Search Form --}}
+                    <form class="form-search">
+                        <fieldset class="name">
+                            <input type="text" placeholder="Search here..." class="" name="name" tabindex="2" value="" aria-required="true" required="">
+                        </fieldset>
+                        <div class="button-submit">
+                            <button class="" type="submit"><i class="icon-search"></i></button>
+                        </div>
+                    </form>
+                </div>
+                {{-- Add New Button --}}
+                <a class="tf-button style-1 w208" href="{{ route('admin.shipping_fees.add') }}">
+                    <i class="icon-plus"></i>Add New
+                </a>
+            </div>
+
+            <div class="wg-table table-all-user">
+                <div class="table-responsive">
+                    {{-- Success/Error Messages --}}
                     @if (session('success'))
                         <div class="alert alert-success" role="alert">
                             {{ session('success') }}
@@ -22,77 +55,79 @@
                         </div>
                     @endif
 
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="box-content card">
-                                <div class="card-header">
-                                    <h5 class="card-title">Add New Shipping Region</h5>
-                                </div>
-                                <div class="card-body">
-                                    {{-- The form should point to a 'store' route --}}
-                                    <form action="#" method="POST">
-                                        @csrf
-                                        <div class="mb-3">
-                                            <label for="region" class="form-label">Region Name</label>
-                                            <input type="text" class="form-control" id="region" name="region" placeholder="e.g., Inside City" required>
+                    {{-- Shipping Fees Table --}}
+                    <table class="table table-striped table-bordered">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Region Name</th>
+                                <th>Cost</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($shipping_fees as $fee)
+                                <tr>
+                                    <td>{{ $fee->id }}</td>
+                                    <td>{{ $fee->region }}</td>
+                                    <td>${{ number_format($fee->cost, 2) }}</td>
+                                    <td>
+                                        <div class="list-icon-function">
+                                            {{-- Edit Action --}}
+                                            <a href="{{ route('admin.shipping_fees.edit', ['id' => $fee->id]) }}">
+                                                <div class="item edit">
+                                                    <i class="icon-edit-3"></i>
+                                                </div>
+                                            </a>
+                                            {{-- Delete Action --}}
+                                            <form action="{{ route('admin.shipping_fees.destroy', ['id' => $fee->id]) }}" method="POST" class="delete-form">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="button" class="item text-danger delete-button" style="background:none; border:none; cursor:pointer; padding:0;">
+                                                    <i class="icon-trash-2"></i>
+                                                </button>
+                                            </form>
                                         </div>
-                                        <div class="mb-3">
-                                            <label for="cost" class="form-label">Shipping Cost ($)</label>
-                                            <input type="number" step="0.01" class="form-control" id="cost" name="cost" placeholder="e.g., 10.50" required>
-                                        </div>
-                                        <button type="submit" class="btn btn-primary w-100">Add Region</button>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-md-8">
-                            <div class="box-content card">
-                                <div class="card-header">
-                                    <h5 class="card-title">Existing Shipping Regions</h5>
-                                </div>
-                                <div class="card-body">
-                                    <div class="table-responsive">
-                                        <table class="table">
-                                            <thead>
-                                                <tr>
-                                                    <th>#</th>
-                                                    <th>Region Name</th>
-                                                    <th>Shipping Cost</th>
-                                                    <th>Actions</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                @forelse ($shipping_fees as $fee)
-                                                    <tr>
-                                                        <td>{{ $fee->id }}</td>
-                                                        <td>{{ $fee->region }}</td>
-                                                        <td>${{ number_format($fee->cost, 2) }}</td>
-                                                        <td>
-                                                            {{-- Edit and Delete buttons --}}
-                                                            {{-- Note: You will need to create routes and methods for these actions --}}
-                                                            <a href="#" class="btn btn-sm btn-info">Edit</a>
-                                                            <form action="{{ route('admin.shipping_fees.destroy', $fee->id) }}" method="POST" style="display:inline-block;">
-                                                                @csrf
-                                                                @method('DELETE')
-                                                                <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this?')">Delete</button>
-                                                            </form>
-                                                        </td>
-                                                    </tr>
-                                                @empty
-                                                    <tr>
-                                                        <td colspan="4" class="text-center">No shipping fees defined yet.</td>
-                                                    </tr>
-                                                @endforelse
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="4" class="text-center">No shipping fees have been added yet.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+                <div class="divider"></div>
+                <div class="flex items-center justify-between flex-wrap gap10 wgp-pagination">
+                    {{-- Pagination Links --}}
+                    {{ $shipping_fees->links('pagination::bootstrap-5') }}
                 </div>
             </div>
         </div>
     </div>
+</div>
 @endsection
+
+@push('scripts')
+<script>
+    // SweetAlert for delete confirmation
+    $(function() {
+        $('.delete-button').on('click', function(e) {
+            e.preventDefault();
+            var form = $(this).closest('form');
+            swal({
+                title: "Are you sure?",
+                text: "You want to delete this shipping fee?",
+                type: "warning",
+                buttons: ["Cancel", "Yes, delete it!"],
+                dangerMode: true,
+            }).then(function(willDelete) {
+                if (willDelete) {
+                    form.submit();
+                }
+            });
+        });
+    });
+</script>
+@endpush
