@@ -30,7 +30,7 @@
                                 </div>
                                 <div class="card-body">
                                     {{-- The form should point to a 'store' route --}}
-                                    <form action="{{ route('admin.shipping_fees.store') }}" method="POST">
+                                    <form action="#" method="POST">
                                         @csrf
                                         <div class="mb-3">
                                             <label for="region" class="form-label">Region Name</label>
@@ -71,7 +71,7 @@
                                                         <td>
                                                             {{-- Edit and Delete buttons --}}
                                                             {{-- Note: You will need to create routes and methods for these actions --}}
-                                                            <a href="{{ route('admin.shipping_fees.edit', $fee->id) }}" class="btn btn-sm btn-info">Edit</a>
+                                                            <a href="#" class="btn btn-sm btn-info">Edit</a>
                                                             <form action="{{ route('admin.shipping_fees.destroy', $fee->id) }}" method="POST" style="display:inline-block;">
                                                                 @csrf
                                                                 @method('DELETE')
