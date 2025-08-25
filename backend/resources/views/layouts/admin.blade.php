@@ -148,7 +148,7 @@
                                     </a>
                                 </li>
                                 <li class="menu-item">
-                                    <a href="#" class="">
+                                    <a href="{{ route('admin.shipping_fees') }}" class="">
                                         <div class="icon"><i class="icon-truck"></i></div> {{-- Using an example icon --}}
                                         <div class="text">Shipping Fees</div>
                                     </a>
