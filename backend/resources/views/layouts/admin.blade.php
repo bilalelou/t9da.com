@@ -148,6 +148,12 @@
                                     </a>
                                 </li>
                                 <li class="menu-item">
+                                    <a href="#" class="">
+                                        <div class="icon"><i class="icon-truck"></i></div> {{-- Using an example icon --}}
+                                        <div class="text">Shipping Fees</div>
+                                    </a>
+                                </li>
+                                <li class="menu-item">
                                     <a href="{{ route('admin.contacts') }}" class="">
                                         <div class="icon"><i class="icon-mail"></i></div>
                                         <div class="text">Messages</div>
@@ -155,7 +161,7 @@
                                 </li>
 
                                 <li class="menu-item">
-                                    <a href="{{route('admin.users')}}" class="">
+                                    <a href="{{ route('admin.users') }}" class="">
                                         <div class="icon"><i class="icon-user"></i></div>
                                         <div class="text">User</div>
                                     </a>
@@ -169,11 +175,13 @@
                                 </li>
 
                                 <li class="menu-item">
-                                    <a href="{{ route('logout') }}" onclick="event.preventDefault(); document.getElementById('logout-form-sidebar').submit();">
+                                    <a href="{{ route('logout') }}"
+                                        onclick="event.preventDefault(); document.getElementById('logout-form-sidebar').submit();">
                                         <div class="icon"><i class="icon-log-out"></i></div>
                                         <div class="text">Logout</div>
                                     </a>
-                                    <form id="logout-form-sidebar" method="POST" action="{{ route('logout') }}" style="display: none;">
+                                    <form id="logout-form-sidebar" method="POST" action="{{ route('logout') }}"
+                                        style="display: none;">
                                         @csrf
                                     </form>
                                 </li>
@@ -336,12 +344,14 @@
                                                     <div class="body-title-2">Support</div>
                                                 </a>
                                             </li>
-                                                <li>
-                                                <a href="{{ route('logout') }}" class="user-item" onclick="event.preventDefault(); document.getElementById('logout-form-header').submit();">
+                                            <li>
+                                                <a href="{{ route('logout') }}" class="user-item"
+                                                    onclick="event.preventDefault(); document.getElementById('logout-form-header').submit();">
                                                     <div class="icon"><i class="icon-log-out"></i></div>
                                                     <div class="body-title-2">Log out</div>
                                                 </a>
-                                                <form id="logout-form-header" method="POST" action="{{ route('logout') }}" style="display: none;">
+                                                <form id="logout-form-header" method="POST"
+                                                    action="{{ route('logout') }}" style="display: none;">
                                                     @csrf
                                                 </form>
                                             </li>

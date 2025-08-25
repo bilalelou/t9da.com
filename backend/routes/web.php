@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\ShippingFeeController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\HomeController;
@@ -113,4 +114,5 @@ Route::middleware(['auth',AuthAdmin::class])->group(function(){
                         //users route//
     Route::get('/admin/users', [AdminController::class, 'users'])->name('admin.users');
 
+    Route::get('/shipping-fees', [ShippingFeeController::class, 'index'])->name('admin.shipping_fees');
 });
