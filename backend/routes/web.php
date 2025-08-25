@@ -114,12 +114,27 @@ Route::middleware(['auth',AuthAdmin::class])->group(function(){
                         //users route//
     Route::get('/admin/users', [AdminController::class, 'users'])->name('admin.users');
 
-    Route::prefix('shipping-fees')->name('shipping_fees.')->group(function () {
-        Route::get('/', [ShippingFeeController::class, 'index'])->name('index'); // Becomes admin.shipping_fees.index
-        Route::get('/add', [ShippingFeeController::class, 'create'])->name('add'); // Becomes admin.shipping_fees.add
-        Route::post('/store', [ShippingFeeController::class, 'store'])->name('store'); // Becomes admin.shipping_fees.store
-        Route::get('/edit/{id}', [ShippingFeeController::class, 'edit'])->name('edit'); // Becomes admin.shipping_fees.edit
-        Route::put('/update/{id}', [ShippingFeeController::class, 'update'])->name('update'); // Becomes admin.shipping_fees.update
-        Route::delete('/delete/{id}', [ShippingFeeController::class, 'destroy'])->name('destroy'); // Becomes admin.shipping_fees.destroy
+    Route::prefix('admin')->name('admin.')->group(function () {
+
+        Route::prefix('shipping-fees')->name('shipping_fees.')->group(function () {
+            Route::get('/', [ShippingFeeController::class, 'index'])->name('index');
+            // Resulting name: admin.shipping_fees.index
+
+            Route::get('/add', [ShippingFeeController::class, 'create'])->name('add');
+            // Resulting name: admin.shipping_fees.add
+
+            Route::post('/store', [ShippingFeeController::class, 'store'])->name('store');
+            // Resulting name: admin.shipping_fees.store
+
+            Route::get('/edit/{id}', [ShippingFeeController::class, 'edit'])->name('edit');
+            // Resulting name: admin.shipping_fees.edit
+
+            Route::put('/update/{id}', [ShippingFeeController::class, 'update'])->name('update');
+            // Resulting name: admin.shipping_fees.update
+
+            Route::delete('/delete/{id}', [ShippingFeeController::class, 'destroy'])->name('destroy');
+            // Resulting name: admin.shipping_fees.destroy
+        });
     });
+
 });
