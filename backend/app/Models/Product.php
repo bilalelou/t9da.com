@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Product extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     /**
      * The attributes that are mass assignable.
@@ -30,6 +31,16 @@ class Product extends Model
         'category_id',
         'brand_id',
         'has_variants',
+    ];
+
+    protected $casts = [
+        'price' => 'decimal:2',
+        'compare_price' => 'decimal:2',
+        'cost_price' => 'decimal:2',
+        'track_quantity' => 'boolean',
+        'featured' => 'boolean',
+        'digital' => 'boolean',
+        'dimensions' => 'json',
     ];
 
     /**
@@ -62,5 +73,20 @@ class Product extends Model
     public function images()
     {
         return $this->hasMany(ProductImage::class);
+    }
+
+    public function primaryImage()
+    {
+        return $this->hasOne(ProductImage::class)->where('is_primary', true);
+    }
+
+    public function attributes()
+    {
+        return $this->hasMany(ProductAttribute::class);
+    }
+
+    public function reviews()
+    {
+        return $this->hasMany(Review::class);
     }
 }

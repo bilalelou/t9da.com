@@ -13,6 +13,7 @@
         "laravel/tinker": "^2.9",
         "laravel/ui": "^4.6",
         "league/flysystem": "^3.29",
+        "spatie/laravel-permission": "^6.21",
         "surfsidemedia/shoppingcart": "^2.0"
     },
     "require-dev": {
