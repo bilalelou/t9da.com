@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Hash;
 use App\Models\User;
 
 class LoginController extends Controller
@@ -19,29 +20,25 @@ class LoginController extends Controller
             'password' => 'required',
         ]);
 
-        // Attempt to authenticate the user
-        if (!Auth::attempt($request->only('email', 'password'))) {
+        $user = User::where('email', $request->email)->first();
+
+        if (! $user || ! Hash::check($request->password, $user->password)) {
             throw ValidationException::withMessages([
-                'message' => 'بيانات الاعتماد المقدمة غير صحيحة.',
+                'email' => ['The provided credentials do not match our records.'],
             ]);
         }
 
-        $user = User::where('email', $request->email)->firstOrFail();
+        $token = $user->createToken('api-token')->plainTextToken;
 
-        // Create a token for the user
-        $token = $user->createToken('api_token')->plainTextToken;
-
-        // Add the role to the user object
         $user->role = $user->getRoleNames()->first();
 
-        // Return a successful response with the token and user data
         return response()->json([
-            'message' => 'تم تسجيل الدخول بنجاح',
+            'success' => true,
+            'message' => 'Login successful',
             'user' => $user,
-            'token' => $token,
+            'token' => $token
         ]);
     }
-
     /**
      * Handle a logout request to the application.
      *

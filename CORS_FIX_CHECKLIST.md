@@ -132,3 +132,4 @@ curl -X GET http://127.0.0.1:8000/api/user \
 - سجلات الأخطاء في Laravel (`storage/logs/laravel.log`)
 - وحدة تحكم المتصفح (Console) للأخطاء
 - Network tab في أدوات المطور للطلبات الفاشلة
+

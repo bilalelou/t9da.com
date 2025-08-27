@@ -239,3 +239,4 @@ export default function LoginPage() {
 - تأكد من أن CSRF token يتم الحصول عليه قبل تسجيل الدخول
 - تأكد من أن التوكن يتم إرساله في header `Authorization`
 - تأكد من أن النطاقات مضبوطة بشكل صحيح في Laravel
+
