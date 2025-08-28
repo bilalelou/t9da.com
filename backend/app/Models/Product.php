@@ -25,6 +25,7 @@ class Product extends Model
         'SKU',
         'stock_status',
         'featured',
+        'has_variants',
         'quantity',
         'image',
         'images',
