@@ -41,7 +41,7 @@
                                                 <a data-fancybox="gallery"
                                                     href="{{ asset('storage/uploads/' . trim($gimg)) }}"
                                                     data-bs-toggle="tooltip" data-bs-placement="left" title="Zoom">
-                                                    <svg width="12" height="12" viewBox="0 0 16 16" fill="none"
+                                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"
                                                         xmlns="http://www.w3.org/2000/svg">
                                                         <use href="#icon_zoom" />
                                                     </svg>
