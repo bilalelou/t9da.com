@@ -18,7 +18,7 @@
                                         @if ($product->image)
                                             <img loading="lazy" class="h-auto"
                                                 src="{{ asset('storage/uploads/' . $product->image) }}" width="674"
-                                                height="674" alt="{{ $product->name }}" style="width:50%; height:auto; display:block; margin:0 auto;">
+                                                height="674" alt="{{ $product->name }}" style="width:70%; height:auto; display:block; margin:0 auto;">
                                             <a data-fancybox="gallery" href="{{ asset('storage/' . $product->image) }}"
                                                 data-bs-toggle="tooltip" data-bs-placement="left" title="Zoom">
                                                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none"
