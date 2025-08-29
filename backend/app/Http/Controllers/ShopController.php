@@ -50,7 +50,6 @@ class ShopController extends Controller
         $categories = Category::withCount('products')->orderBy("name", "ASC")->get();
         $brands = Brand::withCount('products')->orderBy("name", "ASC")->get();
 
-        info($products);
 
         return view('shop', compact('products', 'size', 'order', 'brands', 'f_brands', 'categories', 'f_categories') + [
             'min_price' => $min_price ?? 1,
