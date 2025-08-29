@@ -60,7 +60,7 @@
                                             </div>
                                         </td>
                                         <td>
-                                            <span class="shopping-cart__product-price">${{ $cartItem->price }}</span>
+                                            <span class="shopping-cart__product-price">MAD{{ $cartItem->price }}</span>
                                         </td>
                                         <td>
                                             <div class="qty-control position-relative">
@@ -81,7 +81,7 @@
                                             {{-- ======================================================= --}}
                                             {{-- تم إصلاح هذا السطر باستدعاء subtotal كدالة --}}
                                             {{-- ======================================================= --}}
-                                            <span class="shopping-cart__subtotal">${{ $cartItem->subtotal() }}</span>
+                                            <span class="shopping-cart__subtotal">MAD{{ $cartItem->subtotal() }}</span>
                                         </td>
                                         <td>
                                             <form method="POST" action="{{ route('cart.remove', ['rowId' => $cartItem->rowId]) }}">
@@ -133,7 +133,7 @@
                                     <tbody>
                                         <tr>
                                             <th>Subtotal</th>
-                                            <td>${{ Cart::instance('cart')->subtotal() }}</td>
+                                            <td>MAD{{ Cart::instance('cart')->subtotal() }}</td>
                                         </tr>
 
                                         @if (Session::has('checkout'))
@@ -146,23 +146,23 @@
                                                         <button type="submit" style="background:none; border:none; color:red; cursor:pointer; font-size:12px;">[Remove]</button>
                                                     </form>
                                                 </th>
-                                                <td>-${{ Session::get('checkout')['discount'] }}</td>
+                                                <td>-MAD{{ Session::get('checkout')['discount'] }}</td>
                                             </tr>
                                             <tr>
                                                 <th>Tax</th>
-                                                <td>${{ Session::get('checkout')['tax'] }}</td>
+                                                <td>MAD{{ Session::get('checkout')['tax'] }}</td>
                                             </tr>
                                             <tr>
                                                 <th>Total</th>
-                                                <td><strong>${{ Session::get('checkout')['total'] }}</strong></td>
+                                                <td><strong>MAD{{ Session::get('checkout')['total'] }}</strong></td>
                                             </tr>
                                         @else
                                             <tr>
                                                 <th>Tax</th>
-                                                <td>${{ Cart::instance('cart')->tax() }}</td>
+                                                <td>MAD{{ Cart::instance('cart')->tax() }}</td>
                                             </tr>
                                             <tr>
-                                                <td><strong>${{ Cart::instance('cart')->total() }}</strong></td>
+                                                <td><strong>MAD{{ Cart::instance('cart')->total() }}</strong></td>
                                             </tr>
                                         @endif
 
