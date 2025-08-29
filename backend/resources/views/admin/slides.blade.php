@@ -76,8 +76,7 @@
                                                 </div>
                                             </a>
 
-                                            <form action="{{ route('admin.slide.delete', ['id', $slide->id]) }}"
-                                                method="POST">
+                                            <form action="{{ route('admin.slide.delete', $slide->id) }}" method="POST">
                                                 @csrf
                                                 @method('DELETE')
                                                 <div class="item text-danger delete">

@@ -290,7 +290,7 @@ class AdminController extends Controller
             'featured' => 'required',
             'quantity' => 'nullable|required_if:has_variants,false|integer',
             'image' => 'required|image|mimes:png,jpg,jpeg|max:51200',
-            'images.*' => 'nullable|image|mimes:png,jpg,jpeg|max:51200',
+            'images' => 'nullable|array|max:12',
             'has_variants' => 'boolean',
             'variants' => 'nullable|required_if:has_variants,true|array',
             'variants.*.size' => 'required|string',
@@ -418,7 +418,12 @@ class AdminController extends Controller
             'featured' => 'required|boolean',
             'quantity' => 'nullable|required_if:has_variants,false|integer|min:0',
             'image' => 'nullable|image|mimes:png,jpg,jpeg|max:51200',
-            'images.*' => 'nullable|image|mimes:png,jpg,jpeg|max:51200',
+
+            // --- هنا التعديل ---
+            'images' => 'nullable|array|max:12', // يسمح بمصفوفة تحتوي على 12 عنصر كحد أقصى
+            'images.*' => 'nullable|image|mimes:png,jpg,jpeg|max:51200', // التحقق من كل صورة في المصفوفة
+            // --------------------
+
             'has_variants' => 'boolean',
             'variants' => 'nullable|required_if:has_variants,true|array',
             'variants.*.size' => 'required|string',
