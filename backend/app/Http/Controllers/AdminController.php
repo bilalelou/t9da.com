@@ -29,24 +29,21 @@ class AdminController extends Controller
     {
         $orders = Order::orderBy('created_at', 'DESC')->take(10)->get();
 
-        // --- الاستعلام الأول: تم تعديله لـ SQLite ---
-        // استبدال IF بـ CASE
+        // --- الاستعلام الأول: تم تعديله لـ MySQL ---
         $dashboardDatas = DB::select("
             SELECT
                 SUM(total) AS TotalAmount,
-                SUM(CASE WHEN status = 'ordered' THEN total ELSE 0 END) AS TotalOrderedAmount,
-                SUM(CASE WHEN status = 'delivered' THEN total ELSE 0 END) AS TotalDeliveredAmount,
-                SUM(CASE WHEN status = 'canceled' THEN total ELSE 0 END) AS TotalCanceledAmount,
+                SUM(IF(status='ordered', total, 0)) AS TotalOrderedAmount,
+                SUM(IF(status='delivered', total, 0)) AS TotalDeliveredAmount,
+                SUM(IF(status='canceled', total, 0)) AS TotalCanceledAmount,
                 COUNT(*) AS Total,
-                SUM(CASE WHEN status = 'ordered' THEN 1 ELSE 0 END) AS TotalOrdered,
-                SUM(CASE WHEN status = 'delivered' THEN 1 ELSE 0 END) AS TotalDelivered,
-                SUM(CASE WHEN status = 'canceled' THEN 1 ELSE 0 END) AS TotalCanceled
+                SUM(IF(status='ordered', 1, 0)) AS TotalOrdered,
+                SUM(IF(status='delivered', 1, 0)) AS TotalDelivered,
+                SUM(IF(status='canceled', 1, 0)) AS TotalCanceled
             FROM orders
         ");
 
-        // --- الاستعلام الثاني: تم تعديله لـ SQLite ---
-        // استبدال IF بـ CASE
-        // استبدال YEAR(), MONTH(), NOW() بدالة strftime() الخاصة بـ SQLite
+        // --- الاستعلام الثاني: تم تعديله لـ MySQL ---
         $monthlyDatas = DB::select("
             SELECT
                 M.id AS MonthID,
@@ -58,14 +55,14 @@ class AdminController extends Controller
             FROM month_names M
             LEFT JOIN (
                 SELECT
-                    CAST(strftime('%m', created_at) AS INTEGER) AS MonthNo,
+                    MONTH(created_at) AS MonthNo,
                     SUM(total) AS TotalAmount,
-                    SUM(CASE WHEN status = 'ordered' THEN total ELSE 0 END) AS TotalOrderedAmount,
-                    SUM(CASE WHEN status = 'delivered' THEN total ELSE 0 END) AS TotalDeliveredAmount,
-                    SUM(CASE WHEN status = 'canceled' THEN total ELSE 0 END) AS TotalCanceledAmount
+                    SUM(IF(status = 'ordered', total, 0)) AS TotalOrderedAmount,
+                    SUM(IF(status = 'delivered', total, 0)) AS TotalDeliveredAmount,
+                    SUM(IF(status = 'canceled', total, 0)) AS TotalCanceledAmount
                 FROM orders
-                WHERE strftime('%Y', created_at) = strftime('%Y', 'now', 'localtime')
-                GROUP BY MonthNo
+                WHERE YEAR(created_at) = YEAR(NOW())
+                GROUP BY MONTH(created_at)
             ) D ON D.MonthNo = M.id
             ORDER BY M.id
         ");
@@ -82,7 +79,7 @@ class AdminController extends Controller
 
         return view('admin.index', compact(
             'orders',
-            'dashboardDatas', // تم إرجاع الاسم الأصلي ليتوافق مع الـ view
+            'dashboardDatas',
             'amountM',
             'orderedAmountM',
             'deliveredAmountM',
