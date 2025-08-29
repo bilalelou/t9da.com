@@ -18,7 +18,7 @@
                                         @if ($product->image)
                                             <img loading="lazy" class="h-auto"
                                                 src="{{ asset('storage/uploads/' . $product->image) }}" width="674"
-                                                height="674" alt="{{ $product->name }}">
+                                                height="674" alt="{{ $product->name }}" style="width:50%; height:auto; display:block; margin:0 auto;">
                                             <a data-fancybox="gallery" href="{{ asset('storage/' . $product->image) }}"
                                                 data-bs-toggle="tooltip" data-bs-placement="left" title="Zoom">
                                                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none"
@@ -37,11 +37,11 @@
                                             <div class="swiper-slide product-single__image-item">
                                                 <img loading="lazy" class="h-auto"
                                                     src="{{ asset('storage/uploads/' . trim($gimg)) }}" width="674"
-                                                    height="674" alt="{{ $product->name }} gallery image">
+                                                    height="674" alt="{{ $product->name }} gallery image" style="width:50%; height:auto; display:block; margin:0 auto;">
                                                 <a data-fancybox="gallery"
                                                     href="{{ asset('storage/uploads/' . trim($gimg)) }}"
                                                     data-bs-toggle="tooltip" data-bs-placement="left" title="Zoom">
-                                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"
+                                                    <svg width="12" height="12" viewBox="0 0 16 16" fill="none"
                                                         xmlns="http://www.w3.org/2000/svg">
                                                         <use href="#icon_zoom" />
                                                     </svg>
