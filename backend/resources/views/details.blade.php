@@ -15,23 +15,34 @@
                             <div class="swiper-container">
                                 <div class="swiper-wrapper">
                                     <div class="swiper-slide product-single__image-item">
-                                        @if($product->image)
-                                            <img loading="lazy" class="h-auto" src="{{ asset('storage/uploads/' . $product->image) }}" width="674" height="674" alt="{{ $product->name }}">
-                                            <a data-fancybox="gallery" href="{{ asset('storage/' . $product->image) }}" data-bs-toggle="tooltip" data-bs-placement="left" title="Zoom">
-                                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        @if ($product->image)
+                                            <img loading="lazy" class="h-auto"
+                                                src="{{ asset('storage/uploads/' . $product->image) }}" width="674"
+                                                height="674" alt="{{ $product->name }}">
+                                            <a data-fancybox="gallery" href="{{ asset('storage/' . $product->image) }}"
+                                                data-bs-toggle="tooltip" data-bs-placement="left" title="Zoom">
+                                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"
+                                                    xmlns="http://www.w3.org/2000/svg">
                                                     <use href="#icon_zoom" />
                                                 </svg>
                                             </a>
                                         @else
-                                            <img loading="lazy" class="h-auto" src="https://placehold.co/674x674/EFEFEF/AAAAAA?text=No+Image" width="674" height="674" alt="No Image">
+                                            <img loading="lazy" class="h-auto"
+                                                src="https://placehold.co/674x674/EFEFEF/AAAAAA?text=No+Image"
+                                                width="674" height="674" alt="No Image">
                                         @endif
                                     </div>
-                                  @if($product->images)
+                                    @if ($product->images)
                                         @foreach (explode(',', $product->images) as $gimg)
                                             <div class="swiper-slide product-single__image-item">
-                                                <img loading="lazy" class="h-auto" src="{{ asset('storage/uploads/' . trim($gimg)) }}" width="674" height="674" alt="{{ $product->name }} gallery image">
-                                                <a data-fancybox="gallery" href="{{ asset('storage/uploads/' . trim($gimg)) }}" data-bs-toggle="tooltip" data-bs-placement="left" title="Zoom">
-                                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                <img loading="lazy" class="h-auto"
+                                                    src="{{ asset('storage/uploads/' . trim($gimg)) }}" width="674"
+                                                    height="674" alt="{{ $product->name }} gallery image">
+                                                <a data-fancybox="gallery"
+                                                    href="{{ asset('storage/uploads/' . trim($gimg)) }}"
+                                                    data-bs-toggle="tooltip" data-bs-placement="left" title="Zoom">
+                                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"
+                                                        xmlns="http://www.w3.org/2000/svg">
                                                         <use href="#icon_zoom" />
                                                     </svg>
                                                 </a>
@@ -52,12 +63,17 @@
                         <div class="product-single__thumbnail">
                             <div class="swiper-container">
                                 <div class="swiper-wrapper">
-                                 @if($product->image)
-                                        <div class="swiper-slide product-single__image-item"><img loading="lazy" class="h-auto" src="{{ asset('storage/uploads/' . $product->image) }}" width="104" height="104" alt="{{ $product->name }}"></div>
+                                    @if ($product->image)
+                                        <div class="swiper-slide product-single__image-item"><img loading="lazy"
+                                                class="h-auto" src="{{ asset('storage/uploads/' . $product->image) }}"
+                                                width="104" height="104" alt="{{ $product->name }}"></div>
                                     @endif
-                                    @if($product->images)
+                                    @if ($product->images)
                                         @foreach (explode(',', $product->images) as $gimg)
-                                            <div class="swiper-slide product-single__image-item"><img loading="lazy" class="h-auto" src="{{ asset('storage/uploads/' . trim($gimg)) }}" width="104" height="104" alt="{{ $product->name }} thumbnail"></div>
+                                            <div class="swiper-slide product-single__image-item"><img loading="lazy"
+                                                    class="h-auto" src="{{ asset('storage/uploads/' . trim($gimg)) }}"
+                                                    width="104" height="104" alt="{{ $product->name }} thumbnail">
+                                            </div>
                                         @endforeach
                                     @endif
                                 </div>
@@ -106,7 +122,7 @@
                         </div>
                         <span class="reviews-note text-lowercase text-secondary ms-1">8k+ reviews</span>
                     </div>
-                    @if($product->has_variants)
+                    @if ($product->has_variants)
                         <div class="product-single__variants">
                             <div class="row">
                                 <div class="col-md-6">
@@ -114,7 +130,7 @@
                                         <label for="variant-size">Size</label>
                                         <select name="size" id="variant-size" class="form-control">
                                             <option value="">Select Size</option>
-                                            @foreach($product->variants->unique('size') as $variant)
+                                            @foreach ($product->variants->unique('size') as $variant)
                                                 <option value="{{ $variant->size }}">{{ $variant->size }}</option>
                                             @endforeach
                                         </select>
@@ -138,17 +154,20 @@
                             <p>{{ $product->short_description }}</p>
                         </div>
 
-                        <form name="addtocart-form" method="POST" action="{{ route('cart.add') }}" id="add-to-cart-form">
+                        <form name="addtocart-form" method="POST" action="{{ route('cart.add') }}"
+                            id="add-to-cart-form">
                             @csrf
                             <div class="product-single__addtocart">
                                 <div class="qty-control position-relative">
-                                    <input type="number" name="quantity" value="1" min="1" class="qty-control__number text-center">
+                                    <input type="number" name="quantity" value="1" min="1"
+                                        class="qty-control__number text-center">
                                     <div class="qty-control__reduce">-</div>
                                     <div class="qty-control__increase">+</div>
                                 </div>
                                 <input type="hidden" name="id" value="{{ $product->id }}">
                                 <input type="hidden" name="variant_id" id="selected-variant-id" value="">
-                                <button type="submit" class="btn btn-primary" id="add-to-cart-btn" disabled>Add to Cart</button>
+                                <button type="submit" class="btn btn-primary" id="add-to-cart-btn" disabled>Add to
+                                    Cart</button>
                             </div>
                         </form>
                     @else
@@ -171,13 +190,15 @@
                                 @csrf
                                 <div class="product-single__addtocart">
                                     <div class="qty-control position-relative">
-                                        <input type="number" name="quantity" value="1" min="1" class="qty-control__number text-center">
+                                        <input type="number" name="quantity" value="1" min="1"
+                                            class="qty-control__number text-center">
                                         <div class="qty-control__reduce">-</div>
                                         <div class="qty-control__increase">+</div>
                                     </div>
                                     <input type="hidden" name="id" value="{{ $product->id }}" />
                                     <input type="hidden" name="name" value="{{ $product->name }}" />
-                                    <input type="hidden" name="price" value="{{ $product->sale_price ?? $product->regular_price }}" />
+                                    <input type="hidden" name="price"
+                                        value="{{ $product->sale_price ?? $product->regular_price }}" />
                                     <button type="submit" class="btn btn-primary">Add to Cart</button>
                                 </div>
                             </form>
@@ -193,7 +214,8 @@
                                 <a href="javascript:void(0)"
                                     class="menu-link menu-link_us-s add-to-wishlist filled-hear"><svg width="16"
                                         height="16" viewBox="0 0 20 20" fill="none"
-                                        xmlns="http://www.w3.org/2000/svg" onclick="document.getElementById('form-remove-wishlist').submit();">
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        onclick="document.getElementById('form-remove-wishlist').submit();">
                                         <use href="#icon_heart" />
                                     </svg><span>Remove from Wishlist</span>
                                 </a>
@@ -502,26 +524,30 @@
                         @foreach ($rproducts as $rproduct)
                             <div class="swiper-slide product-card">
                                 <div class="pc__img-wrapper">
-                                    <a href="details.php">
-                                        <img loading="lazy" src="{{ asset('uploads/products') }}/{{ $rproduct->image }}"
-                                            width="330" height="400" alt="Cropped Faux leather Jacket"
-                                            class="pc__img">
-                                        @if (count(explode(',', $rproduct->images)) > 0)
+                                    <a href="{{ route('shop.product.details', ['product_slug' => $rproduct->slug]) }}">
+
+                                        <img loading="lazy" src="{{ asset('storage/uploads/' . $rproduct->image) }}"
+                                            width="330" height="400" alt="{{ $rproduct->name }}" class="pc__img">
+
+                                        @if ($rproduct->images)
                                             <img loading="lazy"
-                                                src="{{ asset('uploads/products') }}/{{ trim(explode(',', $rproduct->images)[0]) }}"
-                                                width="330" height="400" alt="Cropped Faux leather Jacket"
+                                                src="{{ asset('storage/uploads/' . trim(explode(',', $rproduct->images)[0])) }}"
+                                                width="330" height="400" alt="{{ $rproduct->name }}"
                                                 class="pc__img pc__img-second">
                                         @endif
                                     </a>
-                                    {{-- add check here after --}}
+
+                                    {{-- Add to cart button --}}
                                     <button
                                         class="pc__atc btn anim_appear-bottom btn position-absolute border-0 text-uppercase fw-medium js-add-cart js-open-aside"
                                         data-aside="cartDrawer" title="Add To Cart"> Add To Cart</button>
-
                                 </div>
+
                                 <div class="pc__info position-relative">
-                                    <p class="pc__category">d</p>
-                                    <h6 class="pc__title"><a href="details.php">{{ $rproduct->name }}</a></h6>
+                                    <p class="pc__category">{{ $rproduct->category->name }}</p>
+                                    <h6 class="pc__title"><a
+                                            href="{{ route('shop.product.details', ['product_slug' => $rproduct->slug]) }}">{{ $rproduct->name }}</a>
+                                    </h6>
                                     <div class="product-card__price d-flex">
                                         <span class="money price">${{ $rproduct->regular_price }}</span>
                                     </div>
@@ -558,58 +584,59 @@
 @endsection
 
 @push('scripts')
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const productVariants = @json($product->variants);
-        const sizeSelector = document.getElementById('variant-size');
-        const colorSelector = document.getElementById('variant-color');
-        const priceDisplay = document.getElementById('variant-price');
-        const addToCartButton = document.getElementById('add-to-cart-btn');
-        const selectedVariantIdField = document.getElementById('selected-variant-id');
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const productVariants = @json($product->variants);
+            const sizeSelector = document.getElementById('variant-size');
+            const colorSelector = document.getElementById('variant-color');
+            const priceDisplay = document.getElementById('variant-price');
+            const addToCartButton = document.getElementById('add-to-cart-btn');
+            const selectedVariantIdField = document.getElementById('selected-variant-id');
 
-        if (sizeSelector) {
-            sizeSelector.addEventListener('change', function() {
-                const selectedSize = this.value;
-                colorSelector.innerHTML = '<option value="">Select Color</option>';
-                colorSelector.disabled = true;
-                priceDisplay.textContent = '';
-                addToCartButton.disabled = true;
-                selectedVariantIdField.value = '';
+            if (sizeSelector) {
+                sizeSelector.addEventListener('change', function() {
+                    const selectedSize = this.value;
+                    colorSelector.innerHTML = '<option value="">Select Color</option>';
+                    colorSelector.disabled = true;
+                    priceDisplay.textContent = '';
+                    addToCartButton.disabled = true;
+                    selectedVariantIdField.value = '';
 
-                if (selectedSize) {
-                    const availableColors = [...new Set(productVariants
-                        .filter(v => v.size === selectedSize)
-                        .map(v => v.color))];
+                    if (selectedSize) {
+                        const availableColors = [...new Set(productVariants
+                            .filter(v => v.size === selectedSize)
+                            .map(v => v.color))];
 
-                    availableColors.forEach(color => {
-                        const option = document.createElement('option');
-                        option.value = color;
-                        option.textContent = color;
-                        colorSelector.appendChild(option);
-                    });
-                    colorSelector.disabled = false;
-                }
-            });
-        }
-
-        if (colorSelector) {
-            colorSelector.addEventListener('change', function() {
-                const selectedSize = sizeSelector.value;
-                const selectedColor = this.value;
-                priceDisplay.textContent = '';
-                addToCartButton.disabled = true;
-                selectedVariantIdField.value = '';
-
-                if (selectedSize && selectedColor) {
-                    const selectedVariant = productVariants.find(v => v.size === selectedSize && v.color === selectedColor);
-                    if (selectedVariant) {
-                        priceDisplay.textContent = `$${selectedVariant.price}`;
-                        selectedVariantIdField.value = selectedVariant.id;
-                        addToCartButton.disabled = false;
+                        availableColors.forEach(color => {
+                            const option = document.createElement('option');
+                            option.value = color;
+                            option.textContent = color;
+                            colorSelector.appendChild(option);
+                        });
+                        colorSelector.disabled = false;
                     }
-                }
-            });
-        }
-    });
-</script>
+                });
+            }
+
+            if (colorSelector) {
+                colorSelector.addEventListener('change', function() {
+                    const selectedSize = sizeSelector.value;
+                    const selectedColor = this.value;
+                    priceDisplay.textContent = '';
+                    addToCartButton.disabled = true;
+                    selectedVariantIdField.value = '';
+
+                    if (selectedSize && selectedColor) {
+                        const selectedVariant = productVariants.find(v => v.size === selectedSize && v
+                            .color === selectedColor);
+                        if (selectedVariant) {
+                            priceDisplay.textContent = `$${selectedVariant.price}`;
+                            selectedVariantIdField.value = selectedVariant.id;
+                            addToCartButton.disabled = false;
+                        }
+                    }
+                });
+            }
+        });
+    </script>
 @endpush
