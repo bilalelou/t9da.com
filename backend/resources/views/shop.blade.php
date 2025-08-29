@@ -261,11 +261,11 @@
                             <div class="price-range__info d-flex align-items-center mt-2">
                                 <div class="me-auto">
                                     <span class="text-secondary">Min Price: </span>
-                                    <span class="price-range__min">MAD1</span>
+                                    <span class="price-range__min">MAD 1</span>
                                 </div>
                                 <div>
                                     <span class="text-secondary">Max Price: </span>
-                                    <span class="price-range__max">MAD1000</span>
+                                    <span class="price-range__max">MAD 1000</span>
                                 </div>
                             </div>
                         </div>
@@ -496,7 +496,7 @@
                                     <div class="product-card__price d-flex">
                                         <span class="money price">
                                             @if ($product->sale_price)
-                                                <s>MAD{{ $product->regular_price }}</s> MAD{{ $product->sale_price }}
+                                                <s>MAD {{ $product->regular_price }}</s> MAD {{ $product->sale_price }}
                                                 {{ round((($product->regular_price - $product->sale_price) * 100) / $product->regular_price) }}
                                                 % OFF
                                             @else

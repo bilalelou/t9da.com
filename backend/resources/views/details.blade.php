@@ -155,7 +155,7 @@
                         <div class="product-single__price">
                             <span class="current-price">
                                 @if ($product->sale_price)
-                                    <s>${{ $product->regular_price }}</s> ${{ $product->sale_price }}
+                                    <s>MAD {{ $product->regular_price }}</s> MAD {{ $product->sale_price }}
                                 @else
                                     ${{ $product->regular_price }}
                                 @endif
