@@ -25,22 +25,28 @@ use Surfsidemedia\Shoppingcart\Facades\Cart;
 
 class AdminController extends Controller
 {
-    public function index(){
-        $orders = Order::orderBy('created_at', 'DESC')->get()->take(10);
+    public function index()
+    {
+        $orders = Order::orderBy('created_at', 'DESC')->take(10)->get();
 
+        // --- الاستعلام الأول: تم تعديله لـ SQLite ---
+        // استبدال IF بـ CASE
         $dashboardDatas = DB::select("
             SELECT
                 SUM(total) AS TotalAmount,
-                SUM(IF(status='ordered', total, 0)) AS TotalOrderedAmount,
-                SUM(IF(status='delivered', total, 0)) AS TotalDeliveredAmount,
-                SUM(IF(status='canceled', total, 0)) AS TotalCanceledAmount,
+                SUM(CASE WHEN status = 'ordered' THEN total ELSE 0 END) AS TotalOrderedAmount,
+                SUM(CASE WHEN status = 'delivered' THEN total ELSE 0 END) AS TotalDeliveredAmount,
+                SUM(CASE WHEN status = 'canceled' THEN total ELSE 0 END) AS TotalCanceledAmount,
                 COUNT(*) AS Total,
-                SUM(IF(status='ordered', 1, 0)) AS TotalOrdered,
-                SUM(IF(status='delivered', 1, 0)) AS TotalDelivered,
-                SUM(IF(status='canceled', 1, 0)) AS TotalCanceled
+                SUM(CASE WHEN status = 'ordered' THEN 1 ELSE 0 END) AS TotalOrdered,
+                SUM(CASE WHEN status = 'delivered' THEN 1 ELSE 0 END) AS TotalDelivered,
+                SUM(CASE WHEN status = 'canceled' THEN 1 ELSE 0 END) AS TotalCanceled
             FROM orders
         ");
 
+        // --- الاستعلام الثاني: تم تعديله لـ SQLite ---
+        // استبدال IF بـ CASE
+        // استبدال YEAR(), MONTH(), NOW() بدالة strftime() الخاصة بـ SQLite
         $monthlyDatas = DB::select("
             SELECT
                 M.id AS MonthID,
@@ -52,29 +58,40 @@ class AdminController extends Controller
             FROM month_names M
             LEFT JOIN (
                 SELECT
-                    MONTH(created_at) AS MonthNo,
+                    CAST(strftime('%m', created_at) AS INTEGER) AS MonthNo,
                     SUM(total) AS TotalAmount,
-                    SUM(IF(status = 'ordered', total, 0)) AS TotalOrderedAmount,
-                    SUM(IF(status = 'delivered', total, 0)) AS TotalDeliveredAmount,
-                    SUM(IF(status = 'canceled', total, 0)) AS TotalCanceledAmount
+                    SUM(CASE WHEN status = 'ordered' THEN total ELSE 0 END) AS TotalOrderedAmount,
+                    SUM(CASE WHEN status = 'delivered' THEN total ELSE 0 END) AS TotalDeliveredAmount,
+                    SUM(CASE WHEN status = 'canceled' THEN total ELSE 0 END) AS TotalCanceledAmount
                 FROM orders
-                WHERE YEAR(created_at) = YEAR(NOW())
-                GROUP BY MONTH(created_at)
+                WHERE strftime('%Y', created_at) = strftime('%Y', 'now', 'localtime')
+                GROUP BY MonthNo
             ) D ON D.MonthNo = M.id
             ORDER BY M.id
         ");
 
-        $amountM          = implode(',', collect($monthlyDatas)->pluck('TotalAmount')->toArray());
-        $orderedAmountM   = implode(',', collect($monthlyDatas)->pluck('TotalOrderedAmount')->toArray());
-        $deliveredAmountM = implode(',', collect($monthlyDatas)->pluck('TotalDeliveredAmount')->toArray());
-        $canceledAmountM  = implode(',', collect($monthlyDatas)->pluck('TotalCanceledAmount')->toArray());
+        $amountM            = implode(',', collect($monthlyDatas)->pluck('TotalAmount')->toArray());
+        $orderedAmountM     = implode(',', collect($monthlyDatas)->pluck('TotalOrderedAmount')->toArray());
+        $deliveredAmountM   = implode(',', collect($monthlyDatas)->pluck('TotalDeliveredAmount')->toArray());
+        $canceledAmountM    = implode(',', collect($monthlyDatas)->pluck('TotalCanceledAmount')->toArray());
 
-        $totalAmount          = collect($monthlyDatas)->sum('TotalAmount');
-        $totalOrderedAmount   = collect($monthlyDatas)->sum('TotalOrderedAmount');
-        $totalDeliveredAmount = collect($monthlyDatas)->sum('TotalDeliveredAmount');
-        $totalCanceledAmount  = collect($monthlyDatas)->sum('TotalCanceledAmount');
+        $totalAmount            = collect($monthlyDatas)->sum('TotalAmount');
+        $totalOrderedAmount     = collect($monthlyDatas)->sum('TotalOrderedAmount');
+        $totalDeliveredAmount   = collect($monthlyDatas)->sum('TotalDeliveredAmount');
+        $totalCanceledAmount    = collect($monthlyDatas)->sum('TotalCanceledAmount');
 
-        return view('admin.index', compact('orders', 'dashboardDatas','amountM','orderedAmountM','deliveredAmountM','canceledAmountM','totalAmount','totalOrderedAmount','totalDeliveredAmount','totalCanceledAmount'));
+        return view('admin.index', compact(
+            'orders',
+            'dashboardDatas', // تم إرجاع الاسم الأصلي ليتوافق مع الـ view
+            'amountM',
+            'orderedAmountM',
+            'deliveredAmountM',
+            'canceledAmountM',
+            'totalAmount',
+            'totalOrderedAmount',
+            'totalDeliveredAmount',
+            'totalCanceledAmount'
+        ));
     }
     // brands part//
     public function brands()

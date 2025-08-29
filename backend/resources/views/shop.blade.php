@@ -427,7 +427,6 @@
 
                 <div class="products-grid row row-cols-2 row-cols-md-3" id="products-grid">
                     @foreach ($products as $product)
-
                         <div class="product-card-wrapper">
                             <div class="product-card mb-3 mb-md-4 mb-xxl-5">
                                 <div class="pc__img-wrapper">
@@ -435,30 +434,29 @@
                                         data-settings='{"resizeObserver": true}'>
                                         <div class="swiper-wrapper">
                                             <div class="swiper-slide">
-                                                  @if($product->image)
-                                                        {{-- المسار الصحيح يستخدم 'storage/' ثم المسار المحفوظ في قاعدة البيانات --}}
-                        <img loading="lazy" src="{{ asset('storage/uploads/' . $product->image) }}"
+                                                <a href="{{ route('shop.product.details', ['product_slug' => $product->slug]) }}">
+                                                    @if ($product->image)
+                                                        <img loading="lazy" src="{{ asset('storage/uploads/' . $product->image) }}"
                                                             width="330" height="400" alt="{{ $product->name }}" class="pc__img">
                                                     @else
-                                                        {{-- صورة افتراضية في حالة عدم وجود صورة --}}
-                                                        <img loading="lazy" src="https://placehold.co/330x400/EFEFEF/AAAAAA?text=No+Image"
+                                                        <img loading="lazy"
+                                                            src="https://placehold.co/330x400/EFEFEF/AAAAAA?text=No+Image"
                                                             width="330" height="400" alt="No Image" class="pc__img">
                                                     @endif
+                                                </a>
                                             </div>
-                                        @if($product->images)
-                            <div class="swiper-slide">
-                                {{-- ======================================================= --}}
-                                {{-- 2. إصلاح صور المعرض (Gallery) --}}
-                                {{-- ======================================================= --}}
-                                @foreach (explode(',', $product->images) as $gimg)
-                                    <a href="{{ route('shop.product.details', ['product_slug' => $product->slug]) }}">
-                                        {{-- المسار الصحيح لصور المعرض أيضاً --}}
-                                        <img loading="lazy" src="{{ asset('storage/' . trim($gimg)) }}"
-                                             width="330" height="400" alt="{{ $product->name }} gallery image" class="pc__img">
-                                    </a>
-                                @endforeach
-                            </div>
-                        @endif
+
+                                            @if ($product->images)
+                                                @foreach (explode(',', $product->images) as $gimg)
+                                                    <div class="swiper-slide">
+                                                        <a href="{{ route('shop.product.details', ['product_slug' => $product->slug]) }}">
+                                                            <img loading="lazy" src="{{ asset('storage/uploads/' . trim($gimg)) }}"
+                                                                width="330" height="400"
+                                                                alt="{{ $product->name }} gallery image" class="pc__img">
+                                                        </a>
+                                                    </div>
+                                                @endforeach
+                                            @endif
                                         </div>
                                         <span class="pc__img-prev"><svg width="7" height="11" viewBox="0 0 7 11"
                                                 xmlns="http://www.w3.org/2000/svg">
@@ -516,21 +514,10 @@
                                                 xmlns="http://www.w3.org/2000/svg">
                                                 <use href="#icon_star" />
                                             </svg>
-                                            <svg class="review-star" viewBox="0 0 9 9"
-                                                xmlns="http://www.w3.org/2000/svg">
-                                                <use href="#icon_star" />
-                                            </svg>
-                                            <svg class="review-star" viewBox="0 0 9 9"
-                                                xmlns="http://www.w3.org/2000/svg">
-                                                <use href="#icon_star" />
-                                            </svg>
-                                            <svg class="review-star" viewBox="0 0 9 9"
-                                                xmlns="http://www.w3.org/2000/svg">
-                                                <use href="#icon_star" />
-                                            </svg>
                                         </div>
                                         <span class="reviews-note text-lowercase text-secondary ms-1">8k+ reviews</span>
                                     </div>
+
                                     @if (Cart::instance('wishlist')->content()->where('id', $product->id)->count() > 0)
                                         <form action="{{ route('wishlist.remove', ['rowId' => Cart::instance('wishlist')->content()->where('id', $product->id)->first()->rowId]) }}" method="POST">
                                             @csrf
@@ -562,12 +549,10 @@
                                             </button>
                                         </form>
                                     @endif
-
                                 </div>
                             </div>
                         </div>
                     @endforeach
-
                 </div>
 
                 {{-- <nav class="shop-pages d-flex justify-content-between mt-3" aria-label="Page navigation">
