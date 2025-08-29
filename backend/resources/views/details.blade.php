@@ -37,7 +37,7 @@
                                             <div class="swiper-slide product-single__image-item">
                                                 <img loading="lazy" class="h-auto"
                                                     src="{{ asset('storage/uploads/' . trim($gimg)) }}" width="674"
-                                                    height="674" alt="{{ $product->name }} gallery image" style="width:50%; height:auto; display:block; margin:0 auto;">
+                                                    height="674" alt="{{ $product->name }} gallery image" style="width:70%; height:auto; display:block; margin:0 auto;">
                                                 <a data-fancybox="gallery"
                                                     href="{{ asset('storage/uploads/' . trim($gimg)) }}"
                                                     data-bs-toggle="tooltip" data-bs-placement="left" title="Zoom">
