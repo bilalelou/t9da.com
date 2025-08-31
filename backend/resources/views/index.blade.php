@@ -29,6 +29,66 @@
         border-radius: 2px;
     }
 
+    /* ======================================================= */
+    /* Hero Section - Background Image Style */
+    /* ======================================================= */
+    .hero-slide {
+        min-height: 80vh;
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .hero-slide::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.4); /* Dark overlay for better text readability */
+        z-index: 1;
+    }
+    .slideshow-text {
+        position: relative;
+        z-index: 2;
+        text-align: center;
+        color: white;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    }
+    .slideshow-text h6 {
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 1.1rem;
+        margin-bottom: 15px;
+    }
+    .slideshow-text h2 {
+        color: white;
+        font-size: 3.5rem;
+        font-weight: 700;
+        margin-bottom: 10px;
+        line-height: 1.2;
+    }
+    .slideshow-text .btn {
+        margin-top: 30px;
+        padding: 15px 40px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        border-radius: 30px;
+        background-color: #fff;
+        color: #000;
+        border: none;
+        transition: all 0.3s ease;
+    }
+    .slideshow-text .btn:hover {
+        background-color: #000;
+        color: #fff;
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+    }
+
     /* Features Section */
     .feature-item {
         text-align: center;
@@ -200,8 +260,11 @@
             font-size: 1.8rem;
             margin-bottom: 40px;
         }
+        .hero-slide {
+            min-height: 60vh;
+        }
         .slideshow-text h2 {
-            font-size: 2rem;
+            font-size: 2.5rem;
         }
         .category-item-circle .image-wrapper {
             width: 100px;
@@ -221,31 +284,30 @@
         <div class="swiper-wrapper">
             @foreach ($slides as $slide)
                 <div class="swiper-slide">
-                    <div class="overflow-hidden position-relative h-100">
-                        <div class="slideshow-character position-absolute bottom-0 pos_right-center">
-                            <img loading="lazy" src="{{ asset('storage/uploads/' . $slide->image) }}" width="542"
-                                height="733" alt="{{ $slide->title }}"
-                                class="slideshow-character_img animate animate_fade animate_btt animate_delay-9 w-auto h-auto" />
-                        </div>
-                        <div class="slideshow-text container position-absolute start-50 top-50 translate-middle">
-                            <h6 class="text_dash text-uppercase fs-base fw-medium animate animate_fade animate_btt animate_delay-3">
-                                {{ $slide->tagline }}
-                            </h6>
-                            <h2 class="h1 fw-normal mb-0 animate animate_fade animate_btt animate_delay-5">
-                                {{ $slide->title }}</h2>
-                            <h2 class="h1 fw-bold animate animate_fade animate_btt animate_delay-5">
-                                {{ $slide->subtitle }}</h2>
-                            <a href="{{ $slide->link }}"
-                                class="btn btn-dark btn-lg mt-3 animate animate_fade animate_btt animate_delay-7">
-                                Shop Now
-                            </a>
+                    <div class="hero-slide" style="background-image: url('{{ asset('storage/uploads/' . $slide->image) }}');">
+                        <div class="container">
+                            <div class="slideshow-text">
+                                <h6 class="text_dash text-uppercase fs-base fw-medium animate animate_fade animate_btt animate_delay-3">
+                                    {{ $slide->tagline }}
+                                </h6>
+                                <h2 class="h1 fw-normal mb-0 animate animate_fade animate_btt animate_delay-5">
+                                    {{ $slide->title }}
+                                </h2>
+                                <h2 class="h1 fw-bold animate animate_fade animate_btt animate_delay-5">
+                                    {{ $slide->subtitle }}
+                                </h2>
+                                <a href="{{ $slide->link }}"
+                                    class="btn btn-light btn-lg mt-4 animate animate_fade animate_btt animate_delay-7">
+                                    Shop Now
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>
             @endforeach
         </div>
         <div class="container">
-            <div class="slideshow-pagination slideshow-number-pagination d-flex align-items-center position-absolute bottom-0 mb-5"></div>
+            <div class="slideshow-pagination slideshow-number-pagination d-flex align-items-center position-absolute bottom-0 mb-5" style="z-index: 3;"></div>
         </div>
     </section>
 
