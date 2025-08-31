@@ -56,6 +56,145 @@
         #box-content-search .product-item {
             margin-bottom: 10px;
         }
+
+        #header {
+            position: fixed !important;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.95) !important;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        /* تأثير عند التمرير */
+        #header.scrolled {
+            background: rgba(255, 255, 255, 0.98) !important;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            padding-top: 6px;
+            padding-bottom: 6px;
+        }
+
+        /* إضافة مسافة للـ body لتجنب تداخل المحتوى */
+        body {
+            padding-top: 80px;
+        }
+
+        /* تحسين الـ mobile header */
+        .header-mobile {
+            position: fixed !important;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.95) !important;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        /* تحسين navigation links */
+        .navigation__link {
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .navigation__link:hover {
+            color: #667eea;
+            transform: translateY(-1px);
+        }
+
+        .navigation__link::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 50%;
+            width: 0;
+            height: 2px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transition: all 0.3s ease;
+            transform: translateX(-50%);
+        }
+
+        .navigation__link:hover::after {
+            width: 100%;
+        }
+
+        /* تحسين header tools */
+        .header-tools__item {
+            position: relative;
+            padding: 8px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .header-tools__item:hover {
+            background: rgba(102, 126, 234, 0.1);
+            transform: scale(1.05);
+        }
+
+        /* تحسين cart badge */
+        .cart-amount {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.1);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        /* تحسين search popup */
+        .search-popup {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .search-field__input,
+        .search-popup__input {
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .search-field__input:focus,
+        .search-popup__input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        /* تحسين logo */
+        .logo__image {
+            transition: transform 0.3s ease;
+        }
+
+        .logo:hover .logo__image {
+            transform: scale(1.02);
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            body {
+                padding-top: 70px;
+            }
+
+            .header-mobile {
+                padding-top: 10px;
+                padding-bottom: 10px;
+            }
+        }
     </style>
 </head>
 
