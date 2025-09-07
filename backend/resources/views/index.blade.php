@@ -351,10 +351,10 @@
                             <h6 class="pc__title"><a href="{{ route('shop.product.details', ['product_slug' => $fproduct->slug]) }}">{{ $fproduct->name }}</a></h6>
                             <div class="product-card__price d-flex justify-content-center">
                                 @if ($fproduct->sale_price)
-                                    <span class="money price-sale">${{ $fproduct->sale_price }}</span>
-                                    <span class="money price-old">${{ $fproduct->regular_price }}</span>
+                                    <span class="money price-sale">MAD {{ $fproduct->sale_price }}</span>
+                                    <span class="money price-old">MAD {{ $fproduct->regular_price }}</span>
                                 @else
-                                    <span class="money price text-secondary">${{ $fproduct->regular_price }}</span>
+                                    <span class="money price text-secondary">MAD {{ $fproduct->regular_price }}</span>
                                 @endif
                             </div>
                         </div>
@@ -385,10 +385,10 @@
                             <h6 class="pc__title"><a href="{{ route('shop.product.details', ['product_slug' => $product->slug]) }}">{{ $product->name }}</a></h6>
                             <div class="product-card__price d-flex justify-content-center">
                                 @if ($product->sale_price)
-                                    <span class="money price-sale">${{ $product->sale_price }}</span>
-                                    <span class="money price-old">${{ $product->regular_price }}</span>
+                                    <span class="money price-sale">MAD {{ $product->sale_price }}</span>
+                                    <span class="money price-old">MAD {{ $product->regular_price }}</span>
                                 @else
-                                    <span class="money price text-secondary">${{ $product->regular_price }}</span>
+                                    <span class="money price text-secondary">MAD {{ $product->regular_price }}</span>
                                 @endif
                             </div>
                         </div>
@@ -451,7 +451,7 @@
                 <div class="feature-item">
                     <div class="icon"><i class="icon-shipping"></i></div>
                     <h5>Free Shipping</h5>
-                    <p class="text-muted">On all orders over $99</p>
+                    <p class="text-muted">On all orders over MAD 99</p>
                 </div>
             </div>
             <div class="col-md-3">
