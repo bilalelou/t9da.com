@@ -312,38 +312,7 @@
     </section>
 
     {{-- 2. Features Section --}}
-    <section class="container section-padding">
-        <div class="row">
-            <div class="col-md-3">
-                <div class="feature-item">
-                    <div class="icon"><i class="icon-shipping"></i></div>
-                    <h5>Free Shipping</h5>
-                    <p class="text-muted">On all orders over $99</p>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="feature-item">
-                    <div class="icon"><i class="icon-headphone"></i></div>
-                    <h5>24/7 Support</h5>
-                    <p class="text-muted">Get help when you need it</p>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="feature-item">
-                    <div class="icon"><i class="icon-shield"></i></div>
-                    <h5>Secure Payments</h5>
-                    <p class="text-muted">100% secure payment</p>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="feature-item">
-                    <div class="icon"><i class="icon-gift"></i></div>
-                    <h5>Easy Returns</h5>
-                    <p class="text-muted">30-day money back guarantee</p>
-                </div>
-            </div>
-        </div>
-    </section>
+
 
     {{-- 3. Categories Section --}}
     <section class="category-carousel container section-padding reveal-on-scroll">
@@ -472,6 +441,39 @@
                     </div>
                 </div>
                 @endforeach
+            </div>
+        </div>
+    </section>
+
+    <section class="container section-padding">
+        <div class="row">
+            <div class="col-md-3">
+                <div class="feature-item">
+                    <div class="icon"><i class="icon-shipping"></i></div>
+                    <h5>Free Shipping</h5>
+                    <p class="text-muted">On all orders over $99</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="feature-item">
+                    <div class="icon"><i class="icon-headphone"></i></div>
+                    <h5>24/7 Support</h5>
+                    <p class="text-muted">Get help when you need it</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="feature-item">
+                    <div class="icon"><i class="icon-shield"></i></div>
+                    <h5>Secure Payments</h5>
+                    <p class="text-muted">100% secure payment</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="feature-item">
+                    <div class="icon"><i class="icon-gift"></i></div>
+                    <h5>Easy Returns</h5>
+                    <p class="text-muted">30-day money back guarantee</p>
+                </div>
             </div>
         </div>
     </section>
