@@ -30,8 +30,6 @@ class LoginController extends Controller
 
         $token = $user->createToken('api-token')->plainTextToken;
 
-        $user->role = $user->getRoleNames()->first();
-
         return response()->json([
             'success' => true,
             'message' => 'Login successful',

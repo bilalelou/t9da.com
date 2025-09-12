@@ -15,6 +15,14 @@ class User extends Authenticatable
     use HasFactory, Notifiable, HasApiTokens, HasRoles;
 
     /**
+     * The relationships that should always be loaded.
+     *
+     * @var array
+     */
+    // [إضافة] هذا السطر هو الحل النهائي للمشكلة
+    protected $with = ['roles'];
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var list<string>
@@ -25,6 +33,9 @@ class User extends Authenticatable
         'mobile',
         'password',
     ];
+
+    protected $appends = ['role'];
+
 
     /**
      * The attributes that should be hidden for serialization.
@@ -56,4 +67,10 @@ class User extends Authenticatable
     {
         return $this->hasMany(Order::class);
     }
+        public function getRoleAttribute()
+    {
+        // هذه الدالة الآن ستعمل بشكل صحيح لأن الأدوار ستكون محملة دائماً
+        return $this->getRoleNames()->first();
+    }
 }
+
