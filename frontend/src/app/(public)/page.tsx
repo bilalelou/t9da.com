@@ -1,9 +1,18 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, createContext, useContext, useMemo } from 'react';
-import { Heart, CheckCircle, ShoppingCart, LoaderCircle, X, ChevronDown, ChevronUp, SlidersHorizontal } from 'lucide-react';
+import { Heart, CheckCircle, ChevronLeft, ChevronRight, ShoppingCart, ArrowLeft, ShieldCheck, Truck, PhoneCall, LoaderCircle, Twitter, Instagram, Facebook, Star, Tag } from 'lucide-react';
 
 // --- واجهات البيانات (Interfaces) ---
+interface Slide {
+  id: number;
+  title: string;
+  subtitle: string;
+  image_url: string;
+  link: string;
+}
+
+// تم التحديث: إضافة حقل للصور المتعددة
 interface Product {
   id: number;
   name: string;
@@ -11,25 +20,22 @@ interface Product {
   regular_price: number;
   sale_price?: number;
   image: string;
-  images?: string[];
+  images?: string[]; // مصفوفة روابط الصور الإضافية
   short_description: string;
-  description?: string;
-  category: string; 
-  brand: string;
-  colors: string[];
-  sizes: string[];
+  description?: string; // الوصف الكامل
 }
 
 interface Category {
   id: number;
   name: string;
   slug: string;
+  image: string;
 }
 
 interface Brand {
-    id: number;
-    name: string;
-    slug: string;
+  id: number;
+  name: string;
+  logo: string;
 }
 
 // --- نظام التنبيهات (Toast Notification System) ---
@@ -37,15 +43,19 @@ const ToastContext = createContext<{ showToast: (message: string) => void }>({ s
 
 const ToastProvider = ({ children }: { children: React.ReactNode }) => {
     const [toast, setToast] = useState<{ message: string; visible: boolean }>({ message: '', visible: false });
+
     const showToast = (message: string) => {
         setToast({ message, visible: true });
-        setTimeout(() => { setToast({ message: '', visible: false }); }, 3000);
+        setTimeout(() => {
+            setToast({ message: '', visible: false });
+        }, 3000);
     };
+
     return (
         <ToastContext.Provider value={{ showToast }}>
             {children}
             {toast.visible && (
-                <div className="fixed bottom-10 right-10 bg-gray-800 text-white py-3 px-6 rounded-lg shadow-xl flex items-center gap-3 z-[101]">
+                <div className="fixed bottom-10 right-10 bg-gray-800 text-white py-3 px-6 rounded-lg shadow-xl flex items-center gap-3 z-50 animate-fade-in-up">
                     <CheckCircle size={22} className="text-green-400" />
                     <span>{toast.message}</span>
                 </div>
@@ -53,6 +63,7 @@ const ToastProvider = ({ children }: { children: React.ReactNode }) => {
         </ToastContext.Provider>
     );
 };
+
 const useToast = () => useContext(ToastContext);
 
 // --- Context لإدارة حالة "المفضلة" ---
@@ -60,28 +71,45 @@ interface FavoritesContextType {
     favoriteIds: Set<number>;
     toggleFavorite: (productId: number) => void;
 }
-const FavoritesContext = createContext<FavoritesContextType>({ favoriteIds: new Set(), toggleFavorite: () => {} });
+
+const FavoritesContext = createContext<FavoritesContextType>({
+    favoriteIds: new Set(),
+    toggleFavorite: () => {},
+});
 
 const FavoritesProvider = ({ children }: { children: React.ReactNode }) => {
     const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
-    const toggleFavorite = useCallback((productId: number) => {
+
+    const toggleFavorite = (productId: number) => {
         setFavoriteIds(prevIds => {
             const newIds = new Set(prevIds);
-            if (newIds.has(productId)) newIds.delete(productId);
-            else newIds.add(productId);
+            if (newIds.has(productId)) {
+                newIds.delete(productId);
+            } else {
+                newIds.add(productId);
+            }
             return newIds;
         });
-    }, []);
-    const contextValue = useMemo(() => ({ favoriteIds, toggleFavorite }), [favoriteIds, toggleFavorite]);
-    return <FavoritesContext.Provider value={contextValue}>{children}</FavoritesContext.Provider>;
+    };
+    
+    const contextValue = useMemo(() => ({ favoriteIds, toggleFavorite }), [favoriteIds]);
+
+    return (
+        <FavoritesContext.Provider value={contextValue}>
+            {children}
+        </FavoritesContext.Provider>
+    );
 };
+
 const useFavorites = () => useContext(FavoritesContext);
+
 
 // --- Hook مخصص لجلب البيانات ---
 const useFetchData = <T,>(fetcher: () => Promise<T>) => {
     const [data, setData] = useState<T | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
     const memoizedFetcher = useCallback(fetcher, []);
 
     useEffect(() => {
@@ -103,16 +131,62 @@ const useFetchData = <T,>(fetcher: () => Promise<T>) => {
     return { data, loading, error };
 };
 
+
+// --- Hook مخصص لتأثير الظهور التدريجي ---
+const useIntersectionObserver = (options: IntersectionObserverInit) => {
+    const [element, setElement] = useState<HTMLElement | null>(null);
+    const [isVisible, setIsVisible] = useState(false);
+
+    useEffect(() => {
+        const observer = new IntersectionObserver(([entry]) => {
+            if (entry.isIntersecting) {
+                setIsVisible(true);
+                observer.unobserve(entry.target);
+            }
+        }, options);
+
+        if (element) {
+            observer.observe(element);
+        }
+
+        return () => {
+            if (element) {
+                observer.unobserve(element);
+            }
+        };
+    }, [element, options]);
+
+    return [setElement, isVisible] as const;
+};
+
+
 // --- المكونات ---
+
+const AnimatedSection = React.memo(({ children }: { children: React.ReactNode }) => {
+    const [ref, isVisible] = useIntersectionObserver({ threshold: 0.1 });
+    return (
+        <section ref={ref} className={`transition-all duration-1000 ease-in-out ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+            {children}
+        </section>
+    );
+});
+AnimatedSection.displayName = 'AnimatedSection';
 
 const formatCurrency = (price: number) => {
   if (typeof price !== 'number' || isNaN(price)) return '';
-  return new Intl.NumberFormat('ar-MA', { style: 'currency', currency: 'MAD' }).format(price);
+  return new Intl.NumberFormat('ar-MA', {
+    style: 'currency',
+    currency: 'MAD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(price);
 };
 
-const ProductCard = React.memo(({ product }: { product: Product }) => {
+// تم التحديث: إضافة onNavigate للانتقال بين الصفحات
+const ProductCard = React.memo(({ product, onAddToCart, onNavigate }: { product: Product; onAddToCart: (productName: string) => void; onNavigate: (page: string, slug: string) => void; }) => {
     const { favoriteIds, toggleFavorite } = useFavorites();
     const { showToast } = useToast();
+    
     const isFavorite = favoriteIds.has(product.id);
 
     const handleFavoriteClick = (e: React.MouseEvent) => {
@@ -123,11 +197,12 @@ const ProductCard = React.memo(({ product }: { product: Product }) => {
 
     const handleCartClick = (e: React.MouseEvent) => {
         e.preventDefault(); e.stopPropagation();
-        showToast(`تمت إضافة "${product.name}" إلى السلة!`);
+        onAddToCart(product.name);
     };
     
+    // تم التغيير: استخدام onNavigate بدلاً من href
     return (
-        <a href={`/products/${product.slug}`} className="group relative bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col h-full">
+        <div onClick={() => onNavigate('product', product.slug)} className="cursor-pointer group relative bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col h-full">
             <div className="flex flex-col flex-grow">
                 <div className="overflow-hidden h-72 p-4 bg-white">
                   <img src={product.image} alt={product.name}
@@ -159,346 +234,244 @@ const ProductCard = React.memo(({ product }: { product: Product }) => {
             <button onClick={handleCartClick} aria-label={`Add ${product.name} to cart`} className="absolute bottom-5 left-5 bg-white p-3 rounded-full shadow-lg transform translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 hover:bg-[#eab676] hover:text-white z-10">
                 <ShoppingCart size={22} />
             </button>
-        </a>
+        </div>
     );
 });
 ProductCard.displayName = 'ProductCard';
 
-// --- مكون الفلترة المتقدم ---
-const FilterSidebarContent = ({
-    categories, brands,
-    filters, handleCheckboxChange, setPriceRange, resetFilters,
-    categoryCounts, brandCounts, minPrice, maxPrice
-}) => {
-    const { selectedCategories, selectedBrands, selectedColors, selectedSizes, priceRange } = filters;
-    const { setSelectedCategories, setSelectedBrands, setSelectedColors, setSelectedSizes } = filters.setters;
+const ProductSkeleton = () => (
+    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm animate-pulse">
+        <div className="bg-gray-300 h-72 w-full"></div>
+        <div className="p-4">
+            <div className="h-6 bg-gray-300 rounded w-3/4 mb-2"></div>
+            <div className="h-4 bg-gray-300 rounded w-full mb-4"></div>
+            <div className="h-4 bg-gray-300 rounded w-1/2"></div>
+            <div className="h-8 bg-gray-300 rounded w-1/3 mt-4"></div>
+        </div>
+    </div>
+);
 
-    const [openCats, setOpenCats] = useState(true);
-    const [openColors, setOpenColors] = useState(true);
-    const [openSizes, setOpenSizes] = useState(true);
-    const [openBrands, setOpenBrands] = useState(true);
-    const [openPrice, setOpenPrice] = useState(true);
+const HeroSlider = ({ slides }: { slides: Slide[] }) => {
+    const [currentSlide, setCurrentSlide] = useState(0);
 
-    const availableColors = ['#183153', '#000000', '#f97316', '#2563eb', '#93c5fd', '#d6ad60', '#b58900', '#eab676'];
-    const availableSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+    const next = useCallback(() => setCurrentSlide((curr) => (curr === slides.length - 1 ? 0 : curr + 1)), [slides.length]);
+    const prev = () => setCurrentSlide((curr) => (curr === 0 ? slides.length - 1 : curr - 1));
 
+    useEffect(() => {
+        if (slides.length > 1) {
+            const slideInterval = setInterval(next, 5000);
+            return () => clearInterval(slideInterval);
+        }
+    }, [slides.length, next]);
+
+    if (!slides || slides.length === 0) {
+        return <div className="relative h-[600px] w-full bg-gray-200 animate-pulse flex items-center justify-center"><LoaderCircle className="animate-spin text-gray-400" size={48} /></div>;
+    }
+    
     return (
-        <div className="p-6">
-             <div className="flex justify-between items-center mb-6">
-                <h3 className="text-sm font-bold tracking-wide text-gray-700 uppercase">Product Filters</h3>
-                <button onClick={resetFilters} className="text-xs text-gray-500 hover:text-red-500 flex items-center gap-1"><X size={14} /><span>Reset</span></button>
-            </div>
-
-            {/* Categories */}
-            <div className="mb-6">
-                <button onClick={() => setOpenCats(v => !v)} className="w-full flex items-center justify-between text-[13px] font-semibold text-gray-800 mb-3">
-                    <span>Categories</span>{openCats ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                </button>
-                {openCats && (
-                    <ul className="space-y-3">
-                        {categories.map(c => (
-                            <li key={c.id} className="flex items-center justify-between">
-                                <label className="flex items-center cursor-pointer text-[13px] text-gray-700 capitalize">
-                                    <input type="checkbox" checked={selectedCategories.includes(c.slug)} onChange={() => handleCheckboxChange(setSelectedCategories, c.slug)} className="h-3.5 w-3.5 rounded border-gray-300 text-[#1e81b0] focus:ring-[#1e81b0]"/>
-                                    <span className="ml-2">{c.name}</span>
-                                </label>
-                                <span className="text-xs text-gray-400">{categoryCounts[c.slug] ?? 0}</span>
-                            </li>
-                        ))}
-                    </ul>
-                )}
-            </div>
-
-            {/* Colors */}
-            <div className="mb-6">
-                <button onClick={() => setOpenColors(v => !v)} className="w-full flex items-center justify-between text-[13px] font-semibold text-gray-800 mb-3">
-                    <span>Color</span>{openColors ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                </button>
-                {openColors && (
-                    <div className="flex flex-wrap gap-2">
-                        {availableColors.map(color => (
-                            <button key={color} onClick={() => handleCheckboxChange(setSelectedColors, color)} className={`w-5 h-5 rounded-full border ${selectedColors.includes(color) ? 'ring-2 ring-[#1e81b0] border-[#1e81b0]' : 'border-gray-300'}`} style={{ backgroundColor: color }} aria-label={`Filter by color ${color}`}></button>
-                        ))}
-                    </div>
-                )}
-            </div>
-
-            {/* Sizes */}
-            <div className="mb-6">
-                <button onClick={() => setOpenSizes(v => !v)} className="w-full flex items-center justify-between text-[13px] font-semibold text-gray-800 mb-3">
-                    <span>Sizes</span>{openSizes ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                </button>
-                {openSizes && (
-                    <div className="flex flex-wrap gap-2">
-                        {availableSizes.map(size => (
-                            <button key={size} onClick={() => handleCheckboxChange(setSelectedSizes, size)} className={`px-2.5 py-1.5 rounded border text-xs font-medium ${selectedSizes.includes(size) ? 'bg-[#1e81b0] text-white border-[#1e81b0]' : 'bg-white text-gray-700 border-gray-300'}`}>{size}</button>
-                        ))}
-                    </div>
-                )}
-            </div>
-
-            {/* Brands */}
-            <div className="mb-6">
-                <button onClick={() => setOpenBrands(v => !v)} className="w-full flex items-center justify-between text-[13px] font-semibold text-gray-800 mb-3">
-                    <span>Brands</span>{openBrands ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                </button>
-                {openBrands && (
-                    <ul className="space-y-3">
-                        {brands.map(b => (
-                            <li key={b.id} className="flex items-center justify-between">
-                                <label className="flex items-center cursor-pointer text-[13px] text-gray-700 capitalize">
-                                    <input type="checkbox" checked={selectedBrands.includes(b.slug)} onChange={() => handleCheckboxChange(setSelectedBrands, b.slug)} className="h-3.5 w-3.5 rounded border-gray-300 text-[#1e81b0] focus:ring-[#1e81b0]"/>
-                                    <span className="ml-2">{b.name}</span>
-                                </label>
-                                <span className="text-xs text-gray-400">{brandCounts[b.slug] ?? 0}</span>
-                            </li>
-                        ))}
-                    </ul>
-                )}
-            </div>
-
-            {/* Price */}
-            <div>
-                <button onClick={() => setOpenPrice(v => !v)} className="w-full flex items-center justify-between text-[13px] font-semibold text-gray-800 mb-3">
-                    <span>Price</span>{openPrice ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                </button>
-                {openPrice && (
-                    <div>
-                        <input type="range" min={minPrice} max={maxPrice} value={priceRange} onChange={(e) => setPriceRange(Number(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" />
-                        <div className="flex justify-between text-[11px] text-gray-500 mt-2">
-                            <span>{formatCurrency(minPrice)}</span>
-                            <span>{formatCurrency(priceRange)}</span>
+        <section className="relative h-[600px] w-full overflow-hidden" aria-roledescription="carousel" aria-label="Hero promotions">
+            <div className="flex transition-transform ease-out duration-700 h-full" style={{ transform: `translateX(-${currentSlide * 100}%)` }}>
+                {slides.map((slide, index) => (
+                    <div key={slide.id} className="w-full h-full flex-shrink-0 relative">
+                        <img src={slide.image_url} alt={slide.title} className="w-full h-full object-cover" fetchPriority={index === 0 ? "high" : "auto"} />
+                        <div className="absolute inset-0 bg-black bg-opacity-50 flex flex-col items-center justify-center text-center text-white p-4">
+                            <div className="bg-black/30 backdrop-blur-sm p-8 rounded-lg max-w-3xl">
+                                <h1 className="text-4xl md:text-6xl font-bold">{slide.title}</h1>
+                                <p className="mt-4 text-lg md:text-xl">{slide.subtitle}</p>
+                                <a href={slide.link} className="mt-8 inline-block bg-[#eab676] text-white font-bold py-3 px-10 rounded-lg hover:bg-opacity-90 transition-transform hover:scale-105">
+                                    تسوق الآن
+                                </a>
+                            </div>
                         </div>
                     </div>
-                )}
+                ))}
             </div>
-        </div>
+
+            {slides.length > 1 && (
+                <>
+                    <button onClick={prev} aria-label="Previous slide" className="absolute top-1/2 right-4 transform -translate-y-1/2 bg-white/70 hover:bg-white p-3 rounded-full z-10 transition-colors"><ChevronRight size={28} className="text-gray-800" /></button>
+                    <button onClick={next} aria-label="Next slide" className="absolute top-1/2 left-4 transform -translate-y-1/2 bg-white/70 hover:bg-white p-3 rounded-full z-10 transition-colors"><ChevronLeft size={28} className="text-gray-800" /></button>
+                    <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex gap-2">
+                        {slides.map((_, i) => (
+                            <button key={i} onClick={() => setCurrentSlide(i)} className={`w-3 h-3 rounded-full transition-all ${currentSlide === i ? 'bg-white scale-110' : 'bg-white/50'}`} aria-label={`Go to slide ${i+1}`}></button>
+                        ))}
+                    </div>
+                </>
+            )}
+        </section>
     );
 };
 
-// --- [جديد] مكون لعرض الفلاتر النشطة ---
-const ActiveFilters = ({ filters, setters, resetFilters, categories, brands }) => {
-    const { selectedCategories, selectedBrands, selectedColors, selectedSizes } = filters;
-    const activeFilterCount = selectedCategories.length + selectedBrands.length + selectedColors.length + selectedSizes.length;
-
-    if (activeFilterCount === 0) return null;
-
-    const findName = (slug, items) => items.find(item => item.slug === slug)?.name || slug;
-
-    return (
-        <div className="mb-6 p-4 border rounded-lg bg-gray-50">
-            <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm font-semibold">الفلاتر النشطة:</span>
-                {selectedCategories.map(slug => (
-                    <button key={slug} onClick={() => setters.setSelectedCategories(p => p.filter(s => s !== slug))} className="flex items-center gap-1.5 bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">
-                        <span>{findName(slug, categories)}</span> <X size={12} />
-                    </button>
-                ))}
-                {selectedBrands.map(slug => (
-                    <button key={slug} onClick={() => setters.setSelectedBrands(p => p.filter(s => s !== slug))} className="flex items-center gap-1.5 bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full">
-                         <span>{findName(slug, brands)}</span> <X size={12} />
-                    </button>
-                ))}
-                {selectedSizes.map(size => (
-                    <button key={size} onClick={() => setters.setSelectedSizes(p => p.filter(s => s !== size))} className="flex items-center gap-1.5 bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-1 rounded-full">
-                        <span>{size}</span> <X size={12} />
-                    </button>
-                ))}
-                {selectedColors.map(color => (
-                    <button key={color} onClick={() => setters.setSelectedColors(p => p.filter(s => s !== color))} className="flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full border" style={{ backgroundColor: color, color: '#fff', mixBlendMode: 'difference' }}>
-                        <span>{color}</span> <X size={12} />
-                    </button>
-                ))}
-                <button onClick={resetFilters} className="text-sm text-red-600 hover:underline ml-auto">مسح الكل</button>
+const Footer = () => (
+    <footer className="bg-gray-800 text-white">
+        <div className="container mx-auto px-6 py-12">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+                <div>
+                    <h3 className="text-xl font-bold mb-4">متجرنا</h3>
+                    <p className="text-gray-400">نقدم لكم أفضل المنتجات بأعلى جودة. رضاكم هو هدفنا الأول.</p>
+                </div>
+                <div>
+                    <h3 className="text-lg font-semibold mb-4">روابط سريعة</h3>
+                    <ul className="space-y-2">
+                        <li><a href="#" className="text-gray-400 hover:text-white">عنا</a></li>
+                        <li><a href="#" className="text-gray-400 hover:text-white">اتصل بنا</a></li>
+                        <li><a href="#" className="text-gray-400 hover:text-white">الأسئلة الشائعة</a></li>
+                        <li><a href="#" className="text-gray-400 hover:text-white">سياسة الخصوصية</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 className="text-lg font-semibold mb-4">تابعنا</h3>
+                    <div className="flex space-x-4">
+                        <a href="#" aria-label="Facebook" className="text-gray-400 hover:text-white"><Facebook size={24}/></a>
+                        <a href="#" aria-label="Twitter" className="text-gray-400 hover:text-white"><Twitter size={24}/></a>
+                        <a href="#" aria-label="Instagram" className="text-gray-400 hover:text-white"><Instagram size={24}/></a>
+                    </div>
+                </div>
+                 <div>
+                    <h3 className="text-lg font-semibold mb-4">النشرة البريدية</h3>
+                    <p className="text-gray-400 mb-4">اشترك ليصلك كل جديد وعروض حصرية.</p>
+                    <form className="flex">
+                        <input type="email" placeholder="بريدك الإلكتروني" className="w-full rounded-r-lg p-2 text-gray-800" />
+                        <button type="submit" className="bg-[#eab676] px-4 rounded-l-lg font-semibold">اشتراك</button>
+                    </form>
+                </div>
+            </div>
+            <div className="mt-12 border-t border-gray-700 pt-6 text-center text-gray-500">
+                <p>&copy; {new Date().getFullYear()} متجرنا. جميع الحقوق محفوظة.</p>
             </div>
         </div>
+    </footer>
+);
+
+// --- جديد: رأس الصفحة (Header) ---
+const Header = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
+    return (
+        <header className="bg-white shadow-md sticky top-0 z-40">
+            <div className="container mx-auto px-6 py-4 flex justify-between items-center">
+                <div onClick={() => onNavigate('home')} className="text-2xl font-bold text-[#1e81b0] cursor-pointer">
+                    متجري
+                </div>
+                <nav className="flex items-center gap-6">
+                    <a onClick={() => onNavigate('home')} className="text-gray-600 hover:text-[#1e81b0] cursor-pointer">الرئيسية</a>
+                    <a href="#" className="text-gray-600 hover:text-[#1e81b0]">المنتجات</a>
+                    <a href="#" className="text-gray-600 hover:text-[#1e81b0]">اتصل بنا</a>
+                    <button className="relative">
+                        <ShoppingCart size={24} className="text-gray-600 hover:text-[#1e81b0]" />
+                        <span className="absolute -top-2 -right-2 bg-[#eab676] text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">0</span>
+                    </button>
+                </nav>
+            </div>
+        </header>
     );
 };
 
-// --- المكون الرئيسي لصفحة المنتجات ---
-const AllProductsPage = ({ allProducts, categories, brands }: { allProducts: Product[]; categories: Category[]; brands: Brand[]; }) => {
-    const [isFilterOpen, setIsFilterOpen] = useState(false);
-    const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-    const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
-    const [selectedColors, setSelectedColors] = useState<string[]>([]);
-    const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
-    const [sortBy, setSortBy] = useState('latest');
-    
-    const { minPrice, maxPrice } = useMemo(() => {
-        const prices = allProducts.map(p => (p.sale_price ?? p.regular_price)).filter(n => typeof n === 'number');
-        const min = prices.length ? Math.floor(Math.min(...prices)) : 0;
-        const max = prices.length ? Math.ceil(Math.max(...prices)) : 1000;
-        return { minPrice: min, maxPrice: max };
-    }, [allProducts]);
-    const [priceRange, setPriceRange] = useState<number>(0);
-    useEffect(() => setPriceRange(maxPrice), [maxPrice]);
-    
-    useEffect(() => {
-        if (isFilterOpen) {
-            document.body.style.overflow = 'hidden';
-        } else {
-            document.body.style.overflow = 'auto';
-        }
-        return () => {
-            document.body.style.overflow = 'auto';
-        };
-    }, [isFilterOpen]);
 
-    const handleCheckboxChange = (setter: React.Dispatch<React.SetStateAction<string[]>>, value: string) => {
-        setter(prev => prev.includes(value) ? prev.filter(v => v !== value) : [...prev, value]);
+// --- جديد: صفحة تفاصيل المنتج ---
+const ProductDetailPage = ({ product, onAddToCart, onNavigate }: { product: Product; onAddToCart: (productName: string) => void; onNavigate: (page: string) => void; }) => {
+    const { showToast } = useToast();
+    const [mainImage, setMainImage] = useState(product.image);
+
+    const handleAddToCartClick = () => {
+        onAddToCart(product.name);
+        showToast(`تمت إضافة "${product.name}" إلى السلة بنجاح!`);
     };
     
-    const resetFilters = () => {
-        setSelectedCategories([]);
-        setSelectedBrands([]);
-        setSelectedColors([]);
-        setSelectedSizes([]);
-        setPriceRange(maxPrice);
-        setSortBy('latest');
-    };
-
-    const filteredAndSortedProducts = useMemo(() => {
-        let filtered = [...allProducts];
-        if (selectedCategories.length > 0) filtered = filtered.filter(p => selectedCategories.includes(p.category));
-        if (selectedBrands.length > 0) filtered = filtered.filter(p => selectedBrands.includes(p.brand));
-        if (selectedColors.length > 0) filtered = filtered.filter(p => p.colors.some(c => selectedColors.includes(c)));
-        if (selectedSizes.length > 0) filtered = filtered.filter(p => p.sizes.some(s => selectedSizes.includes(s)));
-        
-        filtered = filtered.filter(p => (p.sale_price ?? p.regular_price) <= priceRange);
-
-        switch (sortBy) {
-            case 'price-asc': filtered.sort((a, b) => (a.sale_price ?? a.regular_price) - (b.sale_price ?? b.regular_price)); break;
-            case 'price-desc': filtered.sort((a, b) => (b.sale_price ?? b.regular_price) - (a.sale_price ?? a.regular_price)); break;
-            case 'latest': default: filtered.sort((a, b) => b.id - a.id); break;
-        }
-        return filtered;
-    }, [allProducts, selectedCategories, selectedBrands, selectedColors, selectedSizes, priceRange, sortBy]);
-
-    const categoryCounts = useMemo(() => {
-        const map: Record<string, number> = {};
-        allProducts.forEach(p => { map[p.category] = (map[p.category] || 0) + 1; });
-        return map;
-    }, [allProducts]);
-    const brandCounts = useMemo(() => {
-        const map: Record<string, number> = {};
-        allProducts.forEach(p => { map[p.brand] = (map[p.brand] || 0) + 1; });
-        return map;
-    }, [allProducts]);
-
-    const filterProps = {
-        categories, brands,
-        filters: {
-            selectedCategories, selectedBrands, selectedColors, selectedSizes, priceRange,
-            setters: { setSelectedCategories, setSelectedBrands, setSelectedColors, setSelectedSizes }
-        },
-        handleCheckboxChange, setPriceRange, resetFilters,
-        categoryCounts, brandCounts, minPrice, maxPrice
-    };
+    const allImages = [product.image, ...(product.images || [])];
 
     return (
-        <div className="container mx-auto px-4 sm:px-6 py-12">
-            <div className="flex justify-between items-center mb-6 pb-4 border-b">
-                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">جميع المنتجات</h1>
-                <button 
-                    onClick={() => setIsFilterOpen(true)}
-                    className="flex items-center gap-2 lg:hidden bg-gray-800 text-white px-4 py-2 rounded-lg shadow hover:bg-gray-700 transition"
-                >
-                    <SlidersHorizontal size={20} />
-                    <span>فلترة</span>
-                </button>
-            </div>
-            <div className="flex flex-row items-start gap-8">
-                {/* --- الفلتر الجانبي --- */}
-                {/* نسخة الهاتف (منزلقة) */}
-                <aside 
-                    className={`fixed top-0 right-0 h-full w-4/5 max-w-sm bg-white shadow-xl z-[100] transform transition-transform duration-300 ease-in-out lg:hidden flex flex-col ${isFilterOpen ? 'translate-x-0' : 'translate-x-full'}`}
-                    aria-modal="true" role="dialog"
-                >
-                    <div className="flex justify-between items-center p-4 border-b bg-gray-50 flex-shrink-0">
-                        <h3 className="text-xl font-bold text-gray-800">الفلترة</h3>
-                        <button onClick={() => setIsFilterOpen(false)} className="p-2 rounded-full hover:bg-gray-200" aria-label="إغلاق الفلتر">
-                            <X size={24} />
+        <div className="container mx-auto px-6 py-12">
+            <button onClick={() => onNavigate('home')} className="flex items-center gap-2 text-gray-600 hover:text-[#1e81b0] mb-8">
+                <ArrowLeft size={20} />
+                <span>العودة إلى المتجر</span>
+            </button>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                {/* معرض الصور */}
+                <div>
+                    <div className="border rounded-lg overflow-hidden mb-4">
+                        <img src={mainImage} alt={product.name} className="w-full h-auto object-cover transition-transform duration-300 hover:scale-105" />
+                    </div>
+                    <div className="flex gap-2">
+                        {allImages.map((img, index) => (
+                            <div key={index} onClick={() => setMainImage(img)} className={`w-20 h-20 border rounded-lg overflow-hidden cursor-pointer ${mainImage === img ? 'border-[#1e81b0] border-2' : ''}`}>
+                                <img src={img} alt={`${product.name} thumbnail ${index + 1}`} className="w-full h-full object-cover" />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* تفاصيل المنتج */}
+                <div>
+                    <h1 className="text-4xl font-bold text-gray-800 mb-4">{product.name}</h1>
+                    <div className="flex items-center mb-6">
+                        <div className="flex text-yellow-400">
+                            <Star size={20} fill="currentColor" />
+                            <Star size={20} fill="currentColor" />
+                            <Star size={20} fill="currentColor" />
+                            <Star size={20} fill="currentColor" />
+                            <Star size={20} className="text-gray-300" fill="currentColor" />
+                        </div>
+                        <span className="text-gray-500 ml-2">(12 تقييم)</span>
+                    </div>
+                    <p className="text-gray-600 mb-6 leading-relaxed">{product.description || product.short_description}</p>
+                    
+                    <div className="flex items-center gap-2 mb-6">
+                       <Tag size={22} className="text-green-500" />
+                       <span className="font-semibold text-green-600">متوفر في المخزون</span>
+                    </div>
+
+                    <div className="bg-gray-50 p-6 rounded-lg">
+                         <div className="flex items-baseline gap-4 mb-6">
+                            {product.sale_price ? (
+                                <>
+                                    <span className="text-4xl font-bold text-[#eab676]">{formatCurrency(product.sale_price)}</span>
+                                    <span className="text-xl text-gray-400 line-through">{formatCurrency(product.regular_price)}</span>
+                                </>
+                            ) : (
+                                <span className="text-4xl font-bold text-[#1e81b0]">{formatCurrency(product.regular_price)}</span>
+                            )}
+                        </div>
+                        <button onClick={handleAddToCartClick} className="w-full bg-[#1e81b0] text-white font-bold py-4 px-8 rounded-lg hover:bg-opacity-90 transition-transform hover:scale-105 flex items-center justify-center gap-3">
+                            <ShoppingCart size={22} />
+                            <span>أضف إلى السلة</span>
                         </button>
                     </div>
-                    <div className="overflow-y-auto flex-grow">
-                        <FilterSidebarContent {...filterProps} />
-                    </div>
-                </aside>
-                {isFilterOpen && <div onClick={() => setIsFilterOpen(false)} className="fixed inset-0 bg-black bg-opacity-60 z-[99] lg:hidden"></div>}
-                
-                {/* نسخة الحاسوب (ثابتة) */}
-                <aside className="hidden lg:block w-72 flex-shrink-0 self-start sticky top-24">
-                     <div className="border rounded-lg bg-gray-50/50">
-                        <FilterSidebarContent {...filterProps} />
-                    </div>
-                </aside>
-                
-                {/* --- شبكة المنتجات --- */}
-                <main className="flex-grow">
-                    <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
-                        <p className="text-gray-600 whitespace-nowrap text-sm">{filteredAndSortedProducts.length} منتجات</p>
-                        <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="border border-gray-300 rounded-lg p-2 text-sm w-full sm:w-auto">
-                            <option value="latest">ترتيب حسب: الأحدث</option>
-                            <option value="price-asc">السعر: من الأقل إلى الأعلى</option>
-                            <option value="price-desc">السعر: من الأعلى إلى الأقل</option>
-                        </select>
-                    </div>
-
-                    <ActiveFilters 
-                        filters={{ selectedCategories, selectedBrands, selectedColors, selectedSizes }}
-                        setters={{ setSelectedCategories, setSelectedBrands, setSelectedColors, setSelectedSizes }}
-                        resetFilters={resetFilters}
-                        categories={categories}
-                        brands={brands}
-                    />
-
-                    {filteredAndSortedProducts.length > 0 ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-8">
-                            {filteredAndSortedProducts.map(product => (<ProductCard key={product.id} product={product} />))}
-                        </div>
-                    ) : (
-                        <div className="text-center py-20">
-                            <h2 className="text-2xl font-semibold text-gray-700">لا توجد منتجات تطابق بحثك</h2>
-                            <p className="text-gray-500 mt-2">حاول تغيير خيارات التصفية.</p>
-                        </div>
-                    )}
-                </main>
+                </div>
             </div>
         </div>
     );
 };
+
 
 // --- API ---
 const API_BASE_URL = 'http://localhost:8000/api';
-const handleApiError = (error: unknown) => {
+
+const handleApiError = (error: any) => {
     console.error('API Error:', error);
-    if (error instanceof TypeError && typeof error.message === 'string' && error.message.includes('fetch')) {
+    if (error.name === 'TypeError' && error.message.includes('fetch')) {
         throw new Error('خطأ في الاتصال بالخادم. تأكد من تشغيل الخادم المحلي.');
     }
-    if (error instanceof Error) throw error;
-    throw new Error('حدث خطأ غير معروف.');
+    throw error;
 };
 
 const api = {
+    getSlides: async (): Promise<Slide[]> => {
+        return [
+            { id: 1, title: 'اكتشف أحدث التشكيلات', subtitle: 'تصاميم عصرية تلبي كل الأذواق', image_url: 'https://images.unsplash.com/photo-1483985988355-763728e1_935b?q=80&w=2070&auto=format&fit=crop', link: '/products' },
+            { id: 2, title: 'عروض خاصة لفترة محدودة', subtitle: 'خصومات تصل إلى 50%', image_url: 'https://images.unsplash.com/photo-1445205170230-053b8_3016050?q=80&w=2071&auto-format&fit=crop', link: '/offers' },
+        ];
+    },
+    
+    // تم التحديث: إضافة حقل description و images
     productAdapter: (apiProduct: any): Product => ({
         id: apiProduct.id,
         name: apiProduct.name || 'منتج بدون اسم',
         slug: apiProduct.slug || '',
-        regular_price: Number(apiProduct.regular_price ?? 0) || 0,
-        sale_price: apiProduct.sale_price != null ? Number(apiProduct.sale_price) : undefined,
+        regular_price: parseFloat(apiProduct.regular_price) || 0,
+        sale_price: apiProduct.sale_price != null ? parseFloat(apiProduct.sale_price) : undefined,
         image: apiProduct.image ? `${API_BASE_URL.replace('/api', '')}/storage/uploads/${apiProduct.image}` : 'https://placehold.co/400x400?text=No+Image',
-        images: apiProduct.images
-            ? (typeof apiProduct.images === 'string'
-                ? apiProduct.images.split(',')
-                : Array.isArray(apiProduct.images) ? apiProduct.images : [])
-                .map((img: string) => `${API_BASE_URL.replace('/api', '')}/storage/uploads/${String(img).trim()}`)
-            : [],
+        images: apiProduct.images ? apiProduct.images.map((img: string) => `${API_BASE_URL.replace('/api', '')}/storage/uploads/${img}`) : [],
         short_description: apiProduct.short_description || 'وصف غير متوفر',
-        description: apiProduct.description || 'وصف كامل ومفصل للمنتج.',
-        category: apiProduct.category?.slug || 'uncategorized',
-        brand: apiProduct.brand?.slug || 'unknown-brand',
-        colors: apiProduct.colors || ['#ffffff', '#000000'],
-        sizes: apiProduct.sizes || ['M', 'L'],
+        description: apiProduct.description || apiProduct.short_description,
     }),
     
     getAllProducts: async (): Promise<Product[]> => {
@@ -506,49 +479,249 @@ const api = {
             const response = await fetch(`${API_BASE_URL}/products`);
             if (!response.ok) throw new Error(`HTTP ${response.status}: Failed to fetch products`);
             const responseData = await response.json();
-            const productList = responseData.data || [];
-            return Array.isArray(productList) ? productList.map(p => api.productAdapter(p)) : [];
-        } catch (error) { handleApiError(error); return []; }
+            const productList = Array.isArray(responseData) ? responseData : responseData.data;
+            return Array.isArray(productList) ? productList.map(api.productAdapter) : [];
+        } catch (error) {
+            handleApiError(error);
+            return [];
+        }
     },
 
     getCategories: async (): Promise<Category[]> => {
         try {
-            const response = await fetch(`${API_BASE_URL}/categories`);
+            const response = await fetch('https://fakestoreapi.com/products/categories');
             if (!response.ok) throw new Error('Failed to fetch categories');
-            const responseData = await response.json();
-            return responseData.data || [];
-        } catch(error) { handleApiError(error); return []; }
-    },
-
-    getBrands: async (): Promise<Brand[]> => {
-        try {
-            const mockBrands: Brand[] = [
-                { id: 1, name: 'Samsung', slug: 'samsung' },
-                { id: 2, name: 'Apple', slug: 'apple' },
-                { id: 3, name: 'Nike', slug: 'nike' },
-                { id: 4, name: 'Adidas', slug: 'adidas' },
-            ];
-            return Promise.resolve(mockBrands);
-        } catch(error) { 
-            console.error("Error fetching mock brands:", error);
-            return []; 
+            const data: string[] = await response.json();
+            const categoryImages: { [key: string]: string } = {
+                'electronics': 'https://images.unsplash.com/photo-1526738549149-8e07eca6c147?q=80&w=1925&auto=format&fit=crop',
+                'jewelery': 'https://images.unsplash.com/photo-1599643477877-530eb83abc8e?q=80&w=1887&auto=format&fit=crop',
+                "men's clothing": 'https://images.unsplash.com/photo-1617137968427-85924c800a22?q=80&w=1887&auto=format&fit=crop',
+                "women's clothing": 'https://images.unsplash.com/photo-1572804013427-4d7ca7268217?q=80&w=1965&auto=format&fit=crop'
+            };
+            return data.map((name, index) => ({
+                id: index + 1,
+                name: name,
+                slug: name.replace(/'/g, "").replace(/\s/g, "-"),
+                image: categoryImages[name] || 'https://images.unsplash.com/photo-1555529669-e69e7aa0ba9a?q=80&w=2070&auto=format&fit=crop'
+            }));
+        } catch(error) {
+             handleApiError(error);
+             return [];
         }
+    },
+    getBrands: async (): Promise<Brand[]> => {
+       try {
+            return [
+                { id: 1, name: 'Adidas', logo: '' },
+                { id: 2, name: 'Nike', logo: '' },
+                { id: 3, name: 'Zara', logo: '' },
+                { id: 4, name: 'Gucci', logo: '' },
+            ];
+       } catch(error) {
+            handleApiError(error);
+            return [];
+       }
     }
 }
 
-// --- المكون الرئيسي للتطبيق الذي يجلب البيانات ---
-function AppLoader() {
+
+// --- مكون الصفحة الرئيسية ---
+function HomePageContent({ onNavigate }: { onNavigate: (page: string, slug?: string) => void }) {
+    const { showToast } = useToast();
+    const { data: slides } = useFetchData(api.getSlides);
     const { data: allProducts, loading: productsLoading, error: productsError } = useFetchData(api.getAllProducts);
     const { data: categories, loading: categoriesLoading, error: categoriesError } = useFetchData(api.getCategories);
-    const { data: brands, loading: brandsLoading, error: brandsError } = useFetchData(api.getBrands);
+    const { data: brands, loading: brandsLoading } = useFetchData(api.getBrands);
+    
+    const featuredProducts = useMemo(() => allProducts?.slice(0, 4) || [], [allProducts]);
+    const specialOffers = useMemo(() => allProducts?.slice(-4).reverse() || [], [allProducts]);
 
-    const loading = productsLoading || categoriesLoading || brandsLoading;
-    const error = productsError || categoriesError || brandsError;
 
-    if (loading) return <div className="flex justify-center items-center h-screen"><LoaderCircle className="animate-spin text-gray-400" size={48} /></div>;
-    if (error) return <div className="flex justify-center items-center h-screen text-red-500 p-4 text-center">{error}</div>;
+    const handleAddToCart = useCallback((productName: string) => {
+        showToast(`تمت إضافة "${productName}" إلى السلة!`);
+    }, [showToast]);
 
-    return <AllProductsPage allProducts={allProducts || []} categories={categories || []} brands={brands || []} />;
+    return (
+        <>
+            <HeroSlider slides={slides || []} />
+            
+            <AnimatedSection>
+                <div className="py-20 bg-gray-50">
+                    <div className="container mx-auto px-6">
+                        <div className="flex items-center justify-between mb-12">
+                            <h2 className="text-4xl font-bold text-[#1e81b0]">المنتجات المميزة</h2>
+                            <a href="#" className="flex items-center gap-2 text-[#1e81b0] font-semibold hover:text-[#eab676] transition-colors">
+                                <span>عرض الكل</span>
+                                <ArrowLeft size={20} />
+                            </a>
+                        </div>
+                        {productsError && <p className="text-red-500 text-center">{productsError}</p>}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                            {productsLoading ? (
+                                Array.from({ length: 4 }).map((_, index) => <ProductSkeleton key={index} />)
+                            ) : (
+                                featuredProducts?.map((product) => <ProductCard key={product.id} product={product} onAddToCart={handleAddToCart} onNavigate={onNavigate} />)
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </AnimatedSection>
+            
+            <AnimatedSection>
+                <div className="py-20 bg-[#fff8f0]">
+                    <div className="container mx-auto px-6">
+                        <div className="flex items-center justify-between mb-12">
+                            <h2 className="text-4xl font-bold text-[#eab676]">عروض حصرية</h2>
+                             <a href="#" className="flex items-center gap-2 text-[#1e81b0] font-semibold hover:text-[#eab676] transition-colors">
+                                <span>مشاهدة الكل</span>
+                                <ArrowLeft size={20} />
+                            </a>
+                        </div>
+                        {productsError && <p className="text-red-500 text-center">{productsError}</p>}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                            {productsLoading ? (
+                                Array.from({ length: 4 }).map((_, index) => <ProductSkeleton key={index} />)
+                            ) : (
+                                specialOffers?.map((product) => <ProductCard key={product.id} product={product} onAddToCart={handleAddToCart} onNavigate={onNavigate} />)
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </AnimatedSection>
+
+            <AnimatedSection>
+                <div className="py-20 bg-white">
+                    <div className="container mx-auto px-6">
+                        <h2 className="text-4xl font-bold text-center text-[#1e81b0] mb-12">تسوق حسب التصنيف</h2>
+                        {categoriesError && <p className="text-red-500 text-center">{categoriesError}</p>}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                            {categoriesLoading ? Array.from({ length: 3 }).map((_, i) => <div key={i} className="w-full h-80 bg-gray-300 rounded-lg animate-pulse"></div>) 
+                            : categories?.map((category) => (
+                                <a href={`/category/${category.slug}`} key={category.id} className="group relative rounded-lg overflow-hidden shadow-lg">
+                                    <img src={category.image} alt={category.name} className="w-full h-80 object-cover transform group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end justify-center">
+                                        <h3 className="text-2xl font-bold text-white mb-6 transform group-hover:translate-y-[-10px] transition-transform duration-300">{category.name}</h3>
+                                    </div>
+                                </a>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </AnimatedSection>
+
+            <AnimatedSection>
+                 <div className="py-24 bg-cover bg-center bg-fixed" style={{backgroundImage: "url('https://images.unsplash.com/photo-1555529669-e69e7aa0ba9a?q=80&w=2070&auto=format&fit=crop')"}}>
+                    <div className="container mx-auto px-6 text-center text-white">
+                        <div className="bg-black/40 backdrop-blur-sm p-10 rounded-lg inline-block">
+                            <h2 className="text-4xl font-bold">تخفيضات نهاية الموسم</h2>
+                            <p className="mt-4 text-lg max-w-xl mx-auto">لا تفوت فرصة الحصول على أفضل المنتجات بأفضل الأسعار. تسوق الآن!</p>
+                            <a href="/offers" className="mt-8 inline-block bg-[#eab676] text-white font-bold py-3 px-12 rounded-lg hover:bg-opacity-90 transition-transform hover:scale-105">
+                                اكتشف العروض
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </AnimatedSection>
+            
+            <AnimatedSection>
+                <div className="py-16 bg-white">
+                    <div className="container mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+                        <div className="border border-gray-200 rounded-lg p-6 hover:shadow-md hover:-translate-y-1 transition-all">
+                            <Truck size={40} className="mx-auto text-[#1e81b0]" />
+                            <h3 className="mt-4 text-xl font-semibold">شحن سريع ومجاني</h3>
+                            <p className="mt-2 text-gray-500">لجميع الطلبات فوق 500 ر.س</p>
+                        </div>
+                         <div className="border border-gray-200 rounded-lg p-6 hover:shadow-md hover:-translate-y-1 transition-all">
+                            <ShieldCheck size={40} className="mx-auto text-[#1e81b0]" />
+                            <h3 className="mt-4 text-xl font-semibold">دفع آمن</h3>
+                            <p className="mt-2 text-gray-500">نضمن لك حماية كاملة لبياناتك</p>
+                        </div>
+                         <div className="border border-gray-200 rounded-lg p-6 hover:shadow-md hover:-translate-y-1 transition-all">
+                            <PhoneCall size={40} className="mx-auto text-[#1e81b0]" />
+                            <h3 className="mt-4 text-xl font-semibold">دعم فني 24/7</h3>
+                            <p className="mt-2 text-gray-500">مستعدون لمساعدتك في أي وقت</p>
+                        </div>
+                    </div>
+                </div>
+            </AnimatedSection>
+            
+            <AnimatedSection>
+                <div className="py-20 bg-gray-50">
+                    <div className="container mx-auto px-6">
+                        <h2 className="text-4xl font-bold text-center text-[#1e81b0] mb-12">أشهر الماركات</h2>
+                        <div className="flex flex-wrap items-center justify-center gap-6">
+                           {brandsLoading ? Array.from({length: 4}).map((_, i) => <div key={i} className="h-24 w-40 bg-gray-200 rounded-lg animate-pulse"></div>) 
+                           : brands?.map((brand) => (
+                                <div key={brand.id} title={brand.name} className="bg-gray-100 p-4 rounded-lg border border-transparent hover:border-gray-300 hover:shadow-sm w-40 h-24 flex items-center justify-center filter grayscale hover:grayscale-0 transition-all duration-300 cursor-pointer">
+                                    <img 
+                                        src={`https://logo.clearbit.com/${brand.name.toLowerCase().replace(/\s/g, '')}.com?size=128`} 
+                                        alt={`${brand.name} logo`} 
+                                        className="max-h-12 w-auto object-contain" 
+                                        onError={(e) => {
+                                            e.currentTarget.onerror = null; // Prevent infinite loops
+                                            e.currentTarget.src = `https://via.placeholder.com/120x60/f0f0f0/cccccc?text=${brand.name}`;
+                                        }}
+                                        loading="lazy" />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </AnimatedSection>
+
+        </>
+    );
+}
+
+// --- المكون الرئيسي للتطبيق الذي يدير التنقل ---
+function App() {
+    const [currentPage, setCurrentPage] = useState('home');
+    const [selectedProductSlug, setSelectedProductSlug] = useState<string | null>(null);
+
+    const { data: allProducts, loading, error } = useFetchData(api.getAllProducts);
+
+    const navigateTo = (page: string, slug: string | null = null) => {
+        setCurrentPage(page);
+        setSelectedProductSlug(slug);
+    };
+    
+    const handleAddToCart = useCallback((productName: string) => {
+        // سيتم لاحقاً إضافة منطق سلة المشتريات هنا
+        console.log(`Added ${productName} to cart`);
+    }, []);
+
+    const renderContent = () => {
+        if (loading) {
+            return <div className="flex justify-center items-center h-screen"><LoaderCircle className="animate-spin text-gray-400" size={48} /></div>;
+        }
+        
+        if(error) {
+            return <div className="flex justify-center items-center h-screen text-red-500">{error}</div>;
+        }
+
+        switch (currentPage) {
+            case 'product':
+                const selectedProduct = allProducts?.find(p => p.slug === selectedProductSlug);
+                if (selectedProduct) {
+                    return <ProductDetailPage product={selectedProduct} onAddToCart={handleAddToCart} onNavigate={navigateTo} />;
+                }
+                // Fallback if product not found
+                return <HomePageContent onNavigate={navigateTo} />;
+            case 'home':
+            default:
+                return <HomePageContent onNavigate={navigateTo} />;
+        }
+    };
+    
+    return (
+        <div className="bg-white">
+            <Header onNavigate={navigateTo} />
+            <main>
+                {renderContent()}
+            </main>
+            <Footer />
+        </div>
+    );
 }
 
 // --- نقطة الدخول الرئيسية ---
@@ -556,12 +729,7 @@ export default function Page() {
     return (
         <ToastProvider>
             <FavoritesProvider>
-                <div className="bg-white min-h-screen">
-                    {/* يمكنك وضع الهيدر والفوتر هنا */}
-                    <main>
-                       <AppLoader />
-                    </main>
-                </div>
+                <App />
             </FavoritesProvider>
         </ToastProvider>
     );

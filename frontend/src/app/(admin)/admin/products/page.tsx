@@ -1,566 +1,285 @@
 'use client';
 
-import React, { useState } from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
+import React, { useState, useMemo, useEffect } from 'react';
 
-// Define interfaces
+// Icons from lucide-react for consistency
+import { 
+    Package, 
+    PlusCircle, 
+    Search, 
+    MoreVertical, 
+    Edit, 
+    Trash2, 
+    LoaderCircle, 
+    Star, 
+    Tag, 
+    Warehouse, 
+    CheckCircle,
+    XCircle,
+    PackageSearch
+} from 'lucide-react';
+
+// --- Interfaces ---
+// تم دمج الواجهات لتشمل جميع التفاصيل
 interface Product {
-  id: string;
-  name: string;
-  category: string;
-  price: number;
-  originalPrice?: number;
-  stock: number;
-  sold: number;
-  status: 'active' | 'inactive' | 'out_of_stock';
-  image: string;
-  createdAt: string;
-  rating: number;
-  reviews: number;
+    id: number;
+    name: string;
+    image: string;
+    category: string;
+    price: number;
+    originalPrice?: number;
+    stock: number;
+    sold: number; // عدد المبيعات
+    status: 'published' | 'draft' | 'out_of_stock';
+    rating: number; // التقييم
+    reviews: number; // عدد المراجعات
 }
 
-interface ProductStats {
-  total: number;
-  active: number;
-  outOfStock: number;
-  lowStock: number;
-  totalValue: number;
-}
+// --- API Helper ---
+const api = {
+    getProducts: async () => {
+        const token = localStorage.getItem('api_token');
+        if (!token) {
+            window.location.href = '/login';
+            return [];
+        }
 
-// Sample data
-const products: Product[] = [
-  {
-    id: '1',
-    name: 'سماعات بلوتوث لاسلكية عالية الجودة',
-    category: 'إلكترونيات',
-    price: 299,
-    originalPrice: 399,
-    stock: 45,
-    sold: 128,
-    status: 'active',
-    image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&h=100',
-    createdAt: '2024-01-15',
-    rating: 4.5,
-    reviews: 89
-  },
-  {
-    id: '2',
-    name: 'ساعة ذكية رياضية مقاومة للماء',
-    category: 'إكسسوارات',
-    price: 1299,
-    stock: 23,
-    sold: 67,
-    status: 'active',
-    image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&h=100',
-    createdAt: '2024-01-10',
-    rating: 4.8,
-    reviews: 156
-  },
-  {
-    id: '3',
-    name: 'حقيبة لابتوب أنيقة ومقاومة للماء',
-    category: 'حقائب',
-    price: 199,
-    originalPrice: 249,
-    stock: 0,
-    sold: 34,
-    status: 'out_of_stock',
-    image: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&h=100',
-    createdAt: '2024-01-08',
-    rating: 4.3,
-    reviews: 45
-  },
-  {
-    id: '4',
-    name: 'كاميرا رقمية احترافية',
-    category: 'كاميرات',
-    price: 2499,
-    originalPrice: 2799,
-    stock: 8,
-    sold: 23,
-    status: 'active',
-    image: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&h=100',
-    createdAt: '2024-01-05',
-    rating: 4.9,
-    reviews: 234
-  },
-  {
-    id: '5',
-    name: 'لوحة مفاتيح ميكانيكية للألعاب',
-    category: 'ألعاب',
-    price: 450,
-    stock: 67,
-    sold: 89,
-    status: 'active',
-    image: 'https://images.unsplash.com/photo-1541140532154-b024d705b90a?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&h=100',
-    createdAt: '2024-01-03',
-    rating: 4.6,
-    reviews: 167
-  },
-  {
-    id: '6',
-    name: 'مكبر صوت محمول عالي الجودة',
-    category: 'صوتيات',
-    price: 189,
-    originalPrice: 229,
-    stock: 3,
-    sold: 145,
-    status: 'active',
-    image: 'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&h=100',
-    createdAt: '2023-12-28',
-    rating: 4.4,
-    reviews: 92
-  }
-];
+        // [ملاحظة] تأكد من أن الـ API يرجع كل البيانات المطلوبة في الواجهة الجديدة
+        const response = await fetch('http://localhost:8000/api/products', {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Accept': 'application/json',
+            },
+        });
 
-const productStats: ProductStats = {
-  total: 320,
-  active: 285,
-  outOfStock: 15,
-  lowStock: 20,
-  totalValue: 1250000
+        const data = await response.json();
+
+        if (!response.ok) {
+            if (response.status === 401) {
+                localStorage.removeItem('api_token');
+                window.location.href = '/login';
+            }
+            throw new Error(data.message || 'فشل في جلب بيانات المنتجات.');
+        }
+
+        return data.data || data;
+    }
 };
 
-export default function ProductsPage() {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedStatus, setSelectedStatus] = useState('all');
-  const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
+// --- Helper Functions ---
+const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('ar-MA', { style: 'currency', currency: 'MAD' }).format(amount);
+};
 
-  const categories = ['all', 'إلكترونيات', 'إكسسوارات', 'حقائب', 'كاميرات', 'ألعاب', 'صوتيات'];
-
-  const getStatusColor = (status: Product['status']) => {
+const getStatusInfo = (status: Product['status']) => {
     switch (status) {
-      case 'active':
-        return 'bg-green-100 text-green-800';
-      case 'inactive':
-        return 'bg-gray-100 text-gray-800';
-      case 'out_of_stock':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+        case 'published': return { text: 'منشور', color: 'bg-green-100 text-green-800' };
+        case 'draft': return { text: 'مسودة', color: 'bg-yellow-100 text-yellow-800' };
+        case 'out_of_stock': return { text: 'نفد المخزون', color: 'bg-red-100 text-red-800' };
+        default: return { text: status, color: 'bg-gray-100 text-gray-800' };
     }
-  };
+};
 
-  const getStatusText = (status: Product['status']) => {
-    switch (status) {
-      case 'active':
-        return 'نشط';
-      case 'inactive':
-        return 'غير نشط';
-      case 'out_of_stock':
-        return 'نفد من المخزون';
-      default:
-        return status;
-    }
-  };
-
-  const getStockStatus = (stock: number) => {
-    if (stock === 0) return { color: 'text-red-600', text: 'نفد' };
-    if (stock <= 10) return { color: 'text-yellow-600', text: 'منخفض' };
-    return { color: 'text-green-600', text: 'متوفر' };
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('ar-SA', {
-      style: 'currency',
-      currency: 'SAR'
-    }).format(amount);
-  };
-
-  const renderStars = (rating: number) => {
+const renderStars = (rating: number) => {
     const stars = [];
-    const fullStars = Math.floor(rating);
-    const hasHalfStar = rating % 1 !== 0;
-
-    for (let i = 0; i < fullStars; i++) {
-      stars.push(
-        <svg key={i} className="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-        </svg>
-      );
+    for (let i = 1; i <= 5; i++) {
+        stars.push(<Star key={i} size={16} className={i <= rating ? "text-yellow-400 fill-current" : "text-gray-300 fill-current"} />);
     }
+    return <div className="flex items-center gap-0.5">{stars}</div>;
+};
 
-    if (hasHalfStar) {
-      stars.push(
-        <svg key="half" className="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-        </svg>
-      );
-    }
+// --- Sub-components ---
 
-    const emptyStars = 5 - Math.ceil(rating);
-    for (let i = 0; i < emptyStars; i++) {
-      stars.push(
-        <svg key={`empty-${i}`} className="w-4 h-4 text-gray-300" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-        </svg>
-      );
-    }
-
-    return stars;
-  };
-
-  const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
-    const matchesStatus = selectedStatus === 'all' || product.status === selectedStatus;
-    return matchesSearch && matchesCategory && matchesStatus;
-  });
-
-  const toggleProductSelection = (productId: string) => {
-    setSelectedProducts(prev => 
-      prev.includes(productId) 
-        ? prev.filter(id => id !== productId)
-        : [...prev, productId]
-    );
-  };
-
-  const handleBulkAction = (action: string) => {
-    console.log(`Bulk action: ${action} for products:`, selectedProducts);
-    setSelectedProducts([]);
-  };
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200">
-        <div className="px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+const StatCard = ({ title, value, icon }) => (
+    <div className="bg-white rounded-2xl shadow-md p-5 border border-gray-100">
+        <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">{icon}</div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">إدارة المنتجات</h1>
-              <p className="text-sm text-gray-600">إدارة وتنظيم منتجات المتجر</p>
+                <p className="text-sm font-medium text-gray-500">{title}</p>
+                <p className="text-2xl font-bold text-gray-900">{value}</p>
             </div>
-            
-            <div className="flex items-center space-x-4 space-x-reverse">
-              {selectedProducts.length > 0 && (
-                <div className="flex items-center space-x-2 space-x-reverse">
-                  <select 
-                    onChange={(e) => handleBulkAction(e.target.value)}
-                    className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="">إجراءات متعددة</option>
-                    <option value="activate">تفعيل</option>
-                    <option value="deactivate">إلغاء تفعيل</option>
-                    <option value="delete">حذف</option>
-                  </select>
-                  <span className="text-sm text-gray-600">({selectedProducts.length} محدد)</span>
-                </div>
-              )}
-              
-              <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2 space-x-reverse">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-                <span>إضافة منتج جديد</span>
-              </button>
-            </div>
-          </div>
         </div>
-      </div>
-
-      <div className="px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
-          <div className="bg-white rounded-2xl shadow-lg p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">إجمالي المنتجات</p>
-                <p className="text-2xl font-bold text-gray-900">{productStats.total}</p>
-              </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-lg p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">المنتجات النشطة</p>
-                <p className="text-2xl font-bold text-gray-900">{productStats.active}</p>
-              </div>
-              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-lg p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">نفد من المخزون</p>
-                <p className="text-2xl font-bold text-gray-900">{productStats.outOfStock}</p>
-              </div>
-              <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
-                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-lg p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">مخزون منخفض</p>
-                <p className="text-2xl font-bold text-gray-900">{productStats.lowStock}</p>
-              </div>
-              <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center">
-                <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-lg p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">قيمة المخزون</p>
-                <p className="text-2xl font-bold text-gray-900">{formatCurrency(productStats.totalValue)}</p>
-              </div>
-              <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                </svg>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Filters */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">البحث</label>
-              <input
-                type="text"
-                placeholder="ابحث عن منتج..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">التصنيف</label>
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                {categories.map(category => (
-                  <option key={category} value={category}>
-                    {category === 'all' ? 'جميع التصنيفات' : category}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">الحالة</label>
-              <select
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="all">جميع الحالات</option>
-                <option value="active">نشط</option>
-                <option value="inactive">غير نشط</option>
-                <option value="out_of_stock">نفد من المخزون</option>
-              </select>
-            </div>
-
-            <div className="flex items-end">
-              <button className="w-full bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors">
-                إعادة تعيين
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Products Table */}
-        <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    <input
-                      type="checkbox"
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedProducts(filteredProducts.map(p => p.id));
-                        } else {
-                          setSelectedProducts([]);
-                        }
-                      }}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    المنتج
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    التصنيف
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    السعر
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    المخزون
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    المبيعات
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    التقييم
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    الحالة
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    الإجراءات
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredProducts.map((product) => {
-                  const stockStatus = getStockStatus(product.stock);
-                  return (
-                    <tr key={product.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <input
-                          type="checkbox"
-                          checked={selectedProducts.includes(product.id)}
-                          onChange={() => toggleProductSelection(product.id)}
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                        />
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0 h-12 w-12">
-                            <Image
-                              src={product.image}
-                              alt={product.name}
-                              width={48}
-                              height={48}
-                              className="h-12 w-12 rounded-lg object-cover"
-                            />
-                          </div>
-                          <div className="mr-4">
-                            <div className="text-sm font-medium text-gray-900 max-w-xs truncate">
-                              {product.name}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              ID: {product.id}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                          {product.category}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
-                          <span className="font-semibold">{formatCurrency(product.price)}</span>
-                          {product.originalPrice && (
-                            <div className="text-xs text-gray-500 line-through">
-                              {formatCurrency(product.originalPrice)}
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm">
-                          <span className={`font-medium ${stockStatus.color}`}>
-                            {product.stock}
-                          </span>
-                          <div className="text-xs text-gray-500">
-                            {stockStatus.text}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {product.sold}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="flex items-center space-x-1 space-x-reverse">
-                            {renderStars(product.rating)}
-                          </div>
-                          <span className="mr-2 text-sm text-gray-600">
-                            ({product.reviews})
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(product.status)}`}>
-                          {getStatusText(product.status)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex items-center space-x-2 space-x-reverse">
-                          <button className="text-blue-600 hover:text-blue-900">
-                            تعديل
-                          </button>
-                          <button className="text-green-600 hover:text-green-900">
-                            عرض
-                          </button>
-                          <button className="text-red-600 hover:text-red-900">
-                            حذف
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination */}
-          <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
-            <div className="flex-1 flex justify-between sm:hidden">
-              <button className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
-                السابق
-              </button>
-              <button className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
-                التالي
-              </button>
-            </div>
-            <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm text-gray-700">
-                  عرض <span className="font-medium">1</span> إلى <span className="font-medium">{filteredProducts.length}</span> من{' '}
-                  <span className="font-medium">{filteredProducts.length}</span> نتيجة
-                </p>
-              </div>
-              <div>
-                <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                  <button className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
-                    السابق
-                  </button>
-                  <button className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-blue-50 text-sm font-medium text-blue-600">
-                    1
-                  </button>
-                  <button className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
-                    التالي
-                  </button>
-                </nav>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
-  );
+);
+
+const ProductCard = ({ product, onSelect, isSelected }) => {
+    const status = getStatusInfo(product.status);
+    return (
+        <div className="bg-white rounded-lg shadow p-4 border border-gray-100 space-y-3">
+            <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                    <input type="checkbox" checked={isSelected} onChange={() => onSelect(product.id)} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mt-1" />
+                    <img src={product.image} alt={product.name} className="w-14 h-14 rounded-lg object-cover border" onError={(e) => { e.currentTarget.src = 'https://placehold.co/100x100/f0f0f0/cccccc?text=No+Image'; }}/>
+                    <div>
+                        <p className="font-bold text-gray-900 line-clamp-2">{product.name}</p>
+                        <p className="text-sm text-gray-500">{product.category}</p>
+                    </div>
+                </div>
+                <button className="text-gray-400 hover:text-gray-700 p-1"><MoreVertical size={20} /></button>
+            </div>
+            <div className="grid grid-cols-2 gap-4 text-sm pt-3 border-t border-gray-100">
+                <div>
+                    <p className="text-gray-500">السعر</p>
+                    <p className="font-semibold text-gray-800">{formatCurrency(product.price)}</p>
+                </div>
+                <div>
+                    <p className="text-gray-500">المخزون</p>
+                    <p className="font-semibold text-gray-800">{product.stock}</p>
+                </div>
+                <div>
+                    <p className="text-gray-500">الحالة</p>
+                    <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${status.color}`}>{status.text}</span>
+                </div>
+                <div>
+                    <p className="text-gray-500">التقييم</p>
+                    <div className="flex items-center gap-1">{renderStars(product.rating)}</div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+
+// --- Main Products Page Component ---
+const ProductsPage = ({ products }) => {
+    const [searchTerm, setSearchTerm] = useState('');
+    const [selectedCategory, setSelectedCategory] = useState('all');
+    const [selectedStatus, setSelectedStatus] = useState('all');
+    const [selectedProducts, setSelectedProducts] = useState<number[]>([]);
+
+    const categories = useMemo(() => ['all', ...Array.from(new Set(products.map(p => p.category)))], [products]);
+
+    const filteredProducts = useMemo(() => {
+        return products.filter(product => {
+            const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
+            const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
+            const matchesStatus = selectedStatus === 'all' || product.status === selectedStatus;
+            return matchesSearch && matchesCategory && matchesStatus;
+        });
+    }, [products, searchTerm, selectedCategory, selectedStatus]);
+
+    const productStats = useMemo(() => ({
+        total: products.length,
+        active: products.filter(p => p.status === 'published').length,
+        outOfStock: products.filter(p => p.stock === 0).length,
+        lowStock: products.filter(p => p.stock > 0 && p.stock <= 10).length,
+        totalValue: products.reduce((acc, p) => acc + (p.price * p.stock), 0)
+    }), [products]);
+
+    const toggleProductSelection = (productId: number) => {
+        setSelectedProducts(prev => prev.includes(productId) ? prev.filter(id => id !== productId) : [...prev, productId]);
+    };
+
+    const toggleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setSelectedProducts(e.target.checked ? filteredProducts.map(p => p.id) : []);
+    };
+    
+    return (
+        <div className="space-y-8" dir="rtl">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-900">إدارة المنتجات</h1>
+                    <p className="text-md text-gray-600 mt-1">إدارة وتنظيم منتجات المتجر.</p>
+                </div>
+                <div><button className="w-full sm:w-auto flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-colors"><PlusCircle size={20} /><span>إضافة منتج</span></button></div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+                 <StatCard title="إجمالي المنتجات" value={productStats.total} icon={<Package size={24} />} />
+                 <StatCard title="المنتجات النشطة" value={productStats.active} icon={<CheckCircle size={24} />} />
+                 <StatCard title="نفد من المخزون" value={productStats.outOfStock} icon={<XCircle size={24} />} />
+                 <StatCard title="مخزون منخفض" value={productStats.lowStock} icon={<Warehouse size={24} />} />
+                 <StatCard title="قيمة المخزون" value={formatCurrency(productStats.totalValue)} icon={<Tag size={24} />} />
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-md p-4 border border-gray-100">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="relative md:col-span-2">
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3"><Search className="h-5 w-5 text-gray-400" /></div>
+                        <input type="text" placeholder="ابحث عن منتج..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pr-10 pl-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                    </div>
+                    <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)} className="w-full py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        {categories.map(cat => <option key={cat} value={cat}>{cat === 'all' ? 'جميع التصنيفات' : cat}</option>)}
+                    </select>
+                    <select value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)} className="w-full py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="all">جميع الحالات</option>
+                        <option value="published">منشور</option>
+                        <option value="draft">مسودة</option>
+                        <option value="out_of_stock">نفد من المخزون</option>
+                    </select>
+                </div>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
+                <div className="overflow-x-auto hidden sm:block">
+                    <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                            <tr>
+                                <th className="px-6 py-3 text-right"><input type="checkbox" onChange={toggleSelectAll} checked={selectedProducts.length === filteredProducts.length && filteredProducts.length > 0} className="rounded" /></th>
+                                <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">المنتج</th>
+                                <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">السعر</th>
+                                <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">المخزون</th>
+                                <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">التقييم</th>
+                                <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">الحالة</th>
+                                <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                            {filteredProducts.map((product) => (
+                                <tr key={product.id} className="hover:bg-gray-50">
+                                    <td className="px-6 py-4"><input type="checkbox" checked={selectedProducts.includes(product.id)} onChange={() => toggleProductSelection(product.id)} className="rounded" /></td>
+                                    <td className="px-6 py-4"><div className="flex items-center gap-3"><img src={product.image} alt={product.name} className="w-12 h-12 rounded-lg object-cover border" onError={(e) => { e.currentTarget.src = 'https://placehold.co/100x100/f0f0f0/cccccc?text=No+Image'; }} /><div><p className="font-semibold text-gray-900 max-w-xs truncate">{product.name}</p><p className="text-sm text-gray-500">{product.category}</p></div></div></td>
+                                    <td className="px-6 py-4"><div className="font-semibold text-gray-800">{formatCurrency(product.price)}</div>{product.originalPrice && <div className="text-xs text-gray-400 line-through">{formatCurrency(product.originalPrice)}</div>}</td>
+                                    <td className="px-6 py-4 text-center text-sm font-medium">{product.stock < 10 ? <span className="text-red-600">{product.stock}</span> : product.stock}</td>
+                                    <td className="px-6 py-4"><div className="flex items-center justify-center gap-1">{renderStars(product.rating)}<span className="text-xs text-gray-500">({product.reviews})</span></div></td>
+                                    <td className="px-6 py-4 text-center"><span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${getStatusInfo(product.status).color}`}>{getStatusInfo(product.status).text}</span></td>
+                                    <td className="px-6 py-4"><div className="flex items-center gap-3 text-gray-500"><button className="hover:text-green-600"><Edit size={18} /></button><button className="hover:text-red-600"><Trash2 size={18} /></button></div></td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+                <div className="sm:hidden p-4 space-y-4 bg-gray-50">
+                     {filteredProducts.map((product) => (<ProductCard key={product.id} product={product} onSelect={toggleProductSelection} isSelected={selectedProducts.includes(product.id)} />))}
+                </div>
+                <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+                    <p className="text-sm text-gray-700">عرض <span className="font-medium">1</span> إلى <span className="font-medium">{filteredProducts.length}</span> من <span className="font-medium">{products.length}</span> نتيجة</p>
+                    <div className="flex gap-1"><button className="px-3 py-1 border rounded-md text-sm hover:bg-gray-50">السابق</button><button className="px-3 py-1 border rounded-md text-sm hover:bg-gray-50">التالي</button></div>
+                </div>
+            </div>
+        </div>
+    );
 }
+
+// --- Data Fetching Wrapper ---
+export default function ProductsPageLoader() {
+    const [products, setProducts] = useState<Product[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        const fetchProducts = async () => {
+            try {
+                // [تعديل] تم تفعيل جلب البيانات الحقيقية من الخادم
+                const data = await api.getProducts(); 
+                setProducts(data);
+            } catch (err) {
+                setError(err instanceof Error ? err.message : 'An unknown error occurred');
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchProducts();
+    }, []);
+
+    if (loading) {
+        return <div className="flex items-center justify-center h-96"><LoaderCircle className="animate-spin text-blue-600" size={48} /></div>;
+    }
+
+    if (error) {
+        return <div className="text-center text-red-600 bg-red-50 p-4 rounded-lg">خطأ: {error}</div>;
+    }
+
+    return <ProductsPage products={products} />;
+}
+

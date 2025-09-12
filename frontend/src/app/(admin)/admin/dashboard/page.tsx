@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 
-// Define interfaces
+// تعريف الواجهات
 interface DashboardStats {
   totalSales: number;
   totalOrders: number;
@@ -31,7 +31,7 @@ interface TopProduct {
   image: string;
 }
 
-// Sample data
+// بيانات تجريبية
 const dashboardStats: DashboardStats = {
   totalSales: 2450000,
   totalOrders: 1250,
@@ -149,10 +149,11 @@ export default function AdminDashboard() {
     }
   };
 
+  // دمج التنسيق بالدرهم المغربي
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('ar-SA', {
+    return new Intl.NumberFormat('ar-MA', {
       style: 'currency',
-      currency: 'SAR'
+      currency: 'MAD'
     }).format(amount);
   };
 
@@ -166,7 +167,6 @@ export default function AdminDashboard() {
               <h1 className="text-2xl font-bold text-gray-900">لوحة التحكم</h1>
               <p className="text-sm text-gray-600">مرحباً بك في لوحة تحكم المدير</p>
             </div>
-            
             <div className="flex items-center space-x-4 space-x-reverse">
               <select
                 value={timeRange}
@@ -178,7 +178,6 @@ export default function AdminDashboard() {
                 <option value="month">هذا الشهر</option>
                 <option value="year">هذا العام</option>
               </select>
-              
               <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
                 تصدير التقرير
               </button>
@@ -189,7 +188,7 @@ export default function AdminDashboard() {
 
       <div className="px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {/* Total Sales */}
           <div className="bg-white rounded-2xl shadow-lg p-6">
             <div className="flex items-center justify-between">
@@ -210,7 +209,6 @@ export default function AdminDashboard() {
               </div>
             </div>
           </div>
-
           {/* Total Orders */}
           <div className="bg-white rounded-2xl shadow-lg p-6">
             <div className="flex items-center justify-between">
@@ -231,7 +229,6 @@ export default function AdminDashboard() {
               </div>
             </div>
           </div>
-
           {/* Total Customers */}
           <div className="bg-white rounded-2xl shadow-lg p-6">
             <div className="flex items-center justify-between">
@@ -252,7 +249,6 @@ export default function AdminDashboard() {
               </div>
             </div>
           </div>
-
           {/* Total Products */}
           <div className="bg-white rounded-2xl shadow-lg p-6">
             <div className="flex items-center justify-between">
@@ -285,7 +281,6 @@ export default function AdminDashboard() {
                   عرض الكل
                 </Link>
               </div>
-              
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
@@ -316,7 +311,6 @@ export default function AdminDashboard() {
               </div>
             </div>
           </div>
-
           {/* Top Products */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-2xl shadow-lg p-6">
@@ -326,7 +320,6 @@ export default function AdminDashboard() {
                   عرض الكل
                 </Link>
               </div>
-              
               <div className="space-y-4">
                 {topProducts.map((product) => (
                   <div key={product.id} className="flex items-center space-x-4 space-x-reverse">
@@ -348,7 +341,6 @@ export default function AdminDashboard() {
             </div>
           </div>
         </div>
-
         {/* Quick Actions */}
         <div className="mt-8">
           <h2 className="text-xl font-bold text-gray-900 mb-6">إجراءات سريعة</h2>
@@ -365,7 +357,6 @@ export default function AdminDashboard() {
               <h3 className="text-lg font-semibold text-gray-900 mb-2">إضافة منتج</h3>
               <p className="text-sm text-gray-600">إضافة منتج جديد للمتجر</p>
             </Link>
-
             <Link
               href="/admin/orders"
               className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow group"
@@ -378,7 +369,6 @@ export default function AdminDashboard() {
               <h3 className="text-lg font-semibold text-gray-900 mb-2">إدارة الطلبات</h3>
               <p className="text-sm text-gray-600">متابعة وإدارة الطلبات</p>
             </Link>
-
             <Link
               href="/admin/customers"
               className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow group"
@@ -391,7 +381,6 @@ export default function AdminDashboard() {
               <h3 className="text-lg font-semibold text-gray-900 mb-2">إدارة العملاء</h3>
               <p className="text-sm text-gray-600">عرض وإدارة العملاء</p>
             </Link>
-
             <Link
               href="/admin/reports"
               className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow group"
