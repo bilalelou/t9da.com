@@ -135,6 +135,17 @@ const ProductCard = ({ product, onSelect, isSelected }) => {
                     <div className="flex items-center gap-1">{renderStars(product.rating)}</div>
                 </div>
             </div>
+            <div className="flex justify-end gap-2 pt-3 border-t border-gray-100">
+                <button 
+                    onClick={() => window.location.href = `/admin/products/edit/${product.id}`}
+                    className="text-green-600 hover:text-green-800 p-1"
+                >
+                    <Edit size={18} />
+                </button>
+                <button className="text-red-600 hover:text-red-800 p-1">
+                    <Trash2 size={18} />
+                </button>
+            </div>
         </div>
     );
 };
@@ -181,7 +192,15 @@ const ProductsPage = ({ products }) => {
                     <h1 className="text-3xl font-bold text-gray-900">إدارة المنتجات</h1>
                     <p className="text-md text-gray-600 mt-1">إدارة وتنظيم منتجات المتجر.</p>
                 </div>
-                <div><button className="w-full sm:w-auto flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-colors"><PlusCircle size={20} /><span>إضافة منتج</span></button></div>
+                <div>
+                    <button 
+                        onClick={() => window.location.href = '/admin/products/add'}
+                        className="w-full sm:w-auto flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-colors"
+                    >
+                        <PlusCircle size={20} />
+                        <span>إضافة منتج</span>
+                    </button>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
@@ -233,7 +252,19 @@ const ProductsPage = ({ products }) => {
                                     <td className="px-6 py-4 text-center text-sm font-medium">{product.stock < 10 ? <span className="text-red-600">{product.stock}</span> : product.stock}</td>
                                     <td className="px-6 py-4"><div className="flex items-center justify-center gap-1">{renderStars(product.rating)}<span className="text-xs text-gray-500">({product.reviews})</span></div></td>
                                     <td className="px-6 py-4 text-center"><span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${getStatusInfo(product.status).color}`}>{getStatusInfo(product.status).text}</span></td>
-                                    <td className="px-6 py-4"><div className="flex items-center gap-3 text-gray-500"><button className="hover:text-green-600"><Edit size={18} /></button><button className="hover:text-red-600"><Trash2 size={18} /></button></div></td>
+                                    <td className="px-6 py-4">
+                                        <div className="flex items-center gap-3 text-gray-500">
+                                            <button 
+                                                onClick={() => window.location.href = `/admin/products/edit/${product.id}`}
+                                                className="hover:text-green-600"
+                                            >
+                                                <Edit size={18} />
+                                            </button>
+                                            <button className="hover:text-red-600">
+                                                <Trash2 size={18} />
+                                            </button>
+                                        </div>
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>
@@ -282,4 +313,3 @@ export default function ProductsPageLoader() {
 
     return <ProductsPage products={products} />;
 }
-
