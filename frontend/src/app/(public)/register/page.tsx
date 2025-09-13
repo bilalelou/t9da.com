@@ -1,472 +1,251 @@
 'use client';
 
 import React, { useState } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 
-// Define interfaces
-interface RegisterForm {
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  password: string;
-  confirmPassword: string;
-  agreeToTerms: boolean;
-  subscribeNewsletter: boolean;
-}
+// Icons
+import { Mail, Lock, User, LogIn, LoaderCircle, Building, Phone, Eye, EyeOff } from 'lucide-react';
 
-interface FormErrors {
-  firstName?: string;
-  lastName?: string;
-  email?: string;
-  phone?: string;
-  password?: string;
-  confirmPassword?: string;
-  agreeToTerms?: string;
-  general?: string;
-}
+// --- API Helper ---
+const api = {
+    register: async (name: string, email: string, phone: string, password: string, password_confirmation: string) => {
+        const response = await fetch('http://localhost:8000/api/register', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({ name, email, phone, password, password_confirmation }),
+        });
 
+        const data = await response.json();
+        if (!response.ok) {
+            throw { message: data.message, errors: data.errors };
+        }
+        return data;
+    }
+};
+
+// --- Main Register Page Component ---
 export default function RegisterPage() {
-  const router = useRouter();
-  const [formData, setFormData] = useState<RegisterForm>({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    password: '',
-    confirmPassword: '',
-    agreeToTerms: false,
-    subscribeNewsletter: true
-  });
-  const [errors, setErrors] = useState<FormErrors>({});
-  const [isLoading, setIsLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [name, setName] = useState('');
+    const [email, setEmail] = useState('');
+    const [phone, setPhone] = useState('');
+    const [password, setPassword] = useState('');
+    const [passwordConfirmation, setPasswordConfirmation] = useState('');
+    
+    const [error, setError] = useState('');
+    const [validationErrors, setValidationErrors] = useState<Record<string, string[]>>({});
+    const [loading, setLoading] = useState(false);
+    const [success, setSuccess] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // Validation
-  const validateForm = (): boolean => {
-    const newErrors: FormErrors = {};
+    // --- Gemini API State ---
+    const [welcomeEmail, setWelcomeEmail] = useState('');
+    const [isGeneratingEmail, setIsGeneratingEmail] = useState(false);
 
-    if (!formData.firstName.trim()) {
-      newErrors.firstName = 'الاسم الأول مطلوب';
-    } else if (formData.firstName.length < 2) {
-      newErrors.firstName = 'الاسم الأول يجب أن يكون حرفين على الأقل';
-    }
 
-    if (!formData.lastName.trim()) {
-      newErrors.lastName = 'اسم العائلة مطلوب';
-    } else if (formData.lastName.length < 2) {
-      newErrors.lastName = 'اسم العائلة يجب أن يكون حرفين على الأقل';
-    }
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError('');
+        setValidationErrors({});
+        setLoading(true);
 
-    if (!formData.email.trim()) {
-      newErrors.email = 'البريد الإلكتروني مطلوب';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'البريد الإلكتروني غير صحيح';
-    }
+        const fullName = name; 
 
-    if (!formData.phone.trim()) {
-      newErrors.phone = 'رقم الهاتف مطلوب';
-    } else if (!/^(\+966|966|0)?[5][0-9]{8}$/.test(formData.phone.replace(/\s/g, ''))) {
-      newErrors.phone = 'رقم الهاتف غير صحيح (مثال: 0501234567)';
-    }
+        try {
+            const data = await api.register(fullName, email, phone, password, passwordConfirmation);
+            setSuccess(true);
+        } catch (err: any) {
+             if (err.errors) {
+                setValidationErrors(err.errors);
+                setError('الرجاء مراجعة الأخطاء في النموذج.');
+            } else {
+                setError(err.message || 'فشل في إنشاء الحساب.');
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
 
-    if (!formData.password.trim()) {
-      newErrors.password = 'كلمة المرور مطلوبة';
-    } else if (formData.password.length < 8) {
-      newErrors.password = 'كلمة المرور يجب أن تكون 8 أحرف على الأقل';
-    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
-      newErrors.password = 'كلمة المرور يجب أن تحتوي على حرف كبير وصغير ورقم';
-    }
+    // --- Gemini API Call ---
+    const handleGenerateWelcomeEmail = async () => {
+        if (!name || !email) {
+            setError('الرجاء إدخال الاسم والبريد الإلكتروني أولاً.');
+            return;
+        }
+        setIsGeneratingEmail(true);
+        setError('');
+        setWelcomeEmail('');
 
-    if (!formData.confirmPassword.trim()) {
-      newErrors.confirmPassword = 'تأكيد كلمة المرور مطلوب';
-    } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'كلمة المرور غير متطابقة';
-    }
+        const systemPrompt = `أنت مساعد ودود لمتجر إلكتروني اسمه 'متجري'. مهمتك هي كتابة رسائل ترحيبية للمستخدمين الجدد.`;
+        const userQuery = `اكتب مسودة بريد إلكتروني ترحيبي قصير وشخصي باللغة العربية لمستخدم جديد اسمه "${name}". يجب أن يشكره البريد الإلكتروني على انضمامه، ويذكر اسم المتجر 'متجري'، ويسلط الضوء بإيجاز على مزايا إنشاء حساب (مثل العروض الحصرية أو إتمام الشراء بشكل أسرع). اجعل الرسالة موجزة وودية.`;
 
-    if (!formData.agreeToTerms) {
-      newErrors.agreeToTerms = 'يجب الموافقة على الشروط والأحكام';
-    }
+        const apiKey = ""; // Leave as-is for Canvas environment
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+        const payload = {
+            contents: [{ parts: [{ text: userQuery }] }],
+            systemInstruction: { parts: [{ text: systemPrompt }] },
+        };
 
-  // Handle input change
-  const handleInputChange = (field: keyof RegisterForm, value: string | boolean) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    if (errors[field as keyof FormErrors]) {
-      setErrors(prev => ({ ...prev, [field]: undefined }));
-    }
-  };
+        try {
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
 
-  // Handle form submission
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+            if (!response.ok) {
+                throw new Error('فشل في إنشاء البريد الإلكتروني. الرجاء المحاولة مرة أخرى.');
+            }
 
-    if (!validateForm()) return;
+            const result = await response.json();
+            const candidate = result.candidates?.[0];
 
-    setIsLoading(true);
-    setErrors({});
+            if (candidate && candidate.content?.parts?.[0]?.text) {
+                setWelcomeEmail(candidate.content.parts[0].text);
+            } else {
+                throw new Error('لم يتمكن الذكاء الاصطناعي من إنشاء رد.');
+            }
 
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setIsGeneratingEmail(false);
+        }
+    };
 
-      // Mock registration logic
-      console.log('Registration data:', formData);
 
-      // Success - redirect to login or dashboard
-      router.push('/login?registered=true');
-    } catch (error) {
-      setErrors({ general: 'حدث خطأ أثناء إنشاء الحساب. يرجى المحاولة مرة أخرى.' });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Social registration handlers
-  const handleSocialRegister = (provider: string) => {
-    console.log(`Register with ${provider}`);
-    // Implement social registration logic here
-  };
-
-  // Password strength indicator
-  const getPasswordStrength = () => {
-    const password = formData.password;
-    let strength = 0;
-
-    if (password.length >= 8) strength++;
-    if (/[a-z]/.test(password)) strength++;
-    if (/[A-Z]/.test(password)) strength++;
-    if (/\d/.test(password)) strength++;
-    if (/[^a-zA-Z\d]/.test(password)) strength++;
-
-    return strength;
-  };
-
-  const passwordStrength = getPasswordStrength();
-  const strengthColors = ['bg-red-500', 'bg-red-400', 'bg-yellow-500', 'bg-green-400', 'bg-green-500'];
-  const strengthLabels = ['ضعيف جداً', 'ضعيف', 'متوسط', 'قوي', 'قوي جداً'];
-
-  return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        {/* Logo */}
-        <div className="flex justify-center">
-          <Link href="/" className="flex items-center space-x-2 space-x-reverse">
-            <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center">
-              <span className="text-white font-bold text-2xl">م</span>
-            </div>
-            <span className="text-2xl font-bold text-gray-900">متجري</span>
-          </Link>
-        </div>
-
-        <h2 className="mt-6 text-center text-3xl font-bold text-gray-900">
-          إنشاء حساب جديد
-        </h2>
-        <p className="mt-2 text-center text-sm text-gray-600">
-          أو{' '}
-          <Link href="/login" className="font-medium text-blue-600 hover:text-blue-500 transition-colors">
-            تسجيل الدخول إلى حسابك
-          </Link>
-        </p>
-      </div>
-
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow-xl rounded-2xl sm:px-10">
-          {/* Social Registration Buttons */}
-          <div className="space-y-3 mb-6">
-            <button
-              onClick={() => handleSocialRegister('google')}
-              className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
-            >
-              <svg className="w-5 h-5 ml-2" viewBox="0 0 24 24">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-              </svg>
-              التسجيل مع Google
-            </button>
-
-            <button
-              onClick={() => handleSocialRegister('apple')}
-              className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
-            >
-              <svg className="w-5 h-5 ml-2" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
-              </svg>
-              التسجيل مع Apple
-            </button>
-          </div>
-
-          {/* Divider */}
-          <div className="relative mb-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300" />
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500">أو</span>
-            </div>
-          </div>
-
-          {/* Registration Form */}
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* General Error */}
-            {errors.general && (
-              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                <div className="flex items-center space-x-2 space-x-reverse">
-                  <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 15.5c-.77.833.192 2.5 1.732 2.5z" />
-                  </svg>
-                  <span className="text-sm text-red-800">{errors.general}</span>
+    return (
+        <div dir="rtl" className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 p-4">
+            <div className="w-full max-w-md">
+                 <div className="text-center mb-8">
+                    <a href="/" className="inline-flex items-center gap-2 text-4xl font-bold text-[#eab676] tracking-wider">
+                        <Building size={36}/>
+                        <span>متجري</span>
+                    </a>
                 </div>
-              </div>
-            )}
+                
+                <div className="bg-white p-8 shadow-2xl rounded-2xl space-y-6 transition-all duration-500 hover:shadow-3xl">
+                   
+                    {success ? (
+                        <div className="text-center p-4 bg-green-50 border border-green-200 rounded-lg">
+                            <h1 className="text-xl font-bold text-green-800">تم إنشاء الحساب بنجاح!</h1>
+                            <p className="mt-2 text-gray-600">
+                                يمكنك الآن <a href="/login" className="font-bold text-blue-600 hover:underline">تسجيل الدخول</a>.
+                            </p>
+                        </div>
+                    ) : (
+                        <>
+                         <div className="text-center">
+                             <h1 className="text-2xl font-bold text-[#1e81b0]">إنشاء حساب جديد</h1>
+                             <p className="mt-1 text-gray-500">
+                                 انضم إلينا اليوم وابدأ التسوق.
+                             </p>
+                        </div>
 
-            {/* Name Fields */}
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-              <div>
-                <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-2">
-                  الاسم الأول *
-                </label>
-                <input
-                  id="firstName"
-                  type="text"
-                  value={formData.firstName}
-                  onChange={(e) => handleInputChange('firstName', e.target.value)}
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                    errors.firstName ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                  placeholder="أحمد"
-                />
-                {errors.firstName && <p className="text-red-500 text-sm mt-1">{errors.firstName}</p>}
-              </div>
+                        {error && (
+                            <div className="text-center bg-red-100 text-red-700 text-sm p-3 rounded-lg border border-red-200">
+                                {error}
+                            </div>
+                        )}
 
-              <div>
-                <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-2">
-                  اسم العائلة *
-                </label>
-                <input
-                  id="lastName"
-                  type="text"
-                  value={formData.lastName}
-                  onChange={(e) => handleInputChange('lastName', e.target.value)}
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                    errors.lastName ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                  placeholder="محمد"
-                />
-                {errors.lastName && <p className="text-red-500 text-sm mt-1">{errors.lastName}</p>}
-              </div>
-            </div>
+                        <form className="space-y-4" onSubmit={handleSubmit}>
+                            <div>
+                                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">الاسم الكامل</label>
+                                <div className="relative">
+                                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3"><User className="h-5 w-5 text-gray-400" /></div>
+                                    <input id="name" type="text" value={name} onChange={(e) => setName(e.target.value)} required className="w-full rounded-lg border-gray-300 py-2.5 pr-10 pl-3 shadow-sm" placeholder="اسمك الكامل" />
+                                </div>
+                                {validationErrors.name && <p className="text-red-500 text-xs mt-1">{validationErrors.name[0]}</p>}
+                            </div>
+                            
+                            <div>
+                                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">البريد الإلكتروني</label>
+                                <div className="relative">
+                                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3"><Mail className="h-5 w-5 text-gray-400" /></div>
+                                    <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="w-full rounded-lg border-gray-300 py-2.5 pr-10 pl-3 shadow-sm" placeholder="your@email.com" />
+                                </div>
+                                {validationErrors.email && <p className="text-red-500 text-xs mt-1">{validationErrors.email[0]}</p>}
+                            </div>
 
-            {/* Email Field */}
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                البريد الإلكتروني *
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => handleInputChange('email', e.target.value)}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                  errors.email ? 'border-red-500' : 'border-gray-300'
-                }`}
-                placeholder="ahmed@example.com"
-              />
-              {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
-            </div>
+                             <div>
+                                <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">رقم الهاتف</label>
+                                <div className="relative">
+                                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3"><Phone className="h-5 w-5 text-gray-400" /></div>
+                                    <input id="phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} required className="w-full rounded-lg border-gray-300 py-2.5 pr-10 pl-3 shadow-sm" placeholder="0600000000" />
+                                </div>
+                                {validationErrors.phone && <p className="text-red-500 text-xs mt-1">{validationErrors.phone[0]}</p>}
+                            </div>
 
-            {/* Phone Field */}
-            <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
-                رقم الهاتف *
-              </label>
-              <input
-                id="phone"
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => handleInputChange('phone', e.target.value)}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                  errors.phone ? 'border-red-500' : 'border-gray-300'
-                }`}
-                placeholder="0501234567"
-              />
-              {errors.phone && <p className="text-red-500 text-sm mt-1">{errors.phone}</p>}
-            </div>
+                            <div>
+                                 <label htmlFor="password"  className="block text-sm font-medium text-gray-700 mb-1">كلمة المرور</label>
+                                <div className="relative">
+                                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3"><Lock className="h-5 w-5 text-gray-400" /></div>
+                                    <input id="password" type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} required className="w-full rounded-lg border-gray-300 py-2.5 pr-10 pl-10 shadow-sm" placeholder="••••••••" />
+                                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400 hover:text-gray-600">
+                                        {showPassword ? <EyeOff size={20}/> : <Eye size={20}/>}
+                                    </button>
+                                </div>
+                                {validationErrors.password && <p className="text-red-500 text-xs mt-1">{validationErrors.password[0]}</p>}
+                            </div>
 
-            {/* Password Field */}
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                كلمة المرور *
-              </label>
-              <div className="relative">
-                <input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={formData.password}
-                  onChange={(e) => handleInputChange('password', e.target.value)}
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors pr-12 ${
-                    errors.password ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                  placeholder="أدخل كلمة مرور قوية"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  {showPassword ? (
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
-                    </svg>
-                  ) : (
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                  )}
-                </button>
-              </div>
+                            <div>
+                                 <label htmlFor="password_confirmation" className="block text-sm font-medium text-gray-700 mb-1">تأكيد كلمة المرور</label>
+                                <div className="relative">
+                                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3"><Lock className="h-5 w-5 text-gray-400" /></div>
+                                    <input id="password_confirmation" type={showConfirmPassword ? 'text' : 'password'} value={passwordConfirmation} onChange={(e) => setPasswordConfirmation(e.target.value)} required className="w-full rounded-lg border-gray-300 py-2.5 pr-10 pl-10 shadow-sm" placeholder="••••••••" />
+                                     <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400 hover:text-gray-600">
+                                        {showConfirmPassword ? <EyeOff size={20}/> : <Eye size={20}/>}
+                                    </button>
+                                </div>
+                            </div>
 
-              {/* Password Strength Indicator */}
-              {formData.password && (
-                <div className="mt-2">
-                  <div className="flex space-x-1 space-x-reverse">
-                    {[...Array(5)].map((_, index) => (
-                      <div
-                        key={index}
-                        className={`h-2 flex-1 rounded ${
-                          index < passwordStrength ? strengthColors[passwordStrength - 1] : 'bg-gray-200'
-                        }`}
-                      />
-                    ))}
-                  </div>
-                  <p className="text-sm mt-1 text-gray-600">
-                    قوة كلمة المرور: <span className={`font-medium ${passwordStrength >= 3 ? 'text-green-600' : passwordStrength >= 2 ? 'text-yellow-600' : 'text-red-600'}`}>
-                      {strengthLabels[passwordStrength - 1] || 'ضعيف جداً'}
-                    </span>
-                  </p>
+                            <div>
+                                <button type="submit" disabled={loading} className="flex w-full justify-center rounded-lg bg-[#2596be] hover:bg-[#1e81b0] py-3 px-4 font-semibold text-white shadow-md">
+                                    {loading ? <LoaderCircle className="animate-spin" /> : <><LogIn className="ml-2 h-5 w-5" />إنشاء حساب</>}
+                                </button>
+                            </div>
+                        </form>
+
+                        {/* --- Gemini Feature --- */}
+                        {name && email && (
+                            <div className="mt-6 text-center">
+                                <button
+                                    type="button"
+                                    onClick={handleGenerateWelcomeEmail}
+                                    disabled={isGeneratingEmail}
+                                    className="w-full flex items-center justify-center gap-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 py-2.5 px-4 rounded-lg transition-colors disabled:opacity-50"
+                                >
+                                    {isGeneratingEmail ? (
+                                        <>
+                                            <LoaderCircle className="animate-spin h-5 w-5" />
+                                            <span>جاري إنشاء البريد الترحيبي...</span>
+                                        </>
+                                    ) : (
+                                        "✨ إنشاء بريد ترحيبي بواسطة Gemini"
+                                    )}
+                                </button>
+                            </div>
+                        )}
+
+                        {welcomeEmail && (
+                            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                                <h4 className="font-semibold text-gray-800">مسودة البريد الإلكتروني الترحيبي:</h4>
+                                <p className="mt-2 text-sm text-gray-700 whitespace-pre-wrap">{welcomeEmail}</p>
+                            </div>
+                        )}
+                        </>
+                    )}
                 </div>
-              )}
-
-              {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password}</p>}
+                 <p className="mt-8 text-center text-sm text-gray-600">
+                    لديك حساب بالفعل؟{' '}
+                    <a href="/login" className="font-medium text-[#1e81b0] hover:text-[#eab676]">
+                        سجل الدخول من هنا
+                    </a>
+                </p>
             </div>
-
-            {/* Confirm Password Field */}
-            <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
-                تأكيد كلمة المرور *
-              </label>
-              <div className="relative">
-                <input
-                  id="confirmPassword"
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  value={formData.confirmPassword}
-                  onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors pr-12 ${
-                    errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                  placeholder="أعد إدخال كلمة المرور"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  {showConfirmPassword ? (
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
-                    </svg>
-                  ) : (
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                  )}
-                </button>
-              </div>
-              {errors.confirmPassword && <p className="text-red-500 text-sm mt-1">{errors.confirmPassword}</p>}
-            </div>
-
-            {/* Terms and Conditions */}
-            <div className="space-y-4">
-              <label className="flex items-start space-x-3 space-x-reverse">
-                <input
-                  type="checkbox"
-                  checked={formData.agreeToTerms}
-                  onChange={(e) => handleInputChange('agreeToTerms', e.target.checked)}
-                  className={`mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded ${
-                    errors.agreeToTerms ? 'border-red-500' : ''
-                  }`}
-                />
-                <span className="text-sm text-gray-700">
-                  أوافق على{' '}
-                  <Link href="/terms" className="text-blue-600 hover:text-blue-500 underline">
-                    الشروط والأحكام
-                  </Link>
-                  {' '}و{' '}
-                  <Link href="/privacy" className="text-blue-600 hover:text-blue-500 underline">
-                    سياسة الخصوصية
-                  </Link>
-                  {' *'}
-                </span>
-              </label>
-              {errors.agreeToTerms && <p className="text-red-500 text-sm">{errors.agreeToTerms}</p>}
-
-              <label className="flex items-start space-x-3 space-x-reverse">
-                <input
-                  type="checkbox"
-                  checked={formData.subscribeNewsletter}
-                  onChange={(e) => handleInputChange('subscribeNewsletter', e.target.checked)}
-                  className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <span className="text-sm text-gray-700">
-                  أرغب في تلقي العروض والأخبار عبر البريد الإلكتروني
-                </span>
-              </label>
-            </div>
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={isLoading}
-              className={`w-full py-3 px-4 rounded-lg font-semibold transition-all duration-300 ${
-                isLoading
-                  ? 'bg-gray-400 text-white cursor-not-allowed'
-                  : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg transform hover:-translate-y-0.5'
-              }`}
-            >
-              {isLoading ? (
-                <div className="flex items-center justify-center space-x-2 space-x-reverse">
-                  <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  <span>جاري إنشاء الحساب...</span>
-                </div>
-              ) : (
-                'إنشاء حساب جديد'
-              )}
-            </button>
-          </form>
         </div>
-
-        {/* Footer Links */}
-        <div className="mt-6 text-center">
-          <p className="text-sm text-gray-600">
-            لديك حساب بالفعل؟{' '}
-            <Link href="/login" className="font-medium text-blue-600 hover:text-blue-500 transition-colors">
-              تسجيل الدخول
-            </Link>
-          </p>
-        </div>
-      </div>
-    </div>
-  );
+    );
 }

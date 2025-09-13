@@ -1,576 +1,277 @@
 'use client';
 
-import React, { useState } from 'react';
-import Image from 'next/image';
+import React, { useState, useEffect, useMemo } from 'react';
 
-// Define interfaces
+// Icons
+import { Warehouse, Search, LoaderCircle, CheckCircle, XCircle, AlertTriangle, Save, Package, DollarSign, ShoppingBasket } from 'lucide-react';
+
+// --- Interfaces ---
 interface InventoryItem {
-  id: string;
-  productName: string;
-  sku: string;
-  category: string;
-  currentStock: number;
-  minStock: number;
-  maxStock: number;
-  reservedStock: number;
-  availableStock: number;
-  unitCost: number;
-  totalValue: number;
-  lastRestocked: string;
-  supplier: string;
-  location: string;
-  image: string;
-  status: 'in_stock' | 'low_stock' | 'out_of_stock' | 'overstocked';
+    id: number;
+    name: string;
+    sku: string;
+    image: string;
+    quantity: number;
+    category: string;
+    cost_price: number;
+    total_value: number;
+    stock_status: 'instock' | 'outofstock' | 'lowstock' | 'overstocked';
 }
 
-interface InventoryStats {
-  totalItems: number;
-  totalValue: number;
-  lowStockItems: number;
-  outOfStockItems: number;
-  overstockedItems: number;
-  reorderNeeded: number;
-}
-
-// Sample data
-const inventoryItems: InventoryItem[] = [
-  {
-    id: '1',
-    productName: 'سماعات بلوتوث لاسلكية',
-    sku: 'SKU-001',
-    category: 'إلكترونيات',
-    currentStock: 45,
-    minStock: 20,
-    maxStock: 100,
-    reservedStock: 5,
-    availableStock: 40,
-    unitCost: 150,
-    totalValue: 6750,
-    lastRestocked: '2024-01-10',
-    supplier: 'شركة التقنية المتقدمة',
-    location: 'مستودع أ - رف 1',
-    image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&h=100',
-    status: 'in_stock'
-  },
-  {
-    id: '2',
-    productName: 'ساعة ذكية رياضية',
-    sku: 'SKU-002',
-    category: 'إكسسوارات',
-    currentStock: 8,
-    minStock: 15,
-    maxStock: 50,
-    reservedStock: 2,
-    availableStock: 6,
-    unitCost: 800,
-    totalValue: 6400,
-    lastRestocked: '2024-01-05',
-    supplier: 'مؤسسة الساعات الذكية',
-    location: 'مستودع ب - رف 3',
-    image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&h=100',
-    status: 'low_stock'
-  },
-  {
-    id: '3',
-    productName: 'حقيبة لابتوب أنيقة',
-    sku: 'SKU-003',
-    category: 'حقائب',
-    currentStock: 0,
-    minStock: 10,
-    maxStock: 30,
-    reservedStock: 0,
-    availableStock: 0,
-    unitCost: 120,
-    totalValue: 0,
-    lastRestocked: '2023-12-20',
-    supplier: 'متجر الحقائب العصرية',
-    location: 'مستودع أ - رف 5',
-    image: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&h=100',
-    status: 'out_of_stock'
-  },
-  {
-    id: '4',
-    productName: 'كاميرا رقمية احترافية',
-    sku: 'SKU-004',
-    category: 'كاميرات',
-    currentStock: 85,
-    minStock: 5,
-    maxStock: 25,
-    reservedStock: 3,
-    availableStock: 82,
-    unitCost: 1500,
-    totalValue: 127500,
-    lastRestocked: '2024-01-12',
-    supplier: 'شركة الكاميرات المحترفة',
-    location: 'مستودع ج - رف 2',
-    image: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&h=100',
-    status: 'overstocked'
-  },
-  {
-    id: '5',
-    productName: 'لوحة مفاتيح ميكانيكية',
-    sku: 'SKU-005',
-    category: 'ألعاب',
-    currentStock: 32,
-    minStock: 25,
-    maxStock: 75,
-    reservedStock: 4,
-    availableStock: 28,
-    unitCost: 250,
-    totalValue: 8000,
-    lastRestocked: '2024-01-08',
-    supplier: 'متجر الألعاب التقني',
-    location: 'مستودع ب - رف 1',
-    image: 'https://images.unsplash.com/photo-1541140532154-b024d705b90a?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&h=100',
-    status: 'in_stock'
-  }
-];
-
-const inventoryStats: InventoryStats = {
-  totalItems: 1247,
-  totalValue: 2450000,
-  lowStockItems: 23,
-  outOfStockItems: 8,
-  overstockedItems: 12,
-  reorderNeeded: 31
+// --- API Helper ---
+const api = {
+    getInventory: async (token: string): Promise<InventoryItem[]> => {
+        const response = await fetch('http://localhost:8000/api/inventory', {
+            headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
+        });
+        if (!response.ok) throw new Error('فشل في جلب بيانات المخزون.');
+        const data = await response.json();
+        return data.data || [];
+    },
+    updateStock: async (productId: number, quantity: number, token: string) => {
+        const response = await fetch(`http://localhost:8000/api/inventory/${productId}`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ quantity }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || 'فشل في تحديث الكمية.');
+        return data;
+    }
 };
 
-export default function InventoryPage() {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('all');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [sortBy, setSortBy] = useState('productName');
-  const [selectedItems, setSelectedItems] = useState<string[]>([]);
+// --- Helper Functions ---
+const formatCurrency = (amount: number) => {
+    if (typeof amount !== 'number' || isNaN(amount)) return 'غير متوفر';
+    return new Intl.NumberFormat('ar-MA', { style: 'currency', currency: 'MAD' }).format(amount);
+};
 
-  const categories = ['all', 'إلكترونيات', 'إكسسوارات', 'حقائب', 'كاميرات', 'ألعاب'];
-
-  const getStatusColor = (status: InventoryItem['status']) => {
+const getStockStatusInfo = (status: InventoryItem['stock_status']) => {
     switch (status) {
-      case 'in_stock':
-        return 'bg-green-100 text-green-800';
-      case 'low_stock':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'out_of_stock':
-        return 'bg-red-100 text-red-800';
-      case 'overstocked':
-        return 'bg-purple-100 text-purple-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+        case 'instock': return { text: 'متوفر', color: 'bg-green-100 text-green-800', icon: <CheckCircle className="w-4 h-4" /> };
+        case 'lowstock': return { text: 'مخزون منخفض', color: 'bg-yellow-100 text-yellow-800', icon: <AlertTriangle className="w-4 h-4" /> };
+        case 'outofstock': return { text: 'نفد المخزون', color: 'bg-red-100 text-red-800', icon: <XCircle className="w-4 h-4" /> };
+        case 'overstocked': return { text: 'مخزون زائد', color: 'bg-purple-100 text-purple-800', icon: <Warehouse className="w-4 h-4" /> };
+        default: return { text: 'غير معروف', color: 'bg-gray-100 text-gray-800' };
     }
-  };
+};
 
-  const getStatusText = (status: InventoryItem['status']) => {
-    switch (status) {
-      case 'in_stock':
-        return 'متوفر';
-      case 'low_stock':
-        return 'مخزون منخفض';
-      case 'out_of_stock':
-        return 'نفد من المخزون';
-      case 'overstocked':
-        return 'مخزون زائد';
-      default:
-        return status;
-    }
-  };
-
-  const getStockPercentage = (current: number, max: number) => {
-    return Math.min((current / max) * 100, 100);
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('ar-SA', {
-      style: 'currency',
-      currency: 'SAR'
-    }).format(amount);
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('ar-SA', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
-  };
-
-  const filteredItems = inventoryItems.filter(item => {
-    const matchesSearch = 
-      item.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.sku.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = selectedStatus === 'all' || item.status === selectedStatus;
-    const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory;
-    return matchesSearch && matchesStatus && matchesCategory;
-  });
-
-  const sortedItems = [...filteredItems].sort((a, b) => {
-    switch (sortBy) {
-      case 'productName':
-        return a.productName.localeCompare(b.productName);
-      case 'currentStock':
-        return b.currentStock - a.currentStock;
-      case 'totalValue':
-        return b.totalValue - a.totalValue;
-      case 'lastRestocked':
-        return new Date(b.lastRestocked).getTime() - new Date(a.lastRestocked).getTime();
-      default:
-        return 0;
-    }
-  });
-
-  const toggleItemSelection = (itemId: string) => {
-    setSelectedItems(prev => 
-      prev.includes(itemId) 
-        ? prev.filter(id => id !== itemId)
-        : [...prev, itemId]
-    );
-  };
-
-  const handleBulkAction = (action: string) => {
-    console.log(`Bulk action: ${action} for items:`, selectedItems);
-    setSelectedItems([]);
-  };
-
-  const updateStock = (itemId: string, newStock: number) => {
-    console.log(`Update stock for item ${itemId} to ${newStock}`);
-  };
-
-  const reorderItem = (itemId: string) => {
-    console.log('Reorder item:', itemId);
-  };
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200">
-        <div className="px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+// --- Sub-components ---
+const StatCard = ({ title, value, icon }) => (
+    <div className="bg-white rounded-2xl shadow-md p-5 border border-gray-100">
+        <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">{icon}</div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">إدارة المخزون</h1>
-              <p className="text-sm text-gray-600">مراقبة وإدارة مستويات المخزون</p>
+                <p className="text-sm font-medium text-gray-500">{title}</p>
+                <p className="text-2xl font-bold text-gray-900">{value}</p>
+            </div>
+        </div>
+    </div>
+);
+
+const InventoryCard = ({ item, onQuantityChange, onSave, isModified, isLoading }) => {
+    const status = getStockStatusInfo(item.stock_status);
+    return (
+        <div className="bg-white rounded-lg shadow p-4 border border-gray-100 space-y-3">
+            <div className="flex items-center gap-3">
+                <img src={item.image} alt={item.name} className="w-14 h-14 rounded-lg object-cover border" />
+                <div>
+                    <p className="font-bold text-gray-900 line-clamp-2">{item.name}</p>
+                    <p className="text-sm text-gray-500 font-mono">{item.sku}</p>
+                </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4 text-sm pt-3 border-t border-gray-100">
+                <div>
+                    <p className="text-gray-500">الحالة</p>
+                    <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium ${status.color}`}>{status.icon} {status.text}</span>
+                </div>
+                <div>
+                    <p className="text-gray-500">القيمة الإجمالية</p>
+                    <p className="font-semibold text-gray-800">{formatCurrency(item.total_value)}</p>
+                </div>
+            </div>
+            <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">تحديث الكمية</label>
+                <div className="flex items-center gap-2">
+                    <input type="number" value={onQuantityChange.value} onChange={onQuantityChange.handler} className="w-full border-gray-300 rounded-lg text-center" />
+                    <button onClick={onSave} disabled={!isModified || isLoading} className="p-2 bg-blue-600 text-white rounded-lg disabled:bg-gray-300">
+                        {isLoading ? <LoaderCircle size={18} className="animate-spin" /> : <Save size={18} />}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// --- Main Inventory Page Component ---
+const InventoryPage = ({ initialItems, token }) => {
+    const [items, setItems] = useState<InventoryItem[]>(initialItems);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState('all');
+    const [updatedQuantities, setUpdatedQuantities] = useState<Record<number, number>>({});
+    const [loading, setLoading] = useState<Record<number, boolean>>({});
+    const [globalError, setGlobalError] = useState<string | null>(null);
+
+    const handleQuantityChange = (id: number, value: string) => {
+        const quantity = parseInt(value, 10);
+        if (!isNaN(quantity) && quantity >= 0) {
+            setUpdatedQuantities(prev => ({...prev, [id]: quantity}));
+        }
+    };
+
+    const handleSaveStock = async (id: number) => {
+        const newQuantity = updatedQuantities[id];
+        if (newQuantity === undefined) return;
+
+        setLoading(prev => ({...prev, [id]: true}));
+        setGlobalError(null);
+        try {
+            await api.updateStock(id, newQuantity, token);
+            const updatedItems = await api.getInventory(token);
+            setItems(updatedItems);
+            setUpdatedQuantities(prev => {
+                const newUpdates = {...prev};
+                delete newUpdates[id];
+                return newUpdates;
+            });
+        } catch (error) {
+            setGlobalError(error.message);
+        } finally {
+            setLoading(prev => ({...prev, [id]: false}));
+        }
+    };
+
+    const filteredItems = useMemo(() => {
+        return items.filter(item => {
+            const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) || item.sku.toLowerCase().includes(searchTerm.toLowerCase());
+            const matchesStatus = statusFilter === 'all' || item.stock_status === statusFilter;
+            return matchesSearch && matchesStatus;
+        });
+    }, [items, searchTerm, statusFilter]);
+
+    const stats = useMemo(() => ({
+        totalValue: items.reduce((sum, item) => sum + item.total_value, 0),
+        lowStock: items.filter(item => item.stock_status === 'lowstock').length,
+        outOfStock: items.filter(item => item.stock_status === 'outofstock').length,
+        reorderNeeded: items.filter(item => item.stock_status === 'lowstock' || item.stock_status === 'outofstock').length,
+    }), [items]);
+
+    return (
+        <div className="space-y-8" dir="rtl">
+            <div>
+                <h1 className="text-3xl font-bold text-gray-900">إدارة المخزون</h1>
+                <p className="text-md text-gray-600 mt-1">متابعة وتحديث كميات المنتجات المتاحة.</p>
             </div>
             
-            <div className="flex items-center space-x-4 space-x-reverse">
-              {selectedItems.length > 0 && (
-                <div className="flex items-center space-x-2 space-x-reverse">
-                  <select 
-                    onChange={(e) => handleBulkAction(e.target.value)}
-                    className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="">إجراءات متعددة</option>
-                    <option value="reorder">إعادة طلب</option>
-                    <option value="update_stock">تحديث المخزون</option>
-                    <option value="export">تصدير البيانات</option>
-                  </select>
-                  <span className="text-sm text-gray-600">({selectedItems.length} محدد)</span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <StatCard title="قيمة المخزون" value={formatCurrency(stats.totalValue)} icon={<DollarSign size={24} />} />
+                <StatCard title="مخزون منخفض" value={stats.lowStock} icon={<AlertTriangle size={24} />} />
+                <StatCard title="نفد من المخزون" value={stats.outOfStock} icon={<XCircle size={24} />} />
+                <StatCard title="يحتاج إعادة طلب" value={stats.reorderNeeded} icon={<ShoppingBasket size={24} />} />
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-md p-4 border border-gray-100">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                     <div className="relative md:col-span-1">
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3"><Search className="h-5 w-5 text-gray-400" /></div>
+                        <input type="text" placeholder="ابحث بالاسم أو SKU..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pr-10 pl-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                     <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="w-full py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <option value="all">جميع الحالات</option>
+                        <option value="instock">متوفر</option>
+                        <option value="lowstock">مخزون منخفض</option>
+                        <option value="outofstock">نفد المخزون</option>
+                        <option value="overstocked">مخزون زائد</option>
+                    </select>
                 </div>
-              )}
-              
-              <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2 space-x-reverse">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                <span>تقرير المخزون</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6 mb-8">
-          <div className="bg-white rounded-2xl shadow-lg p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">إجمالي المنتجات</p>
-                <p className="text-2xl font-bold text-gray-900">{inventoryStats.totalItems}</p>
-              </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-lg p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">قيمة المخزون</p>
-                <p className="text-2xl font-bold text-gray-900">{formatCurrency(inventoryStats.totalValue)}</p>
-              </div>
-              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-lg p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">مخزون منخفض</p>
-                <p className="text-2xl font-bold text-gray-900">{inventoryStats.lowStockItems}</p>
-              </div>
-              <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center">
-                <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-lg p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">نفد من المخزون</p>
-                <p className="text-2xl font-bold text-gray-900">{inventoryStats.outOfStockItems}</p>
-              </div>
-              <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
-                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-lg p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">مخزون زائد</p>
-                <p className="text-2xl font-bold text-gray-900">{inventoryStats.overstockedItems}</p>
-              </div>
-              <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11l5-5m0 0l5 5m-5-5v12" />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-lg p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">يحتاج إعادة طلب</p>
-                <p className="text-2xl font-bold text-gray-900">{inventoryStats.reorderNeeded}</p>
-              </div>
-              <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
-                <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Filters */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">البحث</label>
-              <input
-                type="text"
-                placeholder="اسم المنتج أو SKU..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">حالة المخزون</label>
-              <select
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="all">جميع الحالات</option>
-                <option value="in_stock">متوفر</option>
-                <option value="low_stock">مخزون منخفض</option>
-                <option value="out_of_stock">نفد من المخزون</option>
-                <option value="overstocked">مخزون زائد</option>
-              </select>
-            </div>
+            {globalError && <div className="bg-red-100 text-red-700 p-3 rounded-lg">{globalError}</div>}
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">التصنيف</label>
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                {categories.map(category => (
-                  <option key={category} value={category}>
-                    {category === 'all' ? 'جميع التصنيفات' : category}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">ترتيب حسب</label>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="productName">اسم المنتج</option>
-                <option value="currentStock">المخزون الحالي</option>
-                <option value="totalValue">القيمة الإجمالية</option>
-                <option value="lastRestocked">آخر تجديد</option>
-              </select>
-            </div>
-
-            <div className="flex items-end">
-              <button className="w-full bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors">
-                إعادة تعيين
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Inventory Table */}
-        <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    <input
-                      type="checkbox"
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedItems(sortedItems.map(item => item.id));
-                        } else {
-                          setSelectedItems([]);
-                        }
-                      }}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    المنتج
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    المخزون الحالي
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    المخزون المتاح
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    القيمة الإجمالية
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    الحالة
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    آخر تجديد
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    الإجراءات
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {sortedItems.map((item) => {
-                  const stockPercentage = getStockPercentage(item.currentStock, item.maxStock);
-                  return (
-                    <tr key={item.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <input
-                          type="checkbox"
-                          checked={selectedItems.includes(item.id)}
-                          onChange={() => toggleItemSelection(item.id)}
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            <div className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
+                <div className="overflow-x-auto hidden md:block">
+                    <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                            <tr>
+                                <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">المنتج</th>
+                                <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">SKU</th>
+                                <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">الحالة</th>
+                                <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">الكمية الحالية</th>
+                                <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">تحديث الكمية</th>
+                            </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                            {filteredItems.map((item) => {
+                                const status = getStockStatusInfo(item.stock_status);
+                                const isModified = updatedQuantities[item.id] !== undefined && updatedQuantities[item.id] !== item.quantity;
+                                return (
+                                <tr key={item.id} className="hover:bg-gray-50">
+                                    <td className="px-6 py-4"><div className="flex items-center gap-3"><img src={item.image} alt={item.name} className="w-12 h-12 rounded-lg object-cover border" /><div><p className="font-semibold text-gray-900">{item.name}</p></div></div></td>
+                                    <td className="px-6 py-4 text-sm text-gray-500 font-mono">{item.sku}</td>
+                                    <td className="px-6 py-4 text-center"><span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${status.color}`}>{status.icon} {status.text}</span></td>
+                                    <td className="px-6 py-4 text-center text-lg font-bold text-gray-800">{item.quantity}</td>
+                                    <td className="px-6 py-4">
+                                        <div className="flex items-center gap-2">
+                                            <input type="number" value={updatedQuantities[item.id] ?? item.quantity} onChange={e => handleQuantityChange(item.id, e.target.value)} className="w-24 border-gray-300 rounded-lg text-center" />
+                                            <button onClick={() => handleSaveStock(item.id)} disabled={!isModified || loading[item.id]} className="p-2 bg-blue-600 text-white rounded-lg disabled:bg-gray-300 enabled:hover:bg-blue-700">
+                                                {loading[item.id] ? <LoaderCircle size={18} className="animate-spin" /> : <Save size={18} />}
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                )
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+                 {/* [جديد] عرض البطاقات على شاشات الهاتف */}
+                <div className="md:hidden p-4 space-y-4 bg-gray-50">
+                     {filteredItems.map(item => (
+                        <InventoryCard
+                            key={item.id}
+                            item={item}
+                            onQuantityChange={{
+                                value: updatedQuantities[item.id] ?? item.quantity,
+                                handler: e => handleQuantityChange(item.id, e.target.value)
+                            }}
+                            onSave={() => handleSaveStock(item.id)}
+                            isModified={updatedQuantities[item.id] !== undefined && updatedQuantities[item.id] !== item.quantity}
+                            isLoading={loading[item.id]}
                         />
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0 h-12 w-12">
-                            <Image
-                              src={item.image}
-                              alt={item.productName}
-                              width={48}
-                              height={48}
-                              className="h-12 w-12 rounded-lg object-cover"
-                            />
-                          </div>
-                          <div className="mr-4">
-                            <div className="text-sm font-medium text-gray-900 max-w-xs truncate">
-                              {item.productName}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              SKU: {item.sku}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              {item.category} • {item.location}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{item.currentStock}</div>
-                        <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
-                          <div
-                            className={`h-2 rounded-full ${
-                              stockPercentage > 70 ? 'bg-green-500' :
-                              stockPercentage > 30 ? 'bg-yellow-500' : 'bg-red-500'
-                            }`}
-                            style={{ width: `${stockPercentage}%` }}
-                          />
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          الحد الأدنى: {item.minStock} • الحد الأقصى: {item.maxStock}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{item.availableStock}</div>
-                        <div className="text-xs text-gray-500">محجوز: {item.reservedStock}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-semibold text-gray-900">
-                          {formatCurrency(item.totalValue)}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {formatCurrency(item.unitCost)} / وحدة
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(item.status)}`}>
-                          {getStatusText(item.status)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {formatDate(item.lastRestocked)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex items-center space-x-2 space-x-reverse">
-                          <button
-                            onClick={() => updateStock(item.id, item.currentStock)}
-                            className="text-blue-600 hover:text-blue-900"
-                          >
-                            تحديث
-                          </button>
-                          <button
-                            onClick={() => reorderItem(item.id)}
-                            className="text-green-600 hover:text-green-900"
-                          >
-                            إعادة طلب
-                          </button>
-                          <button className="text-gray-600 hover:text-gray-900">
-                            تفاصيل
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                    ))}
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
-  );
+    );
 }
+
+// --- Data Fetching Wrapper ---
+export default function InventoryPageLoader() {
+    const [items, setItems] = useState<InventoryItem[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [token, setToken] = useState<string | null>(null);
+
+    useEffect(() => {
+        const apiToken = localStorage.getItem('api_token');
+        setToken(apiToken);
+        if (!apiToken) {
+            window.location.href = '/login';
+            return;
+        }
+        api.getInventory(apiToken).then(setItems).catch(err => setError(err.message)).finally(() => setLoading(false));
+    }, []);
+
+    if (loading) {
+        return <div className="flex items-center justify-center h-96"><LoaderCircle className="animate-spin text-blue-600" size={48} /></div>;
+    }
+    if (error) {
+        return <div className="text-center text-red-600 bg-red-50 p-4 rounded-lg">خطأ: {error}</div>;
+    }
+    return <InventoryPage initialItems={items} token={token} />;
+}
+
