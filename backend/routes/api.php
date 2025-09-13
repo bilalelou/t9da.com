@@ -16,6 +16,8 @@ use App\Http\Controllers\Api\RegisterController;
 Route::post('/login', [LoginController::class, 'login']);
 Route::post('/register', [RegisterController::class, 'store']);
 Route::get('/home', [PublicDataController::class, 'home']);
+Route::get('/shop', [PublicDataController::class, 'shop']);
+Route::get('/products/{slug}', [PublicDataController::class, 'show']);
 
 
 Route::middleware('auth:sanctum')->group(function () {
