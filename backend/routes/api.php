@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\AdminDashboardController;
 use App\Http\Controllers\Api\AnalyticsController;
+use App\Http\Controllers\Api\ContactController;
 use App\Http\Controllers\Api\InventoryController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\PublicDataController;
@@ -18,6 +19,8 @@ Route::post('/register', [RegisterController::class, 'store']);
 Route::get('/home', [PublicDataController::class, 'home']);
 Route::get('/shop', [PublicDataController::class, 'shop']);
 Route::get('/products/{slug}', [PublicDataController::class, 'show']);
+Route::post('/contact', [ContactController::class, 'store']);
+
 
 
 Route::middleware('auth:sanctum')->group(function () {
