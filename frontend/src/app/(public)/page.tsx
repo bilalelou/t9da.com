@@ -102,7 +102,7 @@ const useFetchData = <T,>(fetcher: () => Promise<T>) => {
 };
 
 // --- API ---
-const API_BASE_URL = 'http://localhost:8000/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 const handleApiError = (error: any, endpoint: string) => {
     console.error(`API Error at ${endpoint}:`, error);
     if (error instanceof TypeError && error.message.includes('Failed to fetch')) {

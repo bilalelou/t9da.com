@@ -67,7 +67,7 @@ const useFavorites = () => useContext(FavoritesContext);
 
 
 // --- API Helper ---
-const API_BASE_URL = 'http://localhost:8000/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 const api = {
     getProductDetails: async (slug: string): Promise<{ product: Product, related: Product[] }> => {
         const response = await fetch(`${API_BASE_URL}/products/${slug}`);
