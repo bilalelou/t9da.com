@@ -27,7 +27,7 @@ interface Product {
 // --- API Helper ---
 const api = {
     getProduct: async (id: string, token: string): Promise<Product> => {
-        const response = await fetch(`http://localhost:8000/api/products/${id}`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/${id}`, {
             headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
         });
         if (!response.ok) throw new Error('فشل في جلب بيانات المنتج.');

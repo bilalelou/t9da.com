@@ -194,7 +194,7 @@ const HeroSlider = ({ slides }: { slides: Slide[] }) => {
                 {slides.map((slide) => (
                     <div key={slide.id} className="w-full h-full flex-shrink-0 relative">
                         <img src={slide.image_url} alt={slide.title} className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-black bg-opacity-60 flex flex-col items-center justify-center text-center text-white p-4">
+                        <div className="absolute inset-0 bg-opacity-60 flex flex-col items-center justify-center text-center text-white p-4">
                             <div className="bg-black/40 backdrop-blur-md p-10 rounded-2xl max-w-3xl animate-fade-in-up">
                                 <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight">{slide.title}</h1>
                                 <p className="mt-4 text-lg md:text-xl text-gray-200">{slide.subtitle}</p>

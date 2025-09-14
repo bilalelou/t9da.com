@@ -21,7 +21,7 @@ export default function LoginPage() {
             return;
         }
 
-        const apiBaseUrl = "http://localhost:8000/api";
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
 
         try {
             const response = await fetch(`${apiBaseUrl}/login`, {

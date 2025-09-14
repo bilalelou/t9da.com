@@ -12,7 +12,7 @@ interface Category {
 }
 const api = {
     getCategory: async (id: string, token: string) => {
-        const response = await fetch(`http://localhost:8000/api/categories/${id}`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/categories/${id}`, {
             headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
         });
         if (!response.ok) throw new Error('فشل في جلب بيانات التصنيف.');
@@ -21,7 +21,7 @@ const api = {
     },
     updateCategory: async (id: string, formData: FormData, token: string) => {
         formData.append('_method', 'PUT');
-        const response = await fetch(`http://localhost:8000/api/categories/${id}`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/categories/${id}`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
             body: formData,

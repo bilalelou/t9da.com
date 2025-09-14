@@ -14,7 +14,7 @@ interface Category {
 // --- API Helper ---
 const api = {
     getCategories: async (token: string) => {
-        const response = await fetch('http://localhost:8000/api/categories', {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/categories`, {
             headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
         });
         if (!response.ok) throw new Error('فشل في جلب التصنيفات.');
@@ -22,7 +22,7 @@ const api = {
         return data.data || [];
     },
     addProduct: async (formData: FormData, token: string) => {
-        const response = await fetch('http://localhost:8000/api/products', {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,

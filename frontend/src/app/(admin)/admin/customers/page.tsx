@@ -28,7 +28,7 @@ const api = {
             return []; // Return empty to prevent errors before redirect
         }
 
-        const response = await fetch('http://localhost:8000/api/customers', {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/customers`, {
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Accept': 'application/json',

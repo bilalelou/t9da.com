@@ -25,7 +25,7 @@ interface PaginationInfo {
 // --- API Helper ---
 const api = {
     getOrders: async (token: string, page: number, perPage: number): Promise<{ data: Order[], pagination: PaginationInfo }> => {
-        const response = await fetch(`http://localhost:8000/api/orders?page=${page}&per_page=${perPage}`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/orders?page=${page}&per_page=${perPage}`, {
             headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
         });
         if (!response.ok) throw new Error('فشل في جلب بيانات الطلبات.');

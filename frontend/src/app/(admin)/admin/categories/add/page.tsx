@@ -6,7 +6,7 @@ import { PlusCircle, LoaderCircle, Tag, FileText, UploadCloud, X, Image as Image
 // --- API Helper ---
 const api = {
     addCategory: async (formData: FormData, token: string) => {
-        const response = await fetch('http://localhost:8000/api/categories', {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/categories`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
             body: formData,

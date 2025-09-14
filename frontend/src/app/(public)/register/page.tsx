@@ -8,7 +8,7 @@ import { Mail, Lock, User, LogIn, LoaderCircle, Building, Phone, Eye, EyeOff } f
 // --- API Helper ---
 const api = {
     register: async (name: string, email: string, phone: string, password: string, password_confirmation: string) => {
-        const response = await fetch('http://localhost:8000/api/register', {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/register`, {   
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

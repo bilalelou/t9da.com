@@ -26,8 +26,8 @@ interface FormErrors {
 // --- API Helper ---
 const api = {
     sendMessage: async (formData: ContactForm) => {
-        const response = await fetch('http://localhost:8000/api/contact', {
-            method: 'POST',
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/contact`, {  
+        method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',

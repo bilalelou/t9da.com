@@ -21,7 +21,7 @@ interface InventoryItem {
 // --- API Helper ---
 const api = {
     getInventory: async (token: string): Promise<InventoryItem[]> => {
-        const response = await fetch('http://localhost:8000/api/inventory', {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/inventory`, {
             headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
         });
         if (!response.ok) throw new Error('فشل في جلب بيانات المخزون.');
@@ -29,7 +29,7 @@ const api = {
         return data.data || [];
     },
     updateStock: async (productId: number, quantity: number, token: string) => {
-        const response = await fetch(`http://localhost:8000/api/inventory/${productId}`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/inventory/${productId}`, {
             method: 'PUT',
             headers: {
                 'Authorization': `Bearer ${token}`,

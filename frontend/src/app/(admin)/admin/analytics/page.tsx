@@ -21,7 +21,7 @@ interface AnalyticsData {
 // --- API Helper ---
 const api = {
     getAnalytics: async (token: string): Promise<AnalyticsData> => {
-        const response = await fetch('http://localhost:8000/api/analytics', {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/analytics`, { 
             headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
         });
         if (!response.ok) throw new Error('فشل في جلب بيانات التحليلات.');

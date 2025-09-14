@@ -45,8 +45,7 @@ const api = {
         }
 
         // [ملاحظة] تأكد من أن الـ API يرجع كل البيانات المطلوبة في الواجهة الجديدة
-        const response = await fetch('http://localhost:8000/api/products', {
-            headers: {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products`, {            headers: {
                 'Authorization': `Bearer ${token}`,
                 'Accept': 'application/json',
             },
