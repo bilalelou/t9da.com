@@ -112,7 +112,7 @@ class PublicDataController extends Controller
         }
     }
 
-        public function show($slug)
+    public function show($slug)
     {
         try {
             $product = Product::where('slug', $slug)->with('category')->firstOrFail();
@@ -138,6 +138,38 @@ class PublicDataController extends Controller
         }
     }
 
+        public function productsByIds(Request $request)
+    {
+        $validated = $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'integer|exists:products,id',
+        ]);
+
+        try {
+            $products = Product::whereIn('id', $validated['ids'])->get();
+
+            // استخدام دالة مساعدة لتنسيق البيانات
+            $formattedProducts = $products->map(fn($p) => $this->formatProductForCard($p));
+
+            return response()->json($formattedProducts);
+
+        } catch (\Exception $e) {
+            Log::error('خطأ في جلب المنتجات بواسطة IDs: ' . $e->getMessage());
+            return response()->json(['message' => 'حدث خطأ في الخادم.'], 500);
+        }
+    }
+    private function formatProductForCard(Product $product)
+    {
+        return [
+            'id' => $product->id,
+            'name' => $product->name,
+            'slug' => $product->slug,
+            'regular_price' => (float)$product->regular_price,
+            'sale_price' => isset($product->sale_price) ? (float)$product->sale_price : null,
+            'image' => $product->image ? asset('storage/uploads/' . $product->image) : 'https://placehold.co/400x400?text=No+Image',
+            'stock' => $product->quantity ?? 0,
+        ];
+    }
     /**
      * دالة مساعدة لتنسيق بيانات المنتج.
      */

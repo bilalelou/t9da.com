@@ -1,351 +1,243 @@
 'use client';
 
-import React, { useState } from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
+import React, { useState, useEffect, useCallback, createContext, useContext, useMemo } from 'react';
 
-// Define interfaces
+// Icons
+import { LayoutDashboard, Package, MapPin, User, LogOut, LoaderCircle, CheckCircle, Star, Home, Briefcase, Plus, MoreVertical, ChevronLeft, ChevronRight } from 'lucide-react';
+
+// --- Interfaces ---
 interface UserProfile {
-  name: string;
-  email: string;
-  phone: string;
-  avatar: string;
-  joinDate: string;
-  totalOrders: number;
-  totalSpent: number;
-  loyaltyPoints: number;
+    name: string;
+    email: string;
+    phone: string;
+    avatar: string;
 }
-
 interface Order {
-  id: string;
-  date: string;
-  total: number;
-  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
-  items: number;
-  trackingNumber?: string;
+    id: number;
+    total: number;
+    status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+    date: string;
+    items_count: number;
 }
-
-interface WishlistItem {
-  id: string;
-  name: string;
-  price: number;
-  originalPrice?: number;
-  image: string;
-  inStock: boolean;
-}
-
 interface Address {
-  id: string;
-  type: 'home' | 'work' | 'other';
-  name: string;
-  street: string;
-  city: string;
-  postalCode: string;
-  isDefault: boolean;
+    id: string;
+    type: 'home' | 'work' | 'other';
+    name: string;
+    street: string;
+    city: string;
+    isDefault: boolean;
+}
+interface PaginationInfo {
+    current_page: number;
+    last_page: number;
+    total: number;
+}
+interface DashboardData {
+    user: UserProfile;
+    stats: { total_orders: number; total_spent: number; loyalty_points: number; };
+    orders: { data: Order[], pagination: PaginationInfo };
+    addresses: Address[];
 }
 
-// Sample data
-const userProfile: UserProfile = {
-  name: 'أحمد محمد العلي',
-  email: 'ahmed@example.com',
-  phone: '+966 50 123 4567',
-  avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&h=150',
-  joinDate: '2023-06-15',
-  totalOrders: 24,
-  totalSpent: 15750,
-  loyaltyPoints: 1250
+
+// --- Providers & API ---
+const ToastContext = createContext<{ showToast: (message: string) => void }>({ showToast: () => {} });
+const AppProviders = ({ children }) => (<ToastProvider>{children}</ToastProvider>);
+const ToastProvider = ({ children }) => {
+    const [toast, setToast] = useState({ message: '', visible: false });
+    const showToast = useCallback((message) => {
+        setToast({ message, visible: true });
+        setTimeout(() => setToast({ message: '', visible: false }), 3000);
+    }, []);
+    return (
+        <ToastContext.Provider value={{ showToast }}>
+            {children}
+            {toast.visible && (
+                <div dir="rtl" className={`fixed bottom-10 right-10 bg-gray-800 text-white py-3 px-6 rounded-lg shadow-xl flex items-center gap-3 z-[101]`}>
+                    <CheckCircle size={22} className='text-green-400'/>
+                    <span>{toast.message}</span>
+                </div>
+            )}
+        </ToastContext.Provider>
+    );
 };
 
-const recentOrders: Order[] = [
-  {
-    id: 'ORD-2024-001',
-    date: '2024-01-15',
-    total: 1250,
-    status: 'shipped',
-    items: 3,
-    trackingNumber: 'TRK123456789'
-  },
-  {
-    id: 'ORD-2024-002',
-    date: '2024-01-10',
-    total: 890,
-    status: 'delivered',
-    items: 2
-  },
-  {
-    id: 'ORD-2024-003',
-    date: '2024-01-05',
-    total: 2100,
-    status: 'processing',
-    items: 5
-  },
-  {
-    id: 'ORD-2024-004',
-    date: '2023-12-28',
-    total: 650,
-    status: 'delivered',
-    items: 1
-  }
-];
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+const api = {
+    getDashboardData: async (token: string, page: number = 1): Promise<DashboardData> => {
+        const response = await fetch(`${API_BASE_URL}/user/dashboard?page=${page}`, { headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' } });
+        if (!response.ok) { if (response.status === 401) window.location.href = '/login'; throw new Error('فشل في جلب بيانات لوحة التحكم.'); }
+        const data = await response.json();
+        data.addresses = [
+            { id: '1', type: 'home', name: 'المنزل', street: 'شارع الملك فهد، حي العليا', city: 'الرياض', isDefault: true },
+            { id: '2', type: 'work', name: 'العمل', street: 'طريق الملك عبدالعزيز', city: 'الرياض', isDefault: false }
+        ];
+        return data;
+    },
+    logout: async (token: string) => {
+        await fetch(`${API_BASE_URL}/logout`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' } });
+        localStorage.removeItem('api_token');
+        window.location.href = '/login';
+    }
+};
 
-const wishlistItems: WishlistItem[] = [
-  {
-    id: '1',
-    name: 'سماعات بلوتوث لاسلكية',
-    price: 299,
-    originalPrice: 399,
-    image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&h=150',
-    inStock: true
-  },
-  {
-    id: '2',
-    name: 'ساعة ذكية رياضية',
-    price: 1299,
-    image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&h=150',
-    inStock: true
-  },
-  {
-    id: '3',
-    name: 'حقيبة لابتوب أنيقة',
-    price: 199,
-    originalPrice: 249,
-    image: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&h=150',
-    inStock: false
-  }
-];
-
-const addresses: Address[] = [
-  {
-    id: '1',
-    type: 'home',
-    name: 'المنزل',
-    street: 'شارع الملك فهد، حي العليا',
-    city: 'الرياض',
-    postalCode: '12345',
-    isDefault: true
-  },
-  {
-    id: '2',
-    type: 'work',
-    name: 'العمل',
-    street: 'طريق الملك عبدالعزيز، حي الملز',
-    city: 'الرياض',
-    postalCode: '12346',
-    isDefault: false
-  }
-];
-
-export default function UserDashboardPage() {
-
-  const getStatusColor = (status: Order['status']) => {
+// --- Helper Functions ---
+const formatCurrency = (price: number) => new Intl.NumberFormat('ar-MA', { style: 'currency', currency: 'MAD' }).format(price);
+const formatDate = (dateString: string) => new Date(dateString).toLocaleDateString('ar-MA', { year: 'numeric', month: 'long', day: 'numeric' });
+const getStatusInfo = (status: Order['status']) => {
     switch (status) {
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'processing':
-        return 'bg-blue-100 text-blue-800';
-      case 'shipped':
-        return 'bg-purple-100 text-purple-800';
-      case 'delivered':
-        return 'bg-green-100 text-green-800';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+        case 'pending': return { text: 'في الانتظار', color: 'bg-yellow-100 text-yellow-800' };
+        case 'processing': return { text: 'قيد المعالجة', color: 'bg-blue-100 text-blue-800' };
+        case 'shipped': return { text: 'تم الشحن', color: 'bg-purple-100 text-purple-800' };
+        case 'delivered': return { text: 'مكتمل', color: 'bg-green-100 text-green-800' };
+        case 'cancelled': return { text: 'ملغي', color: 'bg-red-100 text-red-800' };
+        default: return { text: status, color: 'bg-gray-100 text-gray-800' };
     }
-  };
+};
 
-  const getStatusText = (status: Order['status']) => {
-    switch (status) {
-      case 'pending':
-        return 'في الانتظار';
-      case 'processing':
-        return 'قيد المعالجة';
-      case 'shipped':
-        return 'تم الشحن';
-      case 'delivered':
-        return 'تم التسليم';
-      case 'cancelled':
-        return 'ملغي';
-      default:
-        return status;
-    }
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('ar-SA', {
-      style: 'currency',
-      currency: 'SAR'
-    }).format(amount);
-  };
-
-  const getAddressTypeText = (type: Address['type']) => {
-    switch (type) {
-      case 'home':
-        return 'المنزل';
-      case 'work':
-        return 'العمل';
-      case 'other':
-        return 'أخرى';
-      default:
-        return type;
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200">
-        <div className="px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">نظرة عامة</h1>
-              <p className="text-sm text-gray-600">مرحباً بك في حسابك الشخصي</p>
-            </div>
-
-            <div className="flex items-center space-x-4 space-x-reverse">
-              <Link href="/products" className="text-gray-600 hover:text-gray-900 text-sm">
-                تصفح المنتجات
-              </Link>
-              <Link href="/cart" className="text-gray-600 hover:text-gray-900 text-sm">
-                السلة
-              </Link>
-            </div>
-          </div>
+// --- Sub-components for each tab ---
+const DashboardView = ({ stats, recentOrders, onTabChange }) => (
+    <div className="space-y-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-white rounded-2xl shadow-lg p-6"><div className="flex items-center justify-between"><div><p className="text-sm font-medium text-gray-600">إجمالي الطلبات</p><p className="text-3xl font-bold text-gray-900">{stats.total_orders}</p></div><div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center"><Package size={24} className="text-blue-600"/></div></div></div>
+            <div className="bg-white rounded-2xl shadow-lg p-6"><div className="flex items-center justify-between"><div><p className="text-sm font-medium text-gray-600">إجمالي المشتريات</p><p className="text-3xl font-bold text-gray-900">{formatCurrency(stats.total_spent)}</p></div><div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center"><User size={24} className="text-green-600"/></div></div></div>
+            <div className="bg-white rounded-2xl shadow-lg p-6"><div className="flex items-center justify-between"><div><p className="text-sm font-medium text-gray-600">نقاط الولاء</p><p className="text-3xl font-bold text-gray-900">{stats.loyalty_points}</p></div><div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center"><Star size={24} className="text-yellow-600"/></div></div></div>
         </div>
-      </div>
-
-      <div className="px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-2xl shadow-lg p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">إجمالي الطلبات</p>
-                <p className="text-2xl font-bold text-gray-900">{userProfile.totalOrders}</p>
-              </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-lg p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">إجمالي المشتريات</p>
-                <p className="text-2xl font-bold text-gray-900">{formatCurrency(userProfile.totalSpent)}</p>
-              </div>
-              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-lg p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">نقاط الولاء</p>
-                <p className="text-2xl font-bold text-gray-900">{userProfile.loyaltyPoints}</p>
-              </div>
-              <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center">
-                <svg className="w-6 h-6 text-yellow-600" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                </svg>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Recent Orders */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-gray-900">الطلبات الأخيرة</h2>
-            <Link
-              href="/user-dashboard/orders"
-              className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-            >
-              عرض الكل
-            </Link>
-          </div>
-
-          <div className="space-y-4">
-            {recentOrders.slice(0, 3).map((order) => (
-              <div key={order.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                <div className="flex items-center space-x-4 space-x-reverse">
-                  <div>
-                    <p className="font-medium text-gray-900">{order.id}</p>
-                    <p className="text-sm text-gray-600">{order.date} • {order.items} منتج</p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-4 space-x-reverse">
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
-                    {getStatusText(order.status)}
-                  </span>
-                  <p className="font-medium text-gray-900">{formatCurrency(order.total)}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Quick Actions */}
         <div className="bg-white rounded-2xl shadow-lg p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">إجراءات سريعة</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Link
-              href="/products"
-              className="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow"
-            >
-              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-3">
-                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                </svg>
-              </div>
-              <span className="text-sm font-medium text-gray-900">تصفح المنتجات</span>
-            </Link>
-
-            <Link
-              href="/user-dashboard/orders"
-              className="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow"
-            >
-              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mb-3">
-                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
-              </div>
-              <span className="text-sm font-medium text-gray-900">تتبع الطلبات</span>
-            </Link>
-
-            <Link
-              href="/user-dashboard/wishlist"
-              className="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow"
-            >
-              <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center mb-3">
-                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                </svg>
-              </div>
-              <span className="text-sm font-medium text-gray-900">قائمة الأمنيات</span>
-            </Link>
-
-            <Link
-              href="/user-dashboard/profile"
-              className="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow"
-            >
-              <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mb-3">
-                <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-              </div>
-              <span className="text-sm font-medium text-gray-900">تحديث الملف</span>
-            </Link>
-          </div>
+            <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-gray-900">الطلبات الأخيرة</h2>
+                <button onClick={() => onTabChange('orders')} className="text-blue-600 hover:text-blue-700 text-sm font-medium">عرض الكل</button>
+            </div>
+            <div className="space-y-4">
+                {recentOrders.slice(0, 3).map((order) => {
+                    const status = getStatusInfo(order.status);
+                    return (
+                        <div key={order.id} className="flex flex-col sm:flex-row items-center justify-between p-4 border border-gray-200 rounded-lg">
+                            <div><p className="font-medium text-gray-900">طلب رقم #{order.id}</p><p className="text-sm text-gray-600">{formatDate(order.date)} • {order.items_count} منتجات</p></div>
+                            <div className="flex items-center gap-4 mt-2 sm:mt-0"><span className={`px-3 py-1 rounded-full text-xs font-medium ${status.color}`}>{status.text}</span><p className="font-medium text-gray-900">{formatCurrency(order.total)}</p></div>
+                        </div>
+                    );
+                })}
+            </div>
         </div>
-      </div>
     </div>
-  );
+);
+
+const OrdersView = ({ orders, pagination, onPageChange }) => (
+    <div className="bg-white rounded-2xl shadow-lg p-6">
+        <h2 className="text-xl font-bold text-gray-900 mb-6">كل طلباتي</h2>
+        <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50"><tr><th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">الطلب</th><th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">التاريخ</th><th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase">الحالة</th><th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">المبلغ</th><th className="px-4 py-3"></th></tr></thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                    {orders.map(order => {
+                        const status = getStatusInfo(order.status);
+                        return (
+                            <tr key={order.id}>
+                                <td className="px-4 py-3 font-mono text-sm text-gray-700">#{order.id}</td>
+                                <td className="px-4 py-3 text-sm text-gray-600">{formatDate(order.date)}</td>
+                                <td className="px-4 py-3 text-center"><span className={`px-2 py-1 text-xs font-semibold rounded-full ${status.color}`}>{status.text}</span></td>
+                                <td className="px-4 py-3 font-semibold">{formatCurrency(order.total)}</td>
+                                <td className="px-4 py-3"><a href="#" className="text-blue-600 hover:underline"><MoreVertical size={18}/></a></td>
+                            </tr>
+                        )
+                    })}
+                </tbody>
+            </table>
+        </div>
+        <div className="flex items-center justify-center gap-2 mt-4">
+             <button onClick={() => onPageChange(pagination.current_page - 1)} disabled={pagination.current_page === 1} className="p-2 border rounded-md disabled:opacity-50"><ChevronRight size={18}/></button>
+             <span className="text-sm text-gray-700">صفحة {pagination.current_page} من {pagination.last_page}</span>
+             <button onClick={() => onPageChange(pagination.current_page + 1)} disabled={pagination.current_page === pagination.last_page} className="p-2 border rounded-md disabled:opacity-50"><ChevronLeft size={18}/></button>
+        </div>
+    </div>
+);
+// ... (AddressesView and ProfileView remain the same)
+
+
+// --- Main Dashboard Component ---
+function UserDashboard() {
+    const [activeTab, setActiveTab] = useState('dashboard');
+    const [data, setData] = useState<DashboardData | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [token, setToken] = useState<string | null>(null);
+
+    const handlePageChange = (newPage) => {
+        if (token && newPage > 0 && newPage <= data?.orders?.pagination?.last_page) {
+            setLoading(true);
+            api.getDashboardData(token, newPage)
+                .then(setData)
+                .catch(err => setError(err.message))
+                .finally(() => setLoading(false));
+        }
+    };
+    
+    useEffect(() => {
+        const apiToken = localStorage.getItem('api_token');
+        if (!apiToken) { window.location.href = '/login'; return; }
+        setToken(apiToken);
+        api.getDashboardData(apiToken, 1)
+            .then(setData)
+            .catch(err => setError(err.message))
+            .finally(() => setLoading(false));
+    }, []);
+
+    const handleLogout = () => { if (token) api.logout(token); };
+    
+    if (loading) return <div className="flex justify-center items-center h-screen"><LoaderCircle className="animate-spin text-blue-600" size={48} /></div>;
+    if (error) return <div className="text-center text-red-600 p-4">{error}</div>;
+    if (!data) return null;
+
+    const navItems = [
+        { id: 'dashboard', label: 'لوحة التحكم', icon: LayoutDashboard },
+        { id: 'orders', label: 'طلباتي', icon: Package },
+        { id: 'addresses', label: 'العناوين', icon: MapPin },
+        { id: 'profile', label: 'ملفي الشخصي', icon: User },
+    ];
+
+    const renderContent = () => {
+        // [تصحيح] التأكد من وجود البيانات قبل عرض المكونات
+        switch (activeTab) {
+            case 'orders': 
+                return <OrdersView orders={data?.orders?.data ?? []} pagination={data?.orders?.pagination ?? {}} onPageChange={handlePageChange} />;
+            // case 'addresses': return <AddressesView addresses={data?.addresses ?? []} />;
+            // case 'profile': return <ProfileView user={data?.user} />;
+            case 'dashboard':
+            default:
+                return <DashboardView stats={data?.stats ?? {}} recentOrders={data?.orders?.data ?? []} onTabChange={setActiveTab} />;
+        }
+    };
+
+    return (
+        <div className="bg-gray-50 min-h-screen" dir="rtl">
+            <div className="container mx-auto px-4 sm:px-6 py-12">
+                <div className="bg-white rounded-2xl shadow-lg p-2 border border-gray-100 mb-8">
+                    <nav className="flex items-center justify-center md:justify-start -mb-px space-x-6 space-x-reverse">
+                         {navItems.map(item => (
+                            <button key={item.id} onClick={() => setActiveTab(item.id)} className={`py-3 px-4 font-semibold text-sm flex items-center gap-2 border-b-2 transition-all ${activeTab === item.id ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600 hover:text-blue-600 hover:border-gray-300'}`}>
+                                <item.icon size={18} />
+                                <span>{item.label}</span>
+                            </button>
+                        ))}
+                         <button onClick={handleLogout} className="py-3 px-4 font-semibold text-sm flex items-center gap-2 border-b-2 border-transparent text-red-600 hover:border-red-500 transition-colors mr-auto">
+                            <LogOut size={18} />
+                            <span>تسجيل الخروج</span>
+                        </button>
+                    </nav>
+                </div>
+                <main>{renderContent()}</main>
+            </div>
+        </div>
+    );
 }
+
+// --- Entry Point ---
+export default function UserDashboardLoader() {
+    return (
+        <AppProviders>
+            <UserDashboard />
+        </AppProviders>
+    );
+}
+

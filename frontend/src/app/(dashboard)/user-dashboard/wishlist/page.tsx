@@ -1,330 +1,242 @@
 'use client';
 
-import React, { useState } from 'react';
-import Link from 'next/link';
+import React, { useState, useEffect, useMemo, useCallback, createContext, useContext } from 'react';
 
-// Define interfaces
-interface WishlistItem {
-  id: string;
-  name: string;
-  price: number;
-  originalPrice?: number;
-  image: string;
-  inStock: boolean;
-  category: string;
-  rating: number;
-  reviews: number;
+// Icons
+import { Heart, ShoppingCart, LoaderCircle, Trash2, CheckCircle, Star } from 'lucide-react';
+
+// --- Interfaces ---
+interface Product {
+    id: number;
+    name: string;
+    slug: string;
+    price: number;
+    originalPrice?: number;
+    image: string;
+    stock: number;
+    inStock: boolean;
+    category: string;
+    rating: number;
+    reviews: number;
+}
+interface CartItem extends Product {
+    quantity: number;
 }
 
-// Sample data
-const wishlistItems: WishlistItem[] = [
-  {
-    id: '1',
-    name: 'سماعات بلوتوث لاسلكية عالية الجودة',
-    price: 299,
-    originalPrice: 399,
-    image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=400',
-    inStock: true,
-    category: 'إلكترونيات',
-    rating: 4.5,
-    reviews: 128
-  },
-  {
-    id: '2',
-    name: 'ساعة ذكية رياضية مقاومة للماء',
-    price: 1299,
-    image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=400',
-    inStock: true,
-    category: 'إكسسوارات',
-    rating: 4.8,
-    reviews: 89
-  },
-  {
-    id: '3',
-    name: 'حقيبة لابتوب أنيقة ومقاومة للماء',
-    price: 199,
-    originalPrice: 249,
-    image: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=400',
-    inStock: false,
-    category: 'حقائب',
-    rating: 4.3,
-    reviews: 45
-  },
-  {
-    id: '4',
-    name: 'كاميرا رقمية احترافية',
-    price: 2499,
-    originalPrice: 2799,
-    image: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=400',
-    inStock: true,
-    category: 'كاميرات',
-    rating: 4.9,
-    reviews: 234
-  },
-  {
-    id: '5',
-    name: 'لوحة مفاتيح ميكانيكية للألعاب',
-    price: 450,
-    image: 'https://images.unsplash.com/photo-1541140532154-b024d705b90a?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=400',
-    inStock: true,
-    category: 'ألعاب',
-    rating: 4.6,
-    reviews: 167
-  },
-  {
-    id: '6',
-    name: 'مكبر صوت محمول عالي الجودة',
-    price: 189,
-    originalPrice: 229,
-    image: 'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=400',
-    inStock: false,
-    category: 'صوتيات',
-    rating: 4.4,
-    reviews: 92
-  }
-];
 
-export default function WishlistPage() {
-  const [selectedItems, setSelectedItems] = useState<string[]>([]);
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('ar-SA', {
-      style: 'currency',
-      currency: 'SAR'
-    }).format(amount);
-  };
-
-  const renderStars = (rating: number) => {
-    const stars = [];
-    const fullStars = Math.floor(rating);
-    const hasHalfStar = rating % 1 !== 0;
-
-    for (let i = 0; i < fullStars; i++) {
-      stars.push(
-        <svg key={i} className="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-        </svg>
-      );
-    }
-
-    if (hasHalfStar) {
-      stars.push(
-        <svg key="half" className="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-        </svg>
-      );
-    }
-
-    const emptyStars = 5 - Math.ceil(rating);
-    for (let i = 0; i < emptyStars; i++) {
-      stars.push(
-        <svg key={`empty-${i}`} className="w-4 h-4 text-gray-300" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-        </svg>
-      );
-    }
-
-    return stars;
-  };
-
-  const toggleItemSelection = (itemId: string) => {
-    setSelectedItems(prev => 
-      prev.includes(itemId) 
-        ? prev.filter(id => id !== itemId)
-        : [...prev, itemId]
+// --- [تصحيح] تم دمج كل أنظمة إدارة الحالة هنا لحل مشكلة الاستيراد ---
+const ToastContext = createContext<{ showToast: (message: string, type?: 'success' | 'error') => void }>({ showToast: () => {} });
+const useToast = () => useContext(ToastContext);
+const ToastProvider = ({ children }) => {
+    const [toast, setToast] = useState({ message: '', visible: false, type: 'success' as 'success' | 'error' });
+    const showToast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
+        setToast({ message, visible: true, type });
+        setTimeout(() => setToast(prev => ({ ...prev, visible: false })), 3000);
+    }, []);
+    return (
+        <ToastContext.Provider value={{ showToast }}>
+            {children}
+            {toast.visible && (
+                <div dir="rtl" className={`fixed bottom-10 right-10 text-white py-3 px-6 rounded-lg shadow-xl flex items-center gap-3 z-[101] ${toast.type === 'success' ? 'bg-gray-800' : 'bg-red-600'}`}>
+                    <CheckCircle size={22} className={toast.type === 'success' ? 'text-green-400' : 'text-white'}/>
+                    <span>{toast.message}</span>
+                </div>
+            )}
+        </ToastContext.Provider>
     );
-  };
+};
 
-  const removeFromWishlist = (itemId: string) => {
-    // Here you would typically call an API to remove the item
-    console.log('Remove item:', itemId);
-  };
+const FavoritesContext = createContext<{ favoriteIds: Set<number>; toggleFavorite: (id: number) => void; }>({ favoriteIds: new Set(), toggleFavorite: () => {} });
+const useFavorites = () => useContext(FavoritesContext);
+const FavoritesProvider = ({ children }) => {
+    const { showToast } = useToast();
+    const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
+    
+    useEffect(() => {
+        try { const localData = localStorage.getItem('favorites'); if (localData) setFavoriteIds(new Set(JSON.parse(localData))); }
+        catch (error) { console.error("Failed to parse favorites", error); }
+    }, []);
 
-  const addToCart = (itemId: string) => {
-    // Here you would typically call an API to add the item to cart
-    console.log('Add to cart:', itemId);
-  };
+    useEffect(() => { localStorage.setItem('favorites', JSON.stringify(Array.from(favoriteIds))); }, [favoriteIds]);
 
-  const addSelectedToCart = () => {
-    selectedItems.forEach(itemId => addToCart(itemId));
-    setSelectedItems([]);
-  };
+    const toggleFavorite = useCallback((productId: number) => {
+        setFavoriteIds(prev => {
+            const newIds = new Set(prev);
+            const isFavorite = newIds.has(productId);
+            if (isFavorite) {
+                newIds.delete(productId);
+                showToast(`تمت إزالة المنتج من المفضلة`);
+            } else {
+                newIds.add(productId);
+                 showToast(`تمت إضافة المنتج إلى المفضلة`);
+            }
+            return newIds;
+        });
+    }, [showToast]);
+    const value = useMemo(() => ({ favoriteIds, toggleFavorite }), [favoriteIds, toggleFavorite]);
+    return <FavoritesContext.Provider value={value}>{children}</FavoritesContext.Provider>;
+};
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200">
-        <div className="px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">قائمة الأمنيات</h1>
-              <p className="text-sm text-gray-600">{wishlistItems.length} منتج في قائمة أمنياتك</p>
+const CartContext = createContext<any>(null);
+const useCart = () => {
+    const context = useContext(CartContext);
+    if (!context) throw new Error('useCart must be used within a CartProvider');
+    return context;
+};
+const CartProvider = ({ children }) => {
+    const [cartItems, setCartItems] = useState<CartItem[]>([]);
+    const { showToast } = useToast();
+    useEffect(() => {
+        try { const localData = localStorage.getItem('cart'); if (localData) setCartItems(JSON.parse(localData)); }
+        catch (error) { console.error("Failed to parse cart", error); }
+    }, []);
+    useEffect(() => { localStorage.setItem('cart', JSON.stringify(cartItems)); }, [cartItems]);
+
+    const addToCart = (product: Product) => {
+        setCartItems(prevItems => {
+            const exist = prevItems.find(item => item.id === product.id);
+            if (exist) {
+                const newQuantity = Math.min(exist.quantity + 1, product.stock);
+                if (exist.quantity >= product.stock) showToast('لا يمكن إضافة المزيد، لقد وصلت للكمية القصوى.', 'error');
+                return prevItems.map(item => item.id === product.id ? { ...item, quantity: newQuantity } : item);
+            }
+            return [...prevItems, { ...product, quantity: 1 }];
+        });
+        showToast(`تمت إضافة "${product.name}" إلى السلة!`);
+    };
+    const value = useMemo(() => ({ cartItems, addToCart }), [cartItems]);
+    return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
+};
+
+const AppProviders = ({ children }) => (
+    <ToastProvider>
+        <FavoritesProvider>
+            <CartProvider>
+                {children}
+            </CartProvider>
+        </FavoritesProvider>
+    </ToastProvider>
+);
+
+// --- API Helper ---
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+const api = {
+    getProductsByIds: async (ids: number[]): Promise<Product[]> => {
+        if (ids.length === 0) return [];
+        const response = await fetch(`${API_BASE_URL}/products-by-ids`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify({ ids }),
+        });
+        if (!response.ok) throw new Error('فشل في جلب منتجات المفضلة.');
+        const data = await response.json();
+        return data.map(p => ({
+            ...p,
+            price: p.sale_price ?? p.regular_price,
+            originalPrice: p.sale_price ? p.regular_price : undefined,
+            inStock: p.stock > 0,
+        }));
+    }
+};
+
+// --- Components ---
+const formatCurrency = (price: number) => new Intl.NumberFormat('ar-MA', { style: 'currency', currency: 'MAD' }).format(price);
+
+const renderStars = (rating: number) => {
+    return Array.from({ length: 5 }, (_, i) => (
+        <Star key={i} size={16} className={i < Math.round(rating) ? "text-yellow-400 fill-current" : "text-gray-300 fill-current"} />
+    ));
+};
+
+const WishlistItemCard = ({ product }: { product: Product }) => {
+    const { toggleFavorite } = useFavorites();
+    const { addToCart } = useCart();
+
+    return (
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden group transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
+            <a href={`/product/${product.slug}`} className="block relative h-64 overflow-hidden">
+                <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+            </a>
+            <div className="p-4 flex flex-col flex-grow">
+                <p className="text-xs text-blue-600 font-medium mb-1">{product.category}</p>
+                <a href={`/product/${product.slug}`}><h3 className="font-bold text-gray-800 line-clamp-2 hover:text-blue-600 transition-colors">{product.name}</h3></a>
+                <div className="flex items-center gap-1 my-2">{renderStars(product.rating)}<span className="text-xs text-gray-500">({product.reviews} مراجعة)</span></div>
+                <div className="mt-auto pt-3 border-t border-gray-100 space-y-3">
+                    <div className="flex items-center justify-between">
+                         <div className="flex items-baseline gap-2">
+                             <span className="text-xl font-bold text-gray-900">{formatCurrency(product.price)}</span>
+                             {product.originalPrice && <span className="text-sm text-gray-400 line-through">{formatCurrency(product.originalPrice)}</span>}
+                         </div>
+                         <p className={`font-semibold text-xs ${product.inStock ? 'text-green-600' : 'text-red-500'}`}>{product.inStock ? 'متوفر' : 'غير متوفر'}</p>
+                    </div>
+                     <div className="flex items-center gap-2">
+                        <button onClick={() => addToCart(product)} className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors text-sm" disabled={!product.inStock}>
+                            إضافة للسلة
+                        </button>
+                        <button onClick={() => toggleFavorite(product.id)} className="p-2 text-gray-500 bg-gray-100 rounded-lg hover:bg-red-100 hover:text-red-600 transition-colors" title="إزالة من المفضلة">
+                            <Trash2 size={18} />
+                        </button>
+                    </div>
+                </div>
             </div>
-            
-            <div className="flex items-center space-x-4 space-x-reverse">
-              {selectedItems.length > 0 && (
-                <button
-                  onClick={addSelectedToCart}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  إضافة المحدد للسلة ({selectedItems.length})
-                </button>
-              )}
-              
-              <select className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                <option value="all">جميع المنتجات</option>
-                <option value="available">متوفر فقط</option>
-                <option value="sale">في التخفيضات</option>
-                <option value="price-low">الأقل سعراً</option>
-                <option value="price-high">الأعلى سعراً</option>
-              </select>
-            </div>
-          </div>
         </div>
-      </div>
+    );
+};
 
-      <div className="px-4 sm:px-6 lg:px-8 py-8">
-        {/* Wishlist Items */}
-        {wishlistItems.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {wishlistItems.map((item) => (
-              <div key={item.id} className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
-                <div className="relative">
-                  <img
-                    src={item.image}
-                    alt={item.name}
-                    className="w-full h-48 object-cover"
-                  />
-                  
-                  {/* Wishlist and Selection Controls */}
-                  <div className="absolute top-3 right-3 flex space-x-2 space-x-reverse">
-                    <button
-                      onClick={() => toggleItemSelection(item.id)}
-                      className={`w-8 h-8 rounded-full flex items-center justify-center shadow-md transition-colors ${
-                        selectedItems.includes(item.id)
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-white text-gray-600 hover:bg-gray-50'
-                      }`}
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                    </button>
-                    
-                    <button
-                      onClick={() => removeFromWishlist(item.id)}
-                      className="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md hover:bg-gray-50 text-red-500"
-                    >
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                      </svg>
-                    </button>
-                  </div>
+// --- Main Wishlist Page Component ---
+function WishlistPage() {
+    const { favoriteIds } = useFavorites();
+    const [products, setProducts] = useState<Product[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-                  {/* Sale Badge */}
-                  {item.originalPrice && (
-                    <div className="absolute top-3 left-3 bg-red-500 text-white px-2 py-1 rounded-lg text-xs font-medium">
-                      خصم {Math.round(((item.originalPrice - item.price) / item.originalPrice) * 100)}%
-                    </div>
-                  )}
+    useEffect(() => {
+        const fetchWishlistProducts = async () => {
+            if (favoriteIds.size === 0) { setProducts([]); setLoading(false); return; }
+            try {
+                setLoading(true);
+                const fetchedProducts = await api.getProductsByIds(Array.from(favoriteIds));
+                setProducts(fetchedProducts);
+            } catch (err: any) { setError(err.message); }
+            finally { setLoading(false); }
+        };
+        fetchWishlistProducts();
+    }, [favoriteIds]);
 
-                  {/* Stock Status */}
-                  {!item.inStock && (
-                    <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-                      <span className="text-white font-medium bg-black bg-opacity-75 px-3 py-1 rounded-lg">
-                        غير متوفر
-                      </span>
-                    </div>
-                  )}
-                </div>
-                
-                <div className="p-4">
-                  {/* Category */}
-                  <p className="text-xs text-blue-600 font-medium mb-2">{item.category}</p>
-                  
-                  {/* Product Name */}
-                  <h3 className="font-medium text-gray-900 mb-2 line-clamp-2">{item.name}</h3>
-                  
-                  {/* Rating */}
-                  <div className="flex items-center space-x-1 space-x-reverse mb-3">
-                    <div className="flex items-center space-x-1 space-x-reverse">
-                      {renderStars(item.rating)}
-                    </div>
-                    <span className="text-sm text-gray-600">({item.reviews})</span>
-                  </div>
-                  
-                  {/* Price */}
-                  <div className="flex items-center space-x-2 space-x-reverse mb-4">
-                    <span className="text-lg font-bold text-gray-900">{formatCurrency(item.price)}</span>
-                    {item.originalPrice && (
-                      <span className="text-sm text-gray-500 line-through">{formatCurrency(item.originalPrice)}</span>
-                    )}
-                  </div>
-                  
-                  {/* Actions */}
-                  <div className="space-y-2">
-                    <button
-                      onClick={() => addToCart(item.id)}
-                      disabled={!item.inStock}
-                      className={`w-full py-2 rounded-lg font-medium transition-colors ${
-                        item.inStock
-                          ? 'bg-blue-600 text-white hover:bg-blue-700'
-                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      }`}
-                    >
-                      {item.inStock ? 'إضافة للسلة' : 'غير متوفر'}
-                    </button>
-                    
-                    <Link
-                      href={`/products/${item.id}`}
-                      className="block w-full py-2 text-center border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                    >
-                      عرض التفاصيل
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          /* Empty State */
-          <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
-            <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-              </svg>
+    if (loading) return <div className="flex justify-center py-20"><LoaderCircle className="animate-spin text-blue-600" size={48} /></div>;
+    if (error) return <div className="text-center text-red-600 bg-red-50 p-4 rounded-lg">خطأ: {error}</div>;
+    
+    if (products.length === 0) {
+        return (
+            <div className="text-center py-20 bg-white rounded-2xl shadow-md border border-gray-100">
+                <Heart size={64} className="mx-auto text-red-300" strokeWidth={1.5} />
+                <h2 className="text-2xl font-bold text-gray-800 mt-6">قائمة مفضلتك فارغة</h2>
+                <a href="/shop" className="mt-8 inline-block bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700">اكتشف منتجاتنا</a>
             </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">قائمة الأمنيات فارغة</h3>
-            <p className="text-gray-600 mb-6">ابدأ بإضافة المنتجات التي تعجبك إلى قائمة أمنياتك</p>
-            <Link
-              href="/products"
-              className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              تصفح المنتجات
-            </Link>
-          </div>
-        )}
+        );
+    }
 
-        {/* Summary */}
-        {wishlistItems.length > 0 && (
-          <div className="mt-8 bg-white rounded-2xl shadow-lg p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">ملخص قائمة الأمنيات</h3>
-                <p className="text-sm text-gray-600">
-                  {wishlistItems.filter(item => item.inStock).length} من {wishlistItems.length} منتج متوفر
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="text-sm text-gray-600">إجمالي القيمة التقديرية</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {formatCurrency(wishlistItems.reduce((total, item) => total + item.price, 0))}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+    return (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            {products.map(product => (<WishlistItemCard key={product.id} product={product} />))}
+        </div>
+    );
 }
+
+// --- Entry Point ---
+export default function WishlistPageLoader() {
+    return (
+        <AppProviders>
+            <div className="bg-gray-50 min-h-screen">
+                <div className="container mx-auto px-4 sm:px-6 py-12" dir="rtl">
+                     <div className="text-center mb-12">
+                        <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">قائمة المفضلة</h1>
+                        <p className="mt-3 text-lg text-gray-600">المنتجات التي قمت بحفظها للعودة إليها لاحقاً.</p>
+                    </div>
+                    <WishlistPage />
+                </div>
+            </div>
+        </AppProviders>
+    );
+}
+

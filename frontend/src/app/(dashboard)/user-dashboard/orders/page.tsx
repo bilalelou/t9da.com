@@ -1,240 +1,190 @@
 'use client';
 
-import React from 'react';
-import Link from 'next/link';
+import React, { useState, useEffect, useCallback, createContext, useContext } from 'react';
 
-// Define interfaces
+// Icons
+import { LoaderCircle, CheckCircle, Package, MoreVertical, ChevronLeft, ChevronRight, Clock, Truck, XCircle } from 'lucide-react';
+
+// --- Interfaces ---
 interface Order {
-  id: string;
-  date: string;
-  total: number;
-  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
-  items: number;
-  trackingNumber?: string;
+    id: number;
+    total: number;
+    status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+    created_at: string;
+    items_count: number;
+}
+interface PaginationInfo {
+    current_page: number;
+    last_page: number;
+    total: number;
 }
 
-// Sample data
-const orders: Order[] = [
-  {
-    id: 'ORD-2024-001',
-    date: '2024-01-15',
-    total: 1250,
-    status: 'shipped',
-    items: 3,
-    trackingNumber: 'TRK123456789'
-  },
-  {
-    id: 'ORD-2024-002',
-    date: '2024-01-10',
-    total: 890,
-    status: 'delivered',
-    items: 2
-  },
-  {
-    id: 'ORD-2024-003',
-    date: '2024-01-05',
-    total: 2100,
-    status: 'processing',
-    items: 5
-  },
-  {
-    id: 'ORD-2024-004',
-    date: '2023-12-28',
-    total: 650,
-    status: 'delivered',
-    items: 1
-  },
-  {
-    id: 'ORD-2024-005',
-    date: '2023-12-20',
-    total: 1800,
-    status: 'cancelled',
-    items: 4
-  },
-  {
-    id: 'ORD-2024-006',
-    date: '2023-12-15',
-    total: 950,
-    status: 'delivered',
-    items: 2
-  }
-];
+// --- [تصحيح] تم دمج أنظمة إدارة الحالة هنا لحل مشكلة الاستيراد ---
+const ToastContext = createContext<{ showToast: (message: string, type?: 'success' | 'error') => void }>({ showToast: () => {} });
+const useToast = () => useContext(ToastContext);
 
-export default function OrdersPage() {
-  const getStatusColor = (status: Order['status']) => {
+const ToastProvider = ({ children }) => {
+    const [toast, setToast] = useState({ message: '', visible: false, type: 'success' as 'success' | 'error' });
+    const showToast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
+        setToast({ message, visible: true, type });
+        setTimeout(() => setToast(prev => ({ ...prev, visible: false })), 3000);
+    }, []);
+    return (
+        <ToastContext.Provider value={{ showToast }}>
+            {children}
+            {toast.visible && (
+                <div dir="rtl" className={`fixed bottom-10 right-10 text-white py-3 px-6 rounded-lg shadow-xl flex items-center gap-3 z-[101] ${toast.type === 'success' ? 'bg-gray-800' : 'bg-red-600'}`}>
+                    <CheckCircle size={22} className={toast.type === 'success' ? 'text-green-400' : 'text-white'}/>
+                    <span>{toast.message}</span>
+                </div>
+            )}
+        </ToastContext.Provider>
+    );
+};
+
+const AppProviders = ({ children }) => (
+    <ToastProvider>
+        {children}
+    </ToastProvider>
+);
+
+
+// --- API Helper ---
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+const api = {
+    getOrders: async (token: string, page: number = 1): Promise<{ orders: Order[], pagination: PaginationInfo }> => {
+        const response = await fetch(`${API_BASE_URL}/user/dashboard?page=${page}`, { 
+            headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' } 
+        });
+        if (!response.ok) {
+            if (response.status === 401) window.location.href = '/login';
+            throw new Error('فشل في جلب الطلبات.');
+        }
+        const data = await response.json();
+        return {
+            orders: data.orders.data,
+            pagination: data.orders.pagination
+        };
+    },
+};
+
+// --- Helper Functions ---
+const formatCurrency = (price: number) => new Intl.NumberFormat('ar-MA', { style: 'currency', currency: 'MAD' }).format(price);
+const formatDate = (dateString: string) => new Date(dateString).toLocaleDateString('ar-MA', { year: 'numeric', month: 'long', day: 'numeric' });
+const getStatusInfo = (status: Order['status']) => {
     switch (status) {
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'processing':
-        return 'bg-blue-100 text-blue-800';
-      case 'shipped':
-        return 'bg-purple-100 text-purple-800';
-      case 'delivered':
-        return 'bg-green-100 text-green-800';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+        case 'pending': return { text: 'في الانتظار', color: 'bg-yellow-100 text-yellow-800', icon: <Clock size={14}/> };
+        case 'processing': return { text: 'قيد المعالجة', color: 'bg-blue-100 text-blue-800', icon: <LoaderCircle size={14} className="animate-spin"/> };
+        case 'shipped': return { text: 'تم الشحن', color: 'bg-purple-100 text-purple-800', icon: <Truck size={14}/> };
+        case 'delivered': return { text: 'مكتمل', color: 'bg-green-100 text-green-800', icon: <CheckCircle size={14}/> };
+        case 'cancelled': return { text: 'ملغي', color: 'bg-red-100 text-red-800', icon: <XCircle size={14}/> };
+        default: return { text: status, color: 'bg-gray-100 text-gray-800' };
     }
-  };
+};
 
-  const getStatusText = (status: Order['status']) => {
-    switch (status) {
-      case 'pending':
-        return 'في الانتظار';
-      case 'processing':
-        return 'قيد المعالجة';
-      case 'shipped':
-        return 'تم الشحن';
-      case 'delivered':
-        return 'تم التسليم';
-      case 'cancelled':
-        return 'ملغي';
-      default:
-        return status;
+// --- Main My Orders Page Component ---
+function MyOrdersPage() {
+    const [ordersData, setOrdersData] = useState<{ orders: Order[], pagination: PaginationInfo } | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [token, setToken] = useState<string | null>(null);
+
+    useEffect(() => {
+        const apiToken = localStorage.getItem('api_token');
+        if (!apiToken) {
+            window.location.href = '/login';
+            return;
+        }
+        setToken(apiToken);
+    }, []);
+
+    useEffect(() => {
+        if (token) {
+            setLoading(true);
+            api.getOrders(token, currentPage)
+                .then(setOrdersData)
+                .catch(err => setError(err.message))
+                .finally(() => setLoading(false));
+        }
+    }, [token, currentPage]);
+
+    const handlePageChange = (newPage: number) => {
+        if (newPage > 0 && newPage <= (ordersData?.pagination.last_page || 1)) {
+            setCurrentPage(newPage);
+        }
+    };
+
+    if (loading && !ordersData) return <div className="flex justify-center items-center h-screen"><LoaderCircle className="animate-spin text-blue-600" size={48} /></div>;
+    if (error) return <div className="text-center text-red-600 bg-red-50 p-4 rounded-lg">{error}</div>;
+    if (!ordersData || ordersData.orders.length === 0) {
+        return (
+            <div className="text-center py-20">
+                <Package size={64} className="mx-auto text-gray-300" />
+                <h2 className="text-2xl font-bold text-gray-800 mt-4">لا توجد لديك طلبات بعد</h2>
+                <a href="/shop" className="mt-6 inline-block bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700">ابدأ التسوق الآن</a>
+            </div>
+        );
     }
-  };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('ar-SA', {
-      style: 'currency',
-      currency: 'SAR'
-    }).format(amount);
-  };
+    const { orders, pagination } = ordersData;
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200">
-        <div className="px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">طلباتي</h1>
-              <p className="text-sm text-gray-600">تتبع وإدارة جميع طلباتك</p>
-            </div>
-            
-            <div className="flex items-center space-x-4 space-x-reverse">
-              <select className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                <option value="all">جميع الطلبات</option>
-                <option value="pending">في الانتظار</option>
-                <option value="processing">قيد المعالجة</option>
-                <option value="shipped">تم الشحن</option>
-                <option value="delivered">تم التسليم</option>
-                <option value="cancelled">ملغي</option>
-              </select>
-              
-              <Link
-                href="/products"
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                طلب جديد
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="px-4 sm:px-6 lg:px-8 py-8">
-        {/* Orders List */}
+    return (
         <div className="space-y-6">
-          {orders.map((order) => (
-            <div key={order.id} className="bg-white rounded-2xl shadow-lg p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">{order.id}</h3>
-                  <p className="text-sm text-gray-600">تاريخ الطلب: {order.date}</p>
-                </div>
-                <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(order.status)}`}>
-                  {getStatusText(order.status)}
-                </span>
-              </div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-sm text-gray-600 mb-1">عدد المنتجات</p>
-                  <p className="text-lg font-semibold text-gray-900">{order.items} منتج</p>
-                </div>
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-sm text-gray-600 mb-1">إجمالي المبلغ</p>
-                  <p className="text-lg font-semibold text-gray-900">{formatCurrency(order.total)}</p>
-                </div>
-                {order.trackingNumber && (
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <p className="text-sm text-gray-600 mb-1">رقم التتبع</p>
-                    <p className="text-lg font-semibold text-gray-900">{order.trackingNumber}</p>
-                  </div>
-                )}
-              </div>
-              
-              <div className="flex flex-wrap gap-3">
-                <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                  عرض التفاصيل
-                </button>
-                {order.status === 'shipped' && (
-                  <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
-                    تتبع الشحنة
-                  </button>
-                )}
-                {order.status === 'delivered' && (
-                  <>
-                    <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
-                      إعادة الطلب
-                    </button>
-                    <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
-                      تقييم المنتجات
-                    </button>
-                  </>
-                )}
-                {(order.status === 'pending' || order.status === 'processing') && (
-                  <button className="px-4 py-2 border border-red-300 text-red-700 rounded-lg hover:bg-red-50 transition-colors">
-                    إلغاء الطلب
-                  </button>
-                )}
-                <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
-                  تحميل الفاتورة
-                </button>
-              </div>
-            </div>
-          ))}
+            {orders.map((order) => {
+                const status = getStatusInfo(order.status);
+                return (
+                    <div key={order.id} className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+                        <div className="flex flex-col sm:flex-row items-center justify-between mb-4 pb-4 border-b">
+                            <div>
+                                <h3 className="text-lg font-semibold text-gray-900">طلب رقم #{order.id}</h3>
+                                <p className="text-sm text-gray-600">تاريخ الطلب: {formatDate(order.created_at)}</p>
+                            </div>
+                            <span className={`px-3 py-1 rounded-full text-sm font-medium flex items-center gap-2 ${status.color}`}>
+                                {status.icon} {status.text}
+                            </span>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 text-center sm:text-right">
+                            <div className="bg-gray-50 rounded-lg p-4">
+                                <p className="text-sm text-gray-600 mb-1">عدد المنتجات</p>
+                                <p className="text-lg font-semibold text-gray-900">{order.items_count} منتج</p>
+                            </div>
+                            <div className="bg-gray-50 rounded-lg p-4">
+                                <p className="text-sm text-gray-600 mb-1">إجمالي المبلغ</p>
+                                <p className="text-lg font-semibold text-gray-900">{formatCurrency(order.total)}</p>
+                            </div>
+                        </div>
+                        <div className="flex flex-wrap gap-3">
+                            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-semibold">عرض التفاصيل</button>
+                        </div>
+                    </div>
+                );
+            })}
+             <div className="flex items-center justify-between mt-8">
+                 <p className="text-sm text-gray-600">عرض {orders.length} من {pagination.total} طلب</p>
+                 <div className="flex items-center gap-2">
+                     <button onClick={() => handlePageChange(pagination.current_page - 1)} disabled={pagination.current_page === 1} className="p-2 border rounded-lg disabled:opacity-50"><ChevronRight size={18}/></button>
+                     <button onClick={() => handlePageChange(pagination.current_page + 1)} disabled={pagination.current_page === pagination.last_page} className="p-2 border rounded-lg disabled:opacity-50"><ChevronLeft size={18}/></button>
+                 </div>
+             </div>
         </div>
-
-        {/* Empty State */}
-        {orders.length === 0 && (
-          <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
-            <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">لا توجد طلبات بعد</h3>
-            <p className="text-gray-600 mb-6">ابدأ التسوق واطلب منتجاتك المفضلة</p>
-            <Link
-              href="/products"
-              className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              تصفح المنتجات
-            </Link>
-          </div>
-        )}
-
-        {/* Pagination */}
-        {orders.length > 0 && (
-          <div className="flex items-center justify-between mt-8">
-            <p className="text-sm text-gray-600">
-              عرض 1-{orders.length} من {orders.length} طلب
-            </p>
-            <div className="flex items-center space-x-2 space-x-reverse">
-              <button className="px-3 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-                السابق
-              </button>
-              <button className="px-3 py-2 bg-blue-600 text-white rounded-lg">1</button>
-              <button className="px-3 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-                التالي
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+    );
 }
+
+// --- Entry Point ---
+export default function MyOrdersPageLoader() {
+    return (
+        <AppProviders>
+             <div className="bg-gray-50 min-h-screen">
+                 <div className="container mx-auto px-4 sm:px-6 py-12" dir="rtl">
+                    <div className="mb-8">
+                        <h1 className="text-3xl font-bold text-gray-900">طلباتي</h1>
+                        <p className="text-md text-gray-600 mt-1">تتبع وإدارة جميع طلباتك السابقة.</p>
+                    </div>
+                    <MyOrdersPage />
+                </div>
+            </div>
+        </AppProviders>
+    );
+}
+

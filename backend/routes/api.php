@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AddressController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\LoginController;
@@ -13,14 +14,15 @@ use App\Http\Controllers\Api\InventoryController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\PublicDataController;
 use App\Http\Controllers\Api\RegisterController;
+use App\Http\Controllers\Api\UserDashboardController;
 
 Route::post('/login', [LoginController::class, 'login']);
 Route::post('/register', [RegisterController::class, 'store']);
 Route::get('/home', [PublicDataController::class, 'home']);
 Route::get('/shop', [PublicDataController::class, 'shop']);
 Route::get('/products/{slug}', [PublicDataController::class, 'show']);
+Route::post('/products-by-ids', [PublicDataController::class, 'productsByIds']);
 Route::post('/contact', [ContactController::class, 'store']);
-
 
 
 Route::middleware('auth:sanctum')->group(function () {
@@ -28,9 +30,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', fn(Request $request) => $request->user());
 
     // Admin Dashboard
-    Route::get('/admin/dashboard', [AdminDashboardController::class, 'index']);
+
+    Route::get('/user/dashboard', [UserDashboardController::class, 'index']);
+
+    Route::apiResource('addresses', AddressController::class);
 
     // Resources
+    Route::get('/admin/dashboard', [AdminDashboardController::class, 'index']);
+
     Route::apiResource('customers', CustomerController::class)->only(['index']);
     Route::apiResource('products', ProductController::class);
     Route::apiResource('categories', CategoryController::class);
