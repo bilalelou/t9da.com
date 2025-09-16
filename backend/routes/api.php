@@ -4,7 +4,6 @@ use App\Http\Controllers\Api\AddressController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\LoginController;
-use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\AdminDashboardController;
@@ -18,6 +17,8 @@ use App\Http\Controllers\Api\RegisterController;
 use App\Http\Controllers\Api\UserDashboardController;
 use App\Http\Controllers\Api\CouponController;
 
+use App\Http\Controllers\Api\UserController;
+
 Route::post('/login', [LoginController::class, 'login']);
 Route::post('/register', [RegisterController::class, 'store']);
 Route::get('/home', [PublicDataController::class, 'home']);
@@ -29,7 +30,7 @@ Route::post('/contact', [ContactController::class, 'store']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [LoginController::class, 'logout']);
-    Route::get('/user', fn(Request $request) => $request->user());
+    Route::get('/user', fn(Request $request) => $request->user()->load('roles'));
 
     // Admin Dashboard
 
@@ -40,7 +41,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // Resources
     Route::get('/admin/dashboard', [AdminDashboardController::class, 'index']);
 
-    Route::apiResource('customers', CustomerController::class)->only(['index']);
+    Route::apiResource('users', UserController::class);
+    Route::post('/users/{user}/toggle-active', [UserController::class, 'toggleActive']);
     Route::apiResource('products', ProductController::class);
     Route::apiResource('categories', CategoryController::class);
     Route::apiResource('brands', BrandController::class);

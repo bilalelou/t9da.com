@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import api, { UnauthorizedError } from '@/lib/api';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/app/(admin)/layout';
 import ConfirmationDialog from '@/components/common/ConfirmationDialog';
 
 // Icons
@@ -23,7 +23,7 @@ export default function BrandsPage() {
     const [brands, setBrands] = useState<Brand[]>([]);
     const [loading, setLoading] = useState(true);
     const [filters, setFilters] = useState({ name: '', sort_by: 'name', sort_direction: 'asc' });
-    const { toast } = useToast();
+    const { showToast } = useToast();
     const router = useRouter();
 
     // State for confirmation dialog
@@ -38,12 +38,15 @@ export default function BrandsPage() {
             setBrands(data.data || []);
         } catch (error) {
             if (error instanceof UnauthorizedError) {
+                showToast('انتهت صلاحية الجلسة، يرجى تسجيل الدخول مرة أخرى.', 'error');
                 router.push('/login');
+            } else {
+                showToast('فشل في جلب بيانات الماركات.', 'error');
             }
         } finally {
             setLoading(false);
         }
-    }, [router]);
+    }, [router, showToast]);
 
     useEffect(() => {
         const handler = setTimeout(() => {
@@ -64,10 +67,7 @@ export default function BrandsPage() {
             const result = await api(`/brands/${itemToDelete}`, {
                 method: 'DELETE',
             });
-            toast({
-                title: "نجاح",
-                description: result.message,
-            });
+            showToast(result.message, 'success');
             fetchBrands(filters);
         } catch (error) {
             if (error instanceof UnauthorizedError) {
