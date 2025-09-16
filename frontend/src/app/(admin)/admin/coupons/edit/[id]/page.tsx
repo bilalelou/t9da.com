@@ -1,43 +1,14 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, createContext, useContext } from 'react';
+import React, { useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import api, { UnauthorizedError } from '@/lib/api';
 
 // Icons
 import { Save, LoaderCircle, ArrowRight, Ticket, Percent, Hash, Calendar } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
 
-// --- [تصحيح] تم دمج أنظمة إدارة الحالة هنا لحل مشكلة الاستيراد ---
-
-// 1. نظام التنبيهات (Toast)
-const ToastContext = createContext<{ showToast: (message: string, type?: 'success' | 'error') => void }>({ showToast: () => {} });
-const useToast = () => useContext(ToastContext);
-
-const ToastProvider = ({ children }: { children: React.ReactNode }) => {
-    const [toast, setToast] = useState({ message: '', visible: false, type: 'success' as 'success' | 'error' });
-    const showToast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
-        setToast({ message, visible: true, type });
-        setTimeout(() => setToast(prev => ({ ...prev, visible: false })), 3000);
-    }, []);
-    return (
-        <ToastContext.Provider value={{ showToast }}>
-            {children}
-            {toast.visible && (
-                <div dir="rtl" className={`fixed bottom-10 right-10 text-white py-3 px-6 rounded-lg shadow-xl flex items-center gap-3 z-[101] ${toast.type === 'success' ? 'bg-gray-800' : 'bg-red-600'}`}>
-                    <span>{toast.message}</span>
-                </div>
-            )}
-        </ToastContext.Provider>
-    );
-};
-
-// --- AppProviders Wrapper ---
-const AppProviders = ({ children }: { children: React.ReactNode }) => (
-    <ToastProvider>
-        {children}
-    </ToastProvider>
-);
-
-// --- Interfaces & API ---
+// --- Interfaces ---
 interface Coupon {
     id: number;
     code: string;
@@ -47,33 +18,9 @@ interface Coupon {
     expires_at: string;
     is_active: boolean;
 }
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
-const api = {
-    getCoupon: async (id: string, token: string): Promise<Coupon> => {
-        const response = await fetch(`${API_BASE_URL}/coupons/${id}`, {
-            headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
-        });
-        if (!response.ok) throw new Error('فشل في جلب بيانات الكوبون.');
-        const data = await response.json();
-        return data.data;
-    },
-    updateCoupon: async (id: string, formData: FormData, token: string) => {
-        formData.append('_method', 'PUT');
-        const response = await fetch(`${API_BASE_URL}/coupons/${id}`, {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
-            body: formData,
-        });
-        if (!response.ok) {
-            const data = await response.json();
-            throw new Error(data.message || 'فشل في تحديث الكوبون.');
-        }
-        return response.json();
-    }
-};
 
 // --- Main Edit Coupon Page Component ---
-function EditCouponPage() {
+export default function EditCouponPage() {
     const [coupon, setCoupon] = useState<Coupon | null>(null);
     const [code, setCode] = useState('');
     const [type, setType] = useState<'fixed' | 'percent'>('percent');
@@ -83,44 +30,49 @@ function EditCouponPage() {
     const [isActive, setIsActive] = useState(true);
     const [loading, setLoading] = useState(false);
     const [pageLoading, setPageLoading] = useState(true);
-    const [token, setToken] = useState<string | null>(null);
-    const { showToast } = useToast();
+    const { toast } = useToast();
     const router = useRouter();
     const params = useParams();
     const id = params.id as string;
 
-    useEffect(() => {
-        const apiToken = localStorage.getItem('api_token');
-        if (!apiToken) { router.push('/login'); return; }
-        setToken(apiToken);
-    }, [router]);
-
-    useEffect(() => {
-        if (token && id) {
+    React.useEffect(() => {
+        if (id) {
             setPageLoading(true);
-            api.getCoupon(id, token)
+            api(`/coupons/${id}`)
                 .then(data => {
-                    setCoupon(data);
-                    setCode(data.code);
-                    setType(data.type);
-                    setValue(String(data.value));
-                    setUsageLimit(String(data.usage_limit));
-                    setIsActive(data.is_active);
-                    // Format date for input type="date" which requires YYYY-MM-DD
-                    setExpiresAt(new Date(data.expires_at).toISOString().split('T')[0]);
+                    const couponData = data.data;
+                    setCoupon(couponData);
+                    setCode(couponData.code);
+                    setType(couponData.type);
+                    setValue(String(couponData.value));
+                    setUsageLimit(String(couponData.usage_limit));
+                    setIsActive(couponData.is_active);
+                    setExpiresAt(new Date(couponData.expires_at).toISOString().split('T')[0]);
                 })
-                .catch(() => {
-                    showToast('لا يمكن العثور على الكوبون.', 'error');
-                    router.push('/admin/coupons');
+                .catch(error => {
+                    if (error instanceof UnauthorizedError) {
+                        router.push('/login');
+                    } else {
+                        toast({
+                            title: "خطأ",
+                            description: "لا يمكن العثور على الكوبون.",
+                            variant: "destructive",
+                        });
+                        router.push('/admin/coupons');
+                    }
                 })
                 .finally(() => setPageLoading(false));
         }
-    }, [token, id, router, showToast]);
+    }, [id, router, toast]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!code || !value || !usageLimit || !expiresAt || !token) {
-            showToast('الرجاء ملء جميع الحقول.', 'error');
+        if (!code || !value || !usageLimit || !expiresAt) {
+            toast({
+                title: "خطأ",
+                description: "الرجاء ملء جميع الحقول.",
+                variant: "destructive",
+            });
             return;
         }
 
@@ -131,15 +83,23 @@ function EditCouponPage() {
         formData.append('usage_limit', usageLimit);
         formData.append('expires_at', expiresAt);
         formData.append('is_active', isActive ? '1' : '0');
+        formData.append('_method', 'PUT');
 
         setLoading(true);
         try {
-            const result = await api.updateCoupon(id, formData, token);
-            showToast(result.message || 'تم تحديث الكوبون بنجاح!');
+            const result = await api(`/coupons/${id}`, {
+                method: 'POST',
+                body: formData,
+            });
+            toast({
+                title: "نجاح",
+                description: result.message || 'تم تحديث الكوبون بنجاح!',
+            });
             router.push('/admin/coupons');
-        } catch (err) {
-            const error = err as Error;
-            showToast(error.message, 'error');
+        } catch (error) {
+            if (error instanceof UnauthorizedError) {
+                router.push('/login');
+            }
         } finally {
             setLoading(false);
         }
@@ -199,46 +159,39 @@ function EditCouponPage() {
                     </div>
                 </div>
 
-                {/* Expiration Date */}
-                <div className="space-y-2">
-                    <label htmlFor="expires_at" className="text-sm font-semibold text-gray-700">تاريخ انتهاء الصلاحية</label>
-                    <div className="flex items-center border border-gray-300 rounded-lg px-3">
-                        <Calendar className="text-gray-400" size={18}/>
-                        <input type="date" id="expires_at" value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)} className="w-full p-2.5 bg-transparent border-0 focus:ring-0"/>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Expiration Date */}
+                    <div className="space-y-2">
+                        <label htmlFor="expires_at" className="text-sm font-semibold text-gray-700">تاريخ انتهاء الصلاحية</label>
+                        <div className="flex items-center border border-gray-300 rounded-lg px-3">
+                            <Calendar className="text-gray-400" size={18}/>
+                            <input type="date" id="expires_at" value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)} className="w-full p-2.5 bg-transparent border-0 focus:ring-0"/>
+                        </div>
                     </div>
-                </div>
 
-                {/* Status */}
-                <div className="space-y-2">
-                    <label htmlFor="is_active" className="text-sm font-semibold text-gray-700">حالة الكوبون</label>
-                    <select 
-                        id="is_active" 
-                        value={isActive ? '1' : '0'} 
-                        onChange={(e) => setIsActive(e.target.value === '1')} 
-                        className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                    >
-                        <option value="1">نشط</option>
-                        <option value="0">غير نشط</option>
-                    </select>
+                    {/* Status */}
+                    <div className="space-y-2">
+                        <label htmlFor="is_active" className="text-sm font-semibold text-gray-700">الحالة</label>
+                        <select
+                            id="is_active"
+                            value={isActive ? '1' : '0'}
+                            onChange={(e) => setIsActive(e.target.value === '1')}
+                            className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                        >
+                            <option value="1">نشط</option>
+                            <option value="0">غير نشط</option>
+                        </select>
+                    </div>
                 </div>
 
                 {/* Submit Button */}
                 <div className="flex justify-end pt-4">
-                    <button type="submit" disabled={loading} className="flex items-center justify-center gap-2 bg-green-600 text-white px-6 py-3 rounded-lg font-semibold text-sm hover:bg-green-700 disabled:bg-green-300 disabled:cursor-not-allowed">
+                    <button type="submit" disabled={loading} className="flex items-center justify-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold text-sm hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed">
                         {loading ? <LoaderCircle className="animate-spin" size={18}/> : <Save size={18}/>}
-                        <span>{loading ? 'جاري الحفظ...' : 'حفظ التعديلات'}</span>
+                        <span>{loading ? 'جاري الحفظ...' : 'حفظ التغييرات'}</span>
                     </button>
                 </div>
             </form>
         </div>
-    );
-}
-
-// --- Entry Point ---
-export default function EditCouponPageLoader() {
-    return (
-        <AppProviders>
-            <EditCouponPage />
-        </AppProviders>
     );
 }

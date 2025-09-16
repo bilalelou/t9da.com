@@ -1,81 +1,32 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, createContext, useContext } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import api, { UnauthorizedError } from '@/lib/api';
 
 // Icons
 import { PlusCircle, LoaderCircle, ArrowRight, Ticket, Percent, Hash, Calendar } from 'lucide-react';
-
-// --- [تصحيح] تم دمج أنظمة إدارة الحالة هنا لحل مشكلة الاستيراد ---
-
-// 1. نظام التنبيهات (Toast)
-const ToastContext = createContext<{ showToast: (message: string, type?: 'success' | 'error') => void }>({ showToast: () => {} });
-const useToast = () => useContext(ToastContext);
-
-const ToastProvider = ({ children }: { children: React.ReactNode }) => {
-    const [toast, setToast] = useState({ message: '', visible: false, type: 'success' as 'success' | 'error' });
-    const showToast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
-        setToast({ message, visible: true, type });
-        setTimeout(() => setToast(prev => ({ ...prev, visible: false })), 3000);
-    }, []);
-    return (
-        <ToastContext.Provider value={{ showToast }}>
-            {children}
-            {toast.visible && (
-                <div dir="rtl" className={`fixed bottom-10 right-10 text-white py-3 px-6 rounded-lg shadow-xl flex items-center gap-3 z-[101] ${toast.type === 'success' ? 'bg-gray-800' : 'bg-red-600'}`}>
-                    <span>{toast.message}</span>
-                </div>
-            )}
-        </ToastContext.Provider>
-    );
-};
-
-// --- AppProviders Wrapper ---
-const AppProviders = ({ children }: { children: React.ReactNode }) => (
-    <ToastProvider>
-        {children}
-    </ToastProvider>
-);
-
-// --- API ---
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
-const api = {
-    addCoupon: async (formData: FormData, token: string) => {
-        const response = await fetch(`${API_BASE_URL}/coupons`, {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
-            body: formData,
-        });
-        if (!response.ok) {
-            const data = await response.json();
-            throw new Error(data.message || 'فشل في إضافة الكوبون.');
-        }
-        return response.json();
-    }
-};
+import { useToast } from '@/components/ui/use-toast';
 
 // --- Main Add Coupon Page Component ---
-function AddCouponPage() {
+export default function AddCouponPage() {
     const [code, setCode] = useState('');
     const [type, setType] = useState<'fixed' | 'percent'>('percent');
     const [value, setValue] = useState('');
     const [usageLimit, setUsageLimit] = useState('');
     const [expiresAt, setExpiresAt] = useState('');
     const [loading, setLoading] = useState(false);
-    const [token, setToken] = useState<string | null>(null);
-    const { showToast } = useToast();
+    const { toast } = useToast();
     const router = useRouter();
-
-    useEffect(() => {
-        const apiToken = localStorage.getItem('api_token');
-        if (!apiToken) { router.push('/login'); return; }
-        setToken(apiToken);
-    }, [router]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!code || !value || !usageLimit || !expiresAt || !token) {
-            showToast('الرجاء ملء جميع الحقول.', 'error');
+        if (!code || !value || !usageLimit || !expiresAt) {
+            toast({
+                title: "خطأ",
+                description: "الرجاء ملء جميع الحقول.",
+                variant: "destructive",
+            });
             return;
         }
 
@@ -88,12 +39,20 @@ function AddCouponPage() {
 
         setLoading(true);
         try {
-            const result = await api.addCoupon(formData, token);
-            showToast(result.message || 'تمت إضافة الكوبون بنجاح!');
+            const result = await api('/coupons', {
+                method: 'POST',
+                body: formData,
+            });
+            toast({
+                title: "نجاح",
+                description: result.message || 'تمت إضافة الكوبون بنجاح!',
+            });
             router.push('/admin/coupons');
-        } catch (err) {
-            const error = err as Error;
-            showToast(error.message, 'error');
+        } catch (error) {
+            if (error instanceof UnauthorizedError) {
+                router.push('/login');
+            }
+            // The api wrapper already shows a toast on error
         } finally {
             setLoading(false);
         }
@@ -167,14 +126,5 @@ function AddCouponPage() {
                 </div>
             </form>
         </div>
-    );
-}
-
-// --- Entry Point ---
-export default function AddCouponPageLoader() {
-    return (
-        <AppProviders>
-            <AddCouponPage />
-        </AppProviders>
     );
 }
