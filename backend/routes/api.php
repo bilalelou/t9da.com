@@ -27,6 +27,10 @@ Route::get('/products/{slug}', [PublicDataController::class, 'show']);
 Route::post('/products-by-ids', [PublicDataController::class, 'productsByIds']);
 Route::post('/contact', [ContactController::class, 'store']);
 
+// Public Checkout Routes (لا تحتاج authentication)
+Route::post('/validate-coupon', [OrderController::class, 'validateCoupon']);
+Route::post('/shipping-costs', [OrderController::class, 'getShippingCosts']);
+
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [LoginController::class, 'logout']);
@@ -52,7 +56,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/inventory', [InventoryController::class, 'index']);
     Route::put('/inventory/{product}', [InventoryController::class, 'update']);
 
+    // Orders Routes
     Route::get('/orders', [OrderController::class, 'index']);
+    Route::post('/orders', [OrderController::class, 'store']);
+    Route::get('/orders/{order}', [OrderController::class, 'show']);
+    Route::put('/orders/{order}/status', [OrderController::class, 'updateStatus']);
 
     Route::get('/analytics', [AnalyticsController::class, 'index']);
     Route::apiResource('coupons', CouponController::class);
