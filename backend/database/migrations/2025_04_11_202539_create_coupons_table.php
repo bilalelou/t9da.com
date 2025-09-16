@@ -16,9 +16,11 @@ return new class extends Migration
             $table->id();
             $table->string('code')->unique();
             $table->enum('type', ['fixed', 'percent']);
-            $table->decimal('value');
-            $table->decimal('cart_value');
-            $table->date('expiry_date')->default(DB::raw('(DATE(CURRENT_TIMESTAMP))'));
+            $table->decimal('value', 10, 2);
+            $table->unsignedInteger('usage_limit')->default(1);
+            $table->unsignedInteger('times_used')->default(0);
+            $table->timestamp('expires_at')->nullable();
+            $table->boolean('is_active')->default(true);
             $table->timestamps();
         });
     }

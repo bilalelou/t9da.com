@@ -9,12 +9,14 @@ use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\AdminDashboardController;
 use App\Http\Controllers\Api\AnalyticsController;
+use App\Http\Controllers\Api\BrandController;
 use App\Http\Controllers\Api\ContactController;
 use App\Http\Controllers\Api\InventoryController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\PublicDataController;
 use App\Http\Controllers\Api\RegisterController;
 use App\Http\Controllers\Api\UserDashboardController;
+use App\Http\Controllers\Api\CouponController;
 
 Route::post('/login', [LoginController::class, 'login']);
 Route::post('/register', [RegisterController::class, 'store']);
@@ -41,6 +43,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('customers', CustomerController::class)->only(['index']);
     Route::apiResource('products', ProductController::class);
     Route::apiResource('categories', CategoryController::class);
+    Route::apiResource('brands', BrandController::class);
+
 
     // [إضافة] Inventory Routes
     Route::get('/inventory', [InventoryController::class, 'index']);
@@ -49,6 +53,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/orders', [OrderController::class, 'index']);
 
     Route::get('/analytics', [AnalyticsController::class, 'index']);
-
+    Route::apiResource('coupons', CouponController::class);
 });
 
