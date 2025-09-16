@@ -257,7 +257,7 @@ const UsersPage = ({ initialUsers, token }: {
                 </div>
             </div>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
                 <div className="bg-white rounded-2xl shadow-md p-5 border border-gray-100"><div className="flex items-center gap-4"><div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600"><Users size={24}/></div><div><p className="text-sm font-medium text-gray-500">إجمالي المستخدمين</p><p className="text-2xl font-bold text-gray-900">{stats.total}</p></div></div></div>
                 <div className="bg-white rounded-2xl shadow-md p-5 border border-gray-100"><div className="flex items-center gap-4"><div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center text-green-600"><CheckCircle size={24}/></div><div><p className="text-sm font-medium text-gray-500">النشطين</p><p className="text-2xl font-bold text-gray-900">{stats.active}</p></div></div></div>
                 <div className="bg-white rounded-2xl shadow-md p-5 border border-gray-100"><div className="flex items-center gap-4"><div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center text-gray-600"><XCircle size={24}/></div><div><p className="text-sm font-medium text-gray-500">غير النشطين</p><p className="text-2xl font-bold text-gray-900">{stats.inactive}</p></div></div></div>
@@ -265,7 +265,7 @@ const UsersPage = ({ initialUsers, token }: {
             </div>
 
             <div className="bg-white rounded-2xl shadow-md p-4 border border-gray-100">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div className="relative">
                         <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3"><Search className="h-5 w-5 text-gray-400" /></div>
                         <input type="text" placeholder="ابحث عن مستخدم..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pr-10 pl-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
@@ -301,7 +301,8 @@ const UsersPage = ({ initialUsers, token }: {
                     </div>
                 </div>
                 
-                <div className="overflow-x-auto">
+                {/* Desktop Table */}
+                <div className="hidden md:block overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gray-50">
                             <tr>
@@ -340,6 +341,51 @@ const UsersPage = ({ initialUsers, token }: {
                             ))}
                         </tbody>
                     </table>
+                </div>
+
+                {/* Mobile Cards */}
+                <div className="md:hidden divide-y divide-gray-200">
+                    {filteredUsers.map((user) => (
+                        <div key={user.id} className="p-4 hover:bg-gray-50 transition-colors">
+                            <div className="flex items-start space-x-3 space-x-reverse">
+                                <div className="flex-shrink-0">
+                                    <div className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 flex items-center justify-center">
+                                        <span className="text-white font-bold text-lg">{user.name.charAt(0)}</span>
+                                    </div>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <p className="text-sm font-medium text-gray-900 truncate">{user.name}</p>
+                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${user.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                            {user.is_active ? 'نشط' : 'غير نشط'}
+                                        </span>
+                                    </div>
+                                    <p className="text-sm text-gray-500 mb-1">{user.email}</p>
+                                    <div className="flex items-center justify-between text-xs text-gray-400 mb-3">
+                                        <span>الدور: {user.role}</span>
+                                        <span>الطلبات: {user.orders_count || 0}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={() => handleToggleActive(user.id)}
+                                            className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${user.is_active 
+                                                ? 'bg-red-100 text-red-700 hover:bg-red-200' 
+                                                : 'bg-green-100 text-green-700 hover:bg-green-200'
+                                            }`}
+                                        >
+                                            {user.is_active ? 'إلغاء التفعيل' : 'تفعيل'}
+                                        </button>
+                                        <button
+                                            onClick={() => handleDelete(user.id)}
+                                            className="px-3 py-1.5 text-xs font-medium text-red-700 bg-red-100 rounded-md hover:bg-red-200 transition-colors"
+                                        >
+                                            حذف
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
                 </div>
             </div>
 
