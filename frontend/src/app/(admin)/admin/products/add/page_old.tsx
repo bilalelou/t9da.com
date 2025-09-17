@@ -59,8 +59,7 @@ const api = {
         return data.data || [];
     },
     addProduct: async (formData: FormData, token: string) => {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api';
-        const response = await fetch(`${apiUrl}/products`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -140,7 +139,7 @@ export default function AddProductPage() {
             setImagePreview(URL.createObjectURL(file));
         }
     };
-    
+
     const handleGalleryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files;
         if (files) {
@@ -150,30 +149,10 @@ export default function AddProductPage() {
             setGalleryPreviews(prev => [...prev, ...newPreviews]);
         }
     };
-    
+
     const removeGalleryImage = (index: number) => {
         setGalleryImages(prev => prev.filter((_, i) => i !== index));
         setGalleryPreviews(prev => prev.filter((_, i) => i !== index));
-    };
-
-    const handleVideoChange = (
-        videoType: 'primary' | 'secondary',
-        field: 'type' | 'url' | 'title' | 'file',
-        value: any
-    ) => {
-        if (videoType === 'primary') {
-            setPrimaryVideo(prev => ({ ...prev, [field]: value }));
-        } else {
-            setSecondaryVideo(prev => ({ ...prev, [field]: value }));
-        }
-    };
-
-    const handleVideoFileChange = (videoType: 'primary' | 'secondary', file: File | null) => {
-        if (videoType === 'primary') {
-            setPrimaryVideo(prev => ({ ...prev, file }));
-        } else {
-            setSecondaryVideo(prev => ({ ...prev, file }));
-        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -182,7 +161,12 @@ export default function AddProductPage() {
         setError(null);
         setValidationErrors({});
 
-        const token = localStorage.getItem('api_token') || 'test_token';
+        const token = localStorage.getItem('api_token');
+        if (!token) {
+            setError('جلسة المستخدم غير صالحة. الرجاء تسجيل الدخول مرة أخرى.');
+            setLoading(false);
+            return;
+        }
 
         const formData = new FormData();
         formData.append('name', name);
@@ -229,8 +213,10 @@ export default function AddProductPage() {
 
         try {
             const result = await api.addProduct(formData, token);
+            alert('تمت إضافة المنتج بنجاح!');
             
-            if (primaryVideo.url || primaryVideo.file || secondaryVideo.url || secondaryVideo.file) {
+            // Redirect to product videos management if videos were added
+            if ((primaryVideo.url || primaryVideo.file) || (secondaryVideo.url || secondaryVideo.file)) {
                 const confirmManage = confirm('تم حفظ المنتج مع الفيديوهات. هل تريد إدارة المزيد من الفيديوهات؟');
                 if (confirmManage && result.data?.id) {
                     window.location.href = `/admin/products/${result.data.id}/videos`;
@@ -239,7 +225,7 @@ export default function AddProductPage() {
             }
             
             window.location.href = '/admin/products';
-        } catch (err: any) {
+        } catch (err: unknown) {
             setError(err.message || 'حدث خطأ غير متوقع.');
             if (err.errors) {
                 setValidationErrors(err.errors);
@@ -497,153 +483,236 @@ export default function AddProductPage() {
                         {/* الشريط الجانبي - الوسائط */}
                         <div className="space-y-6">
                             {/* الصور */}
-                            <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+                            <div className="bg-white rounded-2xl shadow-lg p-8 border border-gray-100">
                                 <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
                                     <div className="p-2 bg-pink-100 rounded-lg">
-                                        <Camera className="w-5 h-5 text-pink-600" />
+                                        <Camera className="w-6 h-6 text-pink-600" />
                                     </div>
                                     <h2 className="text-xl font-bold text-gray-800">الصور</h2>
                                 </div>
-                                
-                                {/* الصورة الرئيسية */}
-                                <div className="mb-6">
-                                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-3">
-                                        <Star className="w-4 h-4 text-yellow-500" />
-                                        الصورة الرئيسية
-                                    </label>
-                                    <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center hover:border-pink-300 transition-colors">
-                                        {imagePreview ? (
-                                            <div className="relative group">
-                                                <img src={imagePreview} alt="معاينة" className="w-full h-32 object-cover rounded-lg" />
-                                                <button 
-                                                    type="button" 
-                                                    onClick={() => { setImage(null); setImagePreview(null); }} 
-                                                    className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                >
-                                                    <X className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        ) : (
-                                            <div>
-                                                <UploadCloud className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                                                <p className="text-gray-500 text-sm">اختر صورة رئيسية</p>
-                                            </div>
-                                        )}
-                                        <input type="file" onChange={handleImageChange} accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" />
-                                    </div>
-                                </div>
-
-                                {/* معرض الصور */}
-                                <div>
-                                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-3">
-                                        <Images className="w-4 h-4 text-blue-500" />
-                                        معرض الصور
-                                    </label>
-                                    <div className="border-2 border-dashed border-gray-200 rounded-xl p-4 text-center hover:border-blue-300 transition-colors">
-                                        <div className="relative">
-                                            <UploadCloud className="w-6 h-6 text-gray-400 mx-auto mb-2" />
-                                            <p className="text-gray-500 text-sm">أضف صور إضافية</p>
-                                            <input type="file" multiple onChange={handleGalleryChange} accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" />
-                                        </div>
-                                    </div>
-                                    {galleryPreviews.length > 0 && (
-                                        <div className="grid grid-cols-2 gap-2 mt-4">
-                                            {galleryPreviews.map((preview, index) => (
-                                                <div key={index} className="relative group">
-                                                    <img src={preview} alt="" className="w-full h-20 object-cover rounded-lg" />
-                                                    <button 
-                                                        type="button" 
-                                                        onClick={() => removeGalleryImage(index)} 
-                                                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                    >
-                                                        <X className="w-3 h-3" />
-                                                    </button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* الفيديوهات */}
-                            <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
-                                <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
-                                    <div className="p-2 bg-red-100 rounded-lg">
-                                        <Play className="w-5 h-5 text-red-600" />
-                                    </div>
-                                    <h2 className="text-xl font-bold text-gray-800">الفيديوهات</h2>
-                                </div>
-                                
-                                {/* فيديو أساسي */}
-                                <div className="space-y-4">
-                                    <h3 className="font-medium text-gray-700">فيديو أساسي (اختياري)</h3>
-                                    <select 
-                                        value={primaryVideo.type} 
-                                        onChange={e => handleVideoChange('primary', 'type', e.target.value)}
-                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-red-500 focus:ring-1 focus:ring-red-200"
-                                    >
-                                        <option value="youtube">YouTube</option>
-                                        <option value="vimeo">Vimeo</option>
-                                        <option value="file">ملف فيديو</option>
-                                    </select>
-                                    
-                                    {primaryVideo.type === 'file' ? (
-                                        <input 
-                                            type="file" 
-                                            accept="video/*" 
-                                            onChange={e => handleVideoFileChange('primary', e.target.files?.[0] || null)}
-                                            className="w-full px-3 py-2 border border-gray-200 rounded-lg"
-                                        />
-                                    ) : (
-                                        <input 
-                                            type="url" 
-                                            placeholder={`رابط ${primaryVideo.type === 'youtube' ? 'YouTube' : 'Vimeo'}`}
-                                            value={primaryVideo.url}
-                                            onChange={e => handleVideoChange('primary', 'url', e.target.value)}
-                                            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-red-500 focus:ring-1 focus:ring-red-200"
-                                        />
-                                    )}
-                                    
-                                    <input 
-                                        type="text" 
-                                        placeholder="عنوان الفيديو"
-                                        value={primaryVideo.title}
-                                        onChange={e => handleVideoChange('primary', 'title', e.target.value)}
-                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-red-500 focus:ring-1 focus:ring-red-200"
-                                    />
-                                </div>
-                            </div>
+                            <div className="relative"><div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 pt-2.5"><FileText className="h-5 w-5 text-gray-400" /></div><textarea id="short_description" value={shortDescription} onChange={e => setShortDescription(e.target.value)} rows={3} className="w-full border-gray-300 rounded-lg pr-10 bg-gray-50 focus:ring-blue-500 focus:border-blue-500"></textarea></div>
+                            {validationErrors.short_description && <p className="text-red-500 text-xs mt-1">{validationErrors.short_description[0]}</p>}
                         </div>
-                    </div>
-
-                    {/* رسائل الخطأ والإرسال */}
-                    {error && (
-                        <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
-                            <p className="text-red-600 font-medium">{error}</p>
+                        
+                        <div>
+                            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">الوصف الكامل</label>
+                            <textarea id="description" value={description} onChange={e => setDescription(e.target.value)} rows={6} className="w-full border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500"></textarea>
                         </div>
-                    )}
-                    
-                    <div className="flex justify-center">
-                        <button 
-                            type="submit" 
-                            disabled={loading} 
-                            className="flex items-center gap-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:transform-none disabled:hover:shadow-lg text-lg font-semibold"
-                        >
-                            {loading ? (
-                                <>
-                                    <LoaderCircle className="animate-spin w-6 h-6" />
-                                    <span>جاري الحفظ...</span>
-                                </>
-                            ) : (
-                                <>
-                                    <PlusCircle className="w-6 h-6" />
-                                    <span>حفظ المنتج</span>
-                                </>
+                        
+                        <div>
+                            <h3 className="text-lg font-semibold text-gray-800 mb-4">صورة المنتج الرئيسية</h3>
+                            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center relative">
+                                {imagePreview ? (
+                                    <div className="relative group mx-auto w-fit"><img src={imagePreview} alt="معاينة" className="h-32 rounded-lg" /><button type="button" onClick={() => { setImage(null); setImagePreview(null); }} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"><X size={16} /></button></div>
+                                ) : (
+                                    <><UploadCloud size={48} className="mx-auto text-gray-400" /><p className="mt-2 text-sm text-gray-600">اسحب وأفلت الصورة هنا، أو انقر للاختيار</p><input type="file" onChange={handleImageChange} className="opacity-0 absolute inset-0 w-full h-full cursor-pointer" /></>
+                                )}
+                            </div>
+                            {validationErrors.image && <p className="text-red-500 text-xs mt-1">{validationErrors.image[0]}</p>}
+                        </div>
+
+                        <div>
+                            <h3 className="text-lg font-semibold text-gray-800 mb-4">معرض الصور (اختياري)</h3>
+                            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center relative">
+                                <Images size={48} className="mx-auto text-gray-400" />
+                                <p className="mt-2 text-sm text-gray-600">اختر صوراً إضافية للمنتج</p>
+                                <input type="file" multiple onChange={handleGalleryChange} className="opacity-0 absolute inset-0 w-full h-full cursor-pointer" />
+                            </div>
+                            {galleryPreviews.length > 0 && (
+                                <div className="mt-4 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
+                                    {galleryPreviews.map((preview, index) => (
+                                        <div key={index} className="relative group"><img src={preview} className="w-full h-24 object-cover rounded-lg" /><button type="button" onClick={() => removeGalleryImage(index)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"><X size={16} /></button></div>
+                                    ))}
+                                </div>
                             )}
-                        </button>
+                            {validationErrors.images && <p className="text-red-500 text-xs mt-1">{validationErrors.images[0]}</p>}
+                        </div>
+
+                        {/* Videos Section */}
+                        <div>
+                            <h3 className="text-lg font-semibold text-gray-800 mb-4">فيديوهات المنتج (اختياري)</h3>
+                            
+                            {/* Primary Video */}
+                            <div className="space-y-4 p-4 border border-gray-200 rounded-lg mb-4">
+                                <h4 className="font-medium text-gray-700 flex items-center gap-2">
+                                    <Video className="h-4 w-4" />
+                                    الفيديو الرئيسي
+                                </h4>
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-600 mb-1">نوع الفيديو</label>
+                                        <select 
+                                            value={primaryVideo.type} 
+                                            onChange={(e) => setPrimaryVideo(prev => ({ ...prev, type: e.target.value as 'youtube' | 'vimeo' | 'file' }))}
+                                            className="w-full border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500"
+                                        >
+                                            <option value="youtube">YouTube</option>
+                                            <option value="vimeo">Vimeo</option>
+                                            <option value="file">ملف فيديو</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-600 mb-1">عنوان الفيديو</label>
+                                        <input 
+                                            type="text"
+                                            value={primaryVideo.title}
+                                            onChange={(e) => setPrimaryVideo(prev => ({ ...prev, title: e.target.value }))}
+                                            placeholder="عنوان الفيديو"
+                                            className="w-full border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500"
+                                        />
+                                    </div>
+                                </div>
+                                
+                                {primaryVideo.type !== 'file' ? (
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-600 mb-1">
+                                            {primaryVideo.type === 'youtube' ? 'رابط YouTube' : 'رابط Vimeo'}
+                                        </label>
+                                        <div className="relative">
+                                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                                                <Youtube className="h-5 w-5 text-gray-400" />
+                                            </div>
+                                            <input 
+                                                type="url"
+                                                value={primaryVideo.url}
+                                                onChange={(e) => setPrimaryVideo(prev => ({ ...prev, url: e.target.value }))}
+                                                placeholder={primaryVideo.type === 'youtube' ? 'https://www.youtube.com/watch?v=...' : 'https://vimeo.com/...'}
+                                                className="w-full border-gray-300 rounded-lg pr-10 bg-gray-50 focus:ring-blue-500 focus:border-blue-500"
+                                            />
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-600 mb-1">رفع ملف الفيديو</label>
+                                        <input 
+                                            type="file"
+                                            accept="video/*"
+                                            onChange={(e) => setPrimaryVideo(prev => ({ ...prev, file: e.target.files?.[0] || null }))}
+                                            className="w-full border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500"
+                                        />
+                                        <p className="text-xs text-gray-500 mt-1">الحد الأقصى: 100 ميجا. الصيغ المدعومة: mp4, mov, avi, wmv</p>
+                                    </div>
+                                )}
+                            </div>
+                            
+                            {/* Secondary Video */}
+                            <div className="space-y-4 p-4 border border-gray-200 rounded-lg">
+                                <h4 className="font-medium text-gray-700 flex items-center gap-2">
+                                    <Video className="h-4 w-4" />
+                                    فيديو ثانوي (اختياري)
+                                </h4>
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-600 mb-1">نوع الفيديو</label>
+                                        <select 
+                                            value={secondaryVideo.type} 
+                                            onChange={(e) => setSecondaryVideo(prev => ({ ...prev, type: e.target.value as 'youtube' | 'vimeo' | 'file' }))}
+                                            className="w-full border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500"
+                                        >
+                                            <option value="youtube">YouTube</option>
+                                            <option value="vimeo">Vimeo</option>
+                                            <option value="file">ملف فيديو</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-600 mb-1">عنوان الفيديو</label>
+                                        <input 
+                                            type="text"
+                                            value={secondaryVideo.title}
+                                            onChange={(e) => setSecondaryVideo(prev => ({ ...prev, title: e.target.value }))}
+                                            placeholder="عنوان الفيديو"
+                                            className="w-full border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500"
+                                        />
+                                    </div>
+                                </div>
+                                
+                                {secondaryVideo.type !== 'file' ? (
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-600 mb-1">
+                                            {secondaryVideo.type === 'youtube' ? 'رابط YouTube' : 'رابط Vimeo'}
+                                        </label>
+                                        <div className="relative">
+                                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                                                <Youtube className="h-5 w-5 text-gray-400" />
+                                            </div>
+                                            <input 
+                                                type="url"
+                                                value={secondaryVideo.url}
+                                                onChange={(e) => setSecondaryVideo(prev => ({ ...prev, url: e.target.value }))}
+                                                placeholder={secondaryVideo.type === 'youtube' ? 'https://www.youtube.com/watch?v=...' : 'https://vimeo.com/...'}
+                                                className="w-full border-gray-300 rounded-lg pr-10 bg-gray-50 focus:ring-blue-500 focus:border-blue-500"
+                                            />
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-600 mb-1">رفع ملف الفيديو</label>
+                                        <input 
+                                            type="file"
+                                            accept="video/*"
+                                            onChange={(e) => setSecondaryVideo(prev => ({ ...prev, file: e.target.files?.[0] || null }))}
+                                            className="w-full border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500"
+                                        />
+                                        <p className="text-xs text-gray-500 mt-1">الحد الأقصى: 100 ميجا. الصيغ المدعومة: mp4, mov, avi, wmv</p>
+                                    </div>
+                                )}
+                            </div>
+                            
+                            <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                                <p className="text-sm text-blue-700">
+                                    💡 <strong>نصيحة:</strong> يمكنك إضافة المزيد من الفيديوهات وإدارتها بشكل متقدم من صفحة &quot;إدارة فيديوهات المنتج&quot; بعد حفظ المنتج.
+                                </p>
+                            </div>
+                        </div>
                     </div>
-                </form>
-            </div>
+
+                    {/* Sidebar */}
+                    <div className="lg:col-span-1 bg-white rounded-2xl shadow-md p-6 border border-gray-100 space-y-6 self-start sticky top-24">
+                        <div>
+                            <label htmlFor="regular_price" className="block text-sm font-medium text-gray-700 mb-1">السعر الأصلي (د.م.)</label>
+                            <div className="relative"><div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3"><DollarSign className="h-5 w-5 text-gray-400" /></div><input type="number" id="regular_price" value={regularPrice} onChange={e => setRegularPrice(e.target.value)} className="w-full border-gray-300 rounded-lg pr-10 bg-gray-50 focus:ring-blue-500 focus:border-blue-500" /></div>
+                            {validationErrors.regular_price && <p className="text-red-500 text-xs mt-1">{validationErrors.regular_price[0]}</p>}
+                        </div>
+                         <div>
+                            <label htmlFor="sale_price" className="block text-sm font-medium text-gray-700 mb-1">سعر التخفيض (اختياري)</label>
+                             <div className="relative"><div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3"><DollarSign className="h-5 w-5 text-gray-400" /></div><input type="number" id="sale_price" value={salePrice} onChange={e => setSalePrice(e.target.value)} className="w-full border-gray-300 rounded-lg pr-10 bg-gray-50 focus:ring-blue-500 focus:border-blue-500" /></div>
+                        </div>
+                        <div>
+                            <label htmlFor="quantity" className="block text-sm font-medium text-gray-700 mb-1">الكمية المتاحة</label>
+                            <div className="relative"><div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3"><Package className="h-5 w-5 text-gray-400" /></div><input type="number" id="quantity" value={quantity} onChange={e => setQuantity(e.target.value)} className="w-full border-gray-300 rounded-lg pr-10 bg-gray-50 focus:ring-blue-500 focus:border-blue-500" /></div>
+                            {validationErrors.quantity && <p className="text-red-500 text-xs mt-1">{validationErrors.quantity[0]}</p>}
+                        </div>
+                         <div>
+                            <label htmlFor="category_id" className="block text-sm font-medium text-gray-700 mb-1">التصنيف</label>
+                            <select id="category_id" value={categoryId} onChange={e => setCategoryId(e.target.value)} className="w-full border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500">
+                                <option value="">اختر تصنيفاً</option>
+                                {categories.map(cat => (<option key={cat.id} value={cat.id}>{cat.name}</option>))}
+                            </select>
+                            {validationErrors.category_id && <p className="text-red-500 text-xs mt-1">{validationErrors.category_id[0]}</p>}
+                        </div>
+                        <div>
+                            <label htmlFor="brand_id" className="block text-sm font-medium text-gray-700 mb-1">العلامة التجارية (اختياري)</label>
+                            <select id="brand_id" value={brandId} onChange={e => setBrandId(e.target.value)} className="w-full border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500">
+                                <option value="">بدون علامة تجارية</option>
+                                {brands.map(brand => (<option key={brand.id} value={brand.id}>{brand.name}</option>))}
+                            </select>
+                            {validationErrors.brand_id && <p className="text-red-500 text-xs mt-1">{validationErrors.brand_id[0]}</p>}
+                        </div>
+                    </div>
+                </div>
+                {error && <p className="text-red-600 mt-4 text-center">{error}</p>}
+                <div className="mt-8 flex justify-end">
+                    <button type="submit" disabled={loading} className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg shadow hover:bg-blue-700 transition-colors disabled:opacity-50">
+                        {loading ? <LoaderCircle className="animate-spin" /> : <PlusCircle size={20} />}
+                        <span>{loading ? 'جاري الحفظ...' : 'حفظ المنتج'}</span>
+                    </button>
+                </div>
+            </form>
         </div>
     );
 }
+

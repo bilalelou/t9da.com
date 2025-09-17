@@ -16,7 +16,8 @@ import {
     Warehouse, 
     CheckCircle,
     XCircle,
-    PackageSearch
+    PackageSearch,
+    Video
 } from 'lucide-react';
 
 // --- Interfaces ---
@@ -136,12 +137,23 @@ const ProductCard = ({ product, onSelect, isSelected }) => {
             </div>
             <div className="flex justify-end gap-2 pt-3 border-t border-gray-100">
                 <button 
+                    onClick={() => window.location.href = `/admin/products/${product.id}/videos`}
+                    className="text-blue-600 hover:text-blue-800 p-1"
+                    title="إدارة الفيديوهات"
+                >
+                    <Video size={18} />
+                </button>
+                <button 
                     onClick={() => window.location.href = `/admin/products/edit/${product.id}`}
                     className="text-green-600 hover:text-green-800 p-1"
+                    title="تعديل المنتج"
                 >
                     <Edit size={18} />
                 </button>
-                <button className="text-red-600 hover:text-red-800 p-1">
+                <button 
+                    className="text-red-600 hover:text-red-800 p-1"
+                    title="حذف المنتج"
+                >
                     <Trash2 size={18} />
                 </button>
             </div>
@@ -254,12 +266,23 @@ const ProductsPage = ({ products }) => {
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-3 text-gray-500">
                                             <button 
+                                                onClick={() => window.location.href = `/admin/products/${product.id}/videos`}
+                                                className="hover:text-blue-600"
+                                                title="إدارة الفيديوهات"
+                                            >
+                                                <Video size={18} />
+                                            </button>
+                                            <button 
                                                 onClick={() => window.location.href = `/admin/products/edit/${product.id}`}
                                                 className="hover:text-green-600"
+                                                title="تعديل المنتج"
                                             >
                                                 <Edit size={18} />
                                             </button>
-                                            <button className="hover:text-red-600">
+                                            <button 
+                                                className="hover:text-red-600"
+                                                title="حذف المنتج"
+                                            >
                                                 <Trash2 size={18} />
                                             </button>
                                         </div>

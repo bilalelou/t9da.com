@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Product;
+use App\Models\ProductVideo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
@@ -70,9 +71,16 @@ class ProductController extends Controller
 
             $data['stock_status'] = ($data['quantity'] ?? 0) > 0 ? 'instock' : 'outofstock';
 
-            Product::create($data);
+            $product = Product::create($data);
 
-            return response()->json(['success' => true, 'message' => 'تمت إضافة المنتج بنجاح!'], 201);
+            // Handle videos
+            $this->handleProductVideos($request, $product);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'تمت إضافة المنتج بنجاح!',
+                'data' => ['id' => $product->id]
+            ], 201);
         } catch (Exception $e) {
             Log::error('خطأ في إضافة المنتج: ' . $e->getMessage());
             return response()->json(['success' => false, 'message' => 'حدث خطأ في الخادم.'], 500);
@@ -159,6 +167,7 @@ class ProductController extends Controller
                 'sale_price' => 'nullable|numeric|min:0|lte:regular_price',
                 'quantity' => 'sometimes|required|integer|min:0',
                 'category_id' => 'sometimes|required|exists:categories,id',
+                'brand_id' => 'nullable|exists:brands,id', // العلامة التجارية اختيارية
                 'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
                 'new_images' => 'nullable|array',
                 'new_images.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:2048',
@@ -174,6 +183,7 @@ class ProductController extends Controller
                 'sale_price' => 'nullable|numeric|min:0|lte:regular_price',
                 'quantity' => 'required|integer|min:0',
                 'category_id' => 'required|exists:categories,id',
+                'brand_id' => 'nullable|exists:brands,id', // العلامة التجارية اختيارية
                 'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
                 'images' => 'nullable|array',
                 'images.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:2048',
@@ -227,9 +237,70 @@ class ProductController extends Controller
             'sale_price' => $product->sale_price,
             'quantity' => $product->quantity,
             'category_id' => $product->category_id,
+            'brand_id' => $product->brand_id, // إضافة العلامة التجارية
             'image' => $product->image ? asset('storage/uploads/' . $product->image) : null,
             'images' => array_map(fn($img) => asset('storage/uploads/' . $img), $gallery),
         ];
+    }
+
+    /**
+     * Handle product videos creation
+     */
+    private function handleProductVideos(Request $request, Product $product)
+    {
+        $sortOrder = 0;
+
+        // Handle primary video
+        if ($this->hasVideoData($request, 'primary')) {
+            $this->createProductVideo($request, $product, 'primary', $sortOrder++, true);
+        }
+
+        // Handle secondary video
+        if ($this->hasVideoData($request, 'secondary')) {
+            $this->createProductVideo($request, $product, 'secondary', $sortOrder++, false);
+        }
+    }
+
+    /**
+     * Check if video data exists
+     */
+    private function hasVideoData(Request $request, string $type): bool
+    {
+        return $request->filled("{$type}_video_url") ||
+               $request->hasFile("{$type}_video_file");
+    }
+
+    /**
+     * Create a product video
+     */
+    private function createProductVideo(Request $request, Product $product, string $type, int $sortOrder, bool $isFeatured)
+    {
+        $videoType = $request->input("{$type}_video_type", 'youtube');
+        $title = $request->input("{$type}_video_title", '');
+        $videoUrl = '';
+
+        if ($videoType === 'file' && $request->hasFile("{$type}_video_file")) {
+            // Handle file upload
+            $file = $request->file("{$type}_video_file");
+            $fileName = 'videos/' . Str::uuid() . '.' . $file->getClientOriginalExtension();
+            $file->storeAs('public', $fileName);
+            $videoUrl = $fileName;
+        } else {
+            // Handle URL
+            $videoUrl = $request->input("{$type}_video_url", '');
+        }
+
+        if (!empty($videoUrl)) {
+            ProductVideo::create([
+                'product_id' => $product->id,
+                'title' => $title ?: ($isFeatured ? 'الفيديو الرئيسي' : 'فيديو ثانوي'),
+                'video_type' => $videoType,
+                'video_url' => $videoUrl,
+                'sort_order' => $sortOrder,
+                'is_featured' => $isFeatured,
+                'is_active' => true,
+            ]);
+        }
     }
 }
 

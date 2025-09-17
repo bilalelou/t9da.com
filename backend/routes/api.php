@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\PublicDataController;
 use App\Http\Controllers\Api\RegisterController;
 use App\Http\Controllers\Api\UserDashboardController;
 use App\Http\Controllers\Api\CouponController;
+use App\Http\Controllers\Admin\ProductVideoController;
 
 use App\Http\Controllers\Api\UserController;
 
@@ -31,6 +32,10 @@ Route::post('/contact', [ContactController::class, 'store']);
 Route::post('/validate-coupon', [OrderController::class, 'validateCoupon']);
 Route::post('/shipping-costs', [OrderController::class, 'getShippingCosts']);
 
+// [مؤقت] للاختبار فقط - routes بدون authentication
+Route::get('/test/products/{product}', [ProductController::class, 'show']);
+Route::get('/test/categories', [CategoryController::class, 'index']);
+Route::get('/test/brands', [BrandController::class, 'index']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [LoginController::class, 'logout']);
@@ -48,6 +53,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('users', UserController::class);
     Route::post('/users/{user}/toggle-active', [UserController::class, 'toggleActive']);
     Route::apiResource('products', ProductController::class);
+    
+    // Product Videos Routes
+    Route::prefix('products/{product}')->group(function () {
+        Route::get('videos', [ProductVideoController::class, 'index']);
+        Route::post('videos', [ProductVideoController::class, 'store']);
+        Route::get('videos/{video}', [ProductVideoController::class, 'show']);
+        Route::put('videos/{video}', [ProductVideoController::class, 'update']);
+        Route::delete('videos/{video}', [ProductVideoController::class, 'destroy']);
+        Route::put('videos-order', [ProductVideoController::class, 'updateOrder']);
+    });
     Route::apiResource('categories', CategoryController::class);
     Route::apiResource('brands', BrandController::class);
 

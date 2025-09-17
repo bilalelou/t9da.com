@@ -90,4 +90,28 @@ class Product extends Model
     {
         return $this->hasMany(Review::class);
     }
+
+    /**
+     * Get all videos for the product.
+     */
+    public function videos()
+    {
+        return $this->hasMany(ProductVideo::class)->ordered();
+    }
+
+    /**
+     * Get active videos for the product.
+     */
+    public function activeVideos()
+    {
+        return $this->hasMany(ProductVideo::class)->active()->ordered();
+    }
+
+    /**
+     * Get featured video for the product.
+     */
+    public function featuredVideo()
+    {
+        return $this->hasOne(ProductVideo::class)->where('is_featured', true)->where('is_active', true);
+    }
 }

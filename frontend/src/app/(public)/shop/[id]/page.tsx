@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, createContext, useContext, useMemo } from 'react';
 import { useCart, useWishlist } from '@/contexts/Providers';
 import { ShoppingCart, LoaderCircle, Star, CheckCircle, Heart, Share2, Minus, Plus, ShieldCheck, Truck, MessageSquare, ChevronDown } from 'lucide-react';
+import ProductVideoGallery from '@/components/ProductVideoGallery';
 
 // --- Interfaces ---
 interface Product {
@@ -184,6 +185,13 @@ const ProductDetailPage = ({ product, relatedProducts }: { product: Product; rel
                             ))}
                         </div>
                     </div>
+                    
+                    {/* Product Videos Section */}
+                    <ProductVideoGallery 
+                        productId={product.id} 
+                        className="mt-8"
+                    />
+                    
                     {/* Product Details */}
                     <div>
                         <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-1 rounded-full">{product.category}</span>
