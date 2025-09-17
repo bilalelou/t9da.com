@@ -27,7 +27,7 @@ class Product extends Model
         'featured',
         'has_variants',
         'quantity',
-        'image',
+        'thumbnail',
         'images',
         'category_id',
         'brand_id',

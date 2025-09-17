@@ -61,8 +61,8 @@ class ProductController extends Controller
             $data['slug'] = Str::slug($data['name']);
             $data['SKU'] = strtoupper(substr(preg_replace('/[^a-zA-Z]/', '', $data['name']), 0, 3)) . '-' . uniqid();
 
-            if ($request->hasFile('image')) {
-                $data['image'] = $this->storeImage($request->file('image'));
+            if ($request->hasFile('thumbnail')) {
+                $data['thumbnail'] = $this->storeImage($request->file('thumbnail'));
             }
 
             if ($request->hasFile('images')) {
@@ -120,9 +120,9 @@ class ProductController extends Controller
         try {
             $data = $validator->validated();
 
-            if ($request->hasFile('image')) {
-                if ($product->image) Storage::disk('public')->delete('uploads/' . $product->image);
-                $data['image'] = $this->storeImage($request->file('image'));
+            if ($request->hasFile('thumbnail')) {
+                if ($product->thumbnail) Storage::disk('public')->delete('uploads/' . $product->thumbnail);
+                $data['thumbnail'] = $this->storeImage($request->file('thumbnail'));
             }
 
             $currentGallery = json_decode($product->images, true) ?? [];
@@ -168,9 +168,9 @@ class ProductController extends Controller
                 'quantity' => 'sometimes|required|integer|min:0',
                 'category_id' => 'sometimes|required|exists:categories,id',
                 'brand_id' => 'nullable|exists:brands,id', // العلامة التجارية اختيارية
-                'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+                'thumbnail' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120', // 5MB
                 'new_images' => 'nullable|array',
-                'new_images.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+                'new_images.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:5120', // 5MB
                 'existing_images' => 'nullable|json',
             ];
         } else {
@@ -184,9 +184,9 @@ class ProductController extends Controller
                 'quantity' => 'required|integer|min:0',
                 'category_id' => 'required|exists:categories,id',
                 'brand_id' => 'nullable|exists:brands,id', // العلامة التجارية اختيارية
-                'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+                'thumbnail' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120', // 5MB
                 'images' => 'nullable|array',
-                'images.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+                'images.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:5120', // 5MB
             ];
         }
 
@@ -217,7 +217,7 @@ class ProductController extends Controller
         }
         return [
             'id' => $product->id, 'name' => $product->name,
-            'image' => $product->image ? asset('storage/uploads/' . $product->image) : 'https://placehold.co/100x100?text=No+Image',
+            'thumbnail' => $product->thumbnail ? asset('storage/uploads/' . $product->thumbnail) : 'https://placehold.co/100x100?text=No+Image',
             'category' => $product->category->name ?? 'غير مصنف',
             'price' => $product->sale_price ?? $product->regular_price,
             'originalPrice' => $product->sale_price ? $product->regular_price : null,
@@ -238,7 +238,7 @@ class ProductController extends Controller
             'quantity' => $product->quantity,
             'category_id' => $product->category_id,
             'brand_id' => $product->brand_id, // إضافة العلامة التجارية
-            'image' => $product->image ? asset('storage/uploads/' . $product->image) : null,
+            'thumbnail' => $product->thumbnail ? asset('storage/uploads/' . $product->thumbnail) : null,
             'images' => array_map(fn($img) => asset('storage/uploads/' . $img), $gallery),
         ];
     }

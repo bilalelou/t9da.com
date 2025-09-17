@@ -434,11 +434,11 @@ export default function WishlistPage() {
                                     <div className="relative mb-4">
                                         <Link href={`/shop/${item.slug}`}>
                                             <Image 
-                                                src={item.image || '/images/placeholder-product.svg'} 
-                                                alt={item.name} 
-                                                width={400}
-                                                height={400}
-                                                className="w-full h-48 object-cover rounded-xl hover:opacity-90 transition-opacity"
+                                                src={item.thumbnail || '/images/placeholder-product.svg'} 
+                                                alt={item.name}
+                                                width={100}
+                                                height={100}
+                                                className="w-24 h-24 object-cover rounded-lg border border-gray-200"
                                             />
                                         </Link>
                                         

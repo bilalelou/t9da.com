@@ -11,7 +11,7 @@ interface Product {
     slug: string;
     price: number;
     originalPrice?: number;
-    image: string;
+    thumbnail: string;
     stock: number;
     inStock: boolean;
     short_description?: string;
@@ -89,7 +89,7 @@ const ProductCard = React.memo(({ product }: { product: Product }) => {
         <div className="group relative bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 flex flex-col h-full">
             <a href={`/shop/${product.slug}`} className="block">
                 <div className="relative overflow-hidden h-80">
-                    <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onError={(e) => { (e.target as HTMLImageElement).src = 'https://placehold.co/400x400/f0f0f0/cccccc?text=No+Image'; }} />
+                    <img src={product.thumbnail} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onError={(e) => { (e.target as HTMLImageElement).src = 'https://placehold.co/400x400/f0f0f0/cccccc?text=No+Image'; }} />
                     
                     {/* أزرار الإجراءات */}
                     <div className="absolute top-3 left-3 flex flex-col gap-2">

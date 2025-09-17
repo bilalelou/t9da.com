@@ -11,7 +11,7 @@ export interface Product {
   description: string;
   price: number;
   originalPrice?: number;
-  image: string;
+  thumbnail: string;
   images?: string[];
   rating: number;
   reviewCount: number;
@@ -102,7 +102,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
           <div className="relative w-full h-full bg-gray-100">
             {!imageError ? (
               <Image
-                src={product.image}
+                src={product.thumbnail}
                 alt={product.name}
                 fill
                 className={`object-cover transition-all duration-500 group-hover:scale-110 ${

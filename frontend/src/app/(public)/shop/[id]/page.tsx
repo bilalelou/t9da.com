@@ -12,11 +12,12 @@ interface Product {
     slug: string;
     regular_price: number;
     sale_price?: number;
-    image: string;
+    thumbnail: string;
     images?: string[];
     description: string;
     category: string;
     SKU: string;
+    stock: number; // Added stock
     // بيانات وهمية للخيارات
     available_colors?: string[];
     available_sizes?: string[];
@@ -100,10 +101,10 @@ const AccordionItem = ({ title, children, defaultOpen = false }) => {
 };
 
 // [إضافة] مكون لعرض المنتجات ذات الصلة
-const MiniProductCard = ({ product }) => (
-    <a href={`/product/${product.slug}`} className="border rounded-lg overflow-hidden group transition-shadow duration-300 hover:shadow-lg bg-white">
+const MiniProductCard = ({ product }: { product: Product }) => (
+    <a href={`/shop/${product.slug}`} className="border rounded-lg overflow-hidden group transition-shadow duration-300 hover:shadow-lg bg-white">
         <div className="h-48 bg-gray-100 flex items-center justify-center overflow-hidden p-2">
-            <img src={product.image} alt={product.name} className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105" />
+            <img src={product.thumbnail} alt={product.name} className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105" />
         </div>
         <div className="p-3">
             <h4 className="font-semibold text-sm truncate text-gray-800">{product.name}</h4>
@@ -118,14 +119,14 @@ const ProductDetailPage = ({ product, relatedProducts }: { product: Product; rel
     const { showToast } = useToast();
     const { addToCart } = useCart();
     const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
-    const [mainImage, setMainImage] = useState(product.image);
+    const [mainImage, setMainImage] = useState(product.thumbnail);
     const [quantity, setQuantity] = useState(1);
     const [selectedColor, setSelectedColor] = useState(product.available_colors?.[0]);
     const [selectedSize, setSelectedSize] = useState(product.available_sizes?.[0]);
     const isFavorite = isInWishlist(product.id);
     
     useEffect(() => {
-        setMainImage(product.image);
+        setMainImage(product.thumbnail);
         setQuantity(1);
     }, [product]);
 
@@ -135,8 +136,9 @@ const ProductDetailPage = ({ product, relatedProducts }: { product: Product; rel
             name: product.name,
             slug: product.slug,
             price: product.sale_price || product.regular_price,
-            image: product.image,
-            inStock: true, // افتراض أن المنتج متوفر
+            image: product.thumbnail, // Use thumbnail
+            stock: product.stock,
+            inStock: product.stock > 0,
             selectedColor,
             selectedSize
         };
@@ -155,8 +157,9 @@ const ProductDetailPage = ({ product, relatedProducts }: { product: Product; rel
                 slug: product.slug,
                 price: product.sale_price || product.regular_price,
                 originalPrice: product.sale_price ? product.regular_price : undefined,
-                image: product.image,
-                inStock: true,
+                image: product.thumbnail, // Use thumbnail
+                inStock: product.stock > 0,
+                stock: product.stock,
                 addedAt: Date.now(),
                 category: product.category,
                 brand: 'ماركة' // يمكن تخصيص هذا حسب البيانات المتاحة
@@ -166,7 +169,7 @@ const ProductDetailPage = ({ product, relatedProducts }: { product: Product; rel
         }
     };
     
-    const allImages = [product.image, ...(product.images || [])].filter(Boolean);
+    const allImages = [product.thumbnail, ...(product.images || [])].filter(Boolean);
 
     return (
         <div className="bg-gray-50">

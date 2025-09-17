@@ -50,7 +50,7 @@ interface Product {
   brand_id?: number;
   featured: boolean;
   status: string;
-  image: string | null;
+  thumbnail: string | null;
   images?: string[];
   videos?: ProductVideo[];
 }
@@ -191,8 +191,8 @@ function EditProductPageInner() {
     status: 'active',
   });
 
-  const [newImage, setNewImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string>('');
+  const [newThumbnail, setNewThumbnail] = useState<File | null>(null);
+  const [thumbnailPreview, setThumbnailPreview] = useState<string>('');
   const [newImages, setNewImages] = useState<File[]>([]);
   const [imagesPreviews, setImagesPreviews] = useState<string[]>([]);
 
@@ -229,6 +229,9 @@ function EditProductPageInner() {
           featured: !!p.featured,
           status: p.status || 'active',
         });
+        if (p.thumbnail) {
+          setThumbnailPreview(p.thumbnail);
+        }
       } catch (e) {
         console.error(e);
         // showToast already called
@@ -252,12 +255,12 @@ function EditProductPageInner() {
     }
   };
 
-  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleThumbnailChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setNewImage(file);
+      setNewThumbnail(file);
       const reader = new FileReader();
-      reader.onload = () => setImagePreview(String(reader.result || ''));
+      reader.onload = () => setThumbnailPreview(String(reader.result || ''));
       reader.readAsDataURL(file);
     }
   };
@@ -314,8 +317,15 @@ function EditProductPageInner() {
       Object.entries(formData).forEach(([k, v]) => {
         if (v !== undefined && v !== null) fd.append(k, String(v));
       });
-      if (newImage) fd.append('image', newImage);
-      newImages.forEach((img, i) => fd.append(`images[${i}]`, img));
+      if (newThumbnail) fd.append('thumbnail', newThumbnail);
+      newImages.forEach((img, i) => fd.append(`new_images[${i}]`, img));
+
+      // Keep existing images
+      if (product?.images) {
+        const existingImages = product.images.filter(img => !imagesPreviews.includes(img));
+        fd.append('existing_images', JSON.stringify(existingImages));
+      }
+      
       await api.updateProduct(id, fd, getToken());
       showToast('تم تحديث المنتج بنجاح', 'success');
       setTimeout(() => router.push('/admin/products'), 1200);
@@ -609,33 +619,33 @@ function EditProductPageInner() {
             <div className="grid md:grid-cols-2 gap-8">
               <div className="space-y-4">
                 <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                  <Camera className="w-4 h-4 text-green-600" />الصورة الرئيسية
+                  <Camera className="w-4 h-4 text-green-600" />الصورة المصغرة
                 </label>
-                {product?.image && !imagePreview && (
+                {thumbnailPreview ? (
                   <div className="relative group mx-auto w-fit">
-                    <Image src={product.image} alt="الصورة الحالية" width={200} height={128} className="h-32 rounded-lg object-cover" />
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg flex items-center justify-center">
-                      <span className="text-white text-sm">الصورة الحالية</span>
-                    </div>
-                  </div>
-                )}
-                {imagePreview && (
-                  <div className="relative group mx-auto w-fit">
-                    <Image src={imagePreview} alt="معاينة" width={200} height={128} className="h-32 rounded-lg object-cover" />
+                    <Image src={thumbnailPreview} alt="معاينة" width={200} height={128} className="h-32 rounded-lg object-cover" />
                     <button
                       type="button"
                       onClick={() => {
-                        setNewImage(null);
-                        setImagePreview('');
+                        setNewThumbnail(null);
+                        setThumbnailPreview('');
+                        // If there was an original product thumbnail, restore it
+                        if (product?.thumbnail) {
+                          setThumbnailPreview(product.thumbnail);
+                        }
                       }}
                       className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors duration-200 shadow-md"
                     >
                       <X className="w-3 h-3" />
                     </button>
                   </div>
+                ) : (
+                   <div className="h-32 w-full bg-gray-100 rounded-lg flex items-center justify-center">
+                      <p className="text-gray-500">لا توجد صورة مصغرة</p>
+                   </div>
                 )}
                 <div className="relative">
-                  <input type="file" accept="image/*" onChange={handleImageChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                  <input type="file" accept="image/*" onChange={handleThumbnailChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
                   <div className="border-2 border-dashed border-green-300 rounded-xl p-6 text-center hover:border-green-400 hover:bg-green-50/50 transition-all duration-200 cursor-pointer">
                     <UploadCloud className="w-8 h-8 text-green-500 mx-auto mb-2" />
                     <p className="text-green-600 font-medium">اختر صورة جديدة</p>

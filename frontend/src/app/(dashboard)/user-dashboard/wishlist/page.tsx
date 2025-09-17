@@ -12,7 +12,7 @@ interface Product {
     slug: string;
     price: number;
     originalPrice?: number;
-    image: string;
+    thumbnail: string;
     stock: number;
     inStock: boolean;
     category: string;
@@ -155,7 +155,7 @@ const WishlistItemCard = ({ product }: { product: Product }) => {
     return (
         <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden group transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
             <a href={`/product/${product.slug}`} className="block relative h-64 overflow-hidden">
-                <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                <img src={product.thumbnail} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
             </a>
             <div className="p-4 flex flex-col flex-grow">
                 <p className="text-xs text-blue-600 font-medium mb-1">{product.category}</p>

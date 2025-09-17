@@ -21,7 +21,7 @@ interface Product {
     slug: string;
     regular_price: number;
     sale_price?: number;
-    image: string;
+    thumbnail: string;
     short_description: string;
 }
 
@@ -154,7 +154,7 @@ const ProductCard = React.memo(({ product }: { product: Product }) => {
             name: product.name,
             slug: product.slug,
             price: product.sale_price || product.regular_price,
-            image: product.image,
+            image: product.thumbnail, // Use thumbnail
             inStock: true,
             stock: 10 // افتراض توفر المنتج
         };
@@ -173,7 +173,7 @@ const ProductCard = React.memo(({ product }: { product: Product }) => {
                 slug: product.slug,
                 price: product.sale_price || product.regular_price,
                 originalPrice: product.sale_price ? product.regular_price : undefined,
-                image: product.image,
+                image: product.thumbnail, // Use thumbnail
                 inStock: true,
                 stock: 10, // افتراض توفر المنتج
                 addedAt: Date.now(),
@@ -187,7 +187,7 @@ const ProductCard = React.memo(({ product }: { product: Product }) => {
     return (
         <a href={`/shop/${product.slug}`} className="cursor-pointer group relative bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-2 transition-all duration-300 flex flex-col h-full">
             <div className="overflow-hidden h-72 p-4 bg-gray-50 relative">
-                <img src={product.image} alt={product.name} className="w-full h-full object-contain group-hover:scale-105 transition-transform" onError={(e) => { e.currentTarget.src = 'https://placehold.co/400x400/f0f0f0/cccccc?text=No+Image'; }} />
+                <img src={product.thumbnail} alt={product.name} className="w-full h-full object-contain group-hover:scale-105 transition-transform" onError={(e) => { e.currentTarget.src = 'https://placehold.co/400x400/f0f0f0/cccccc?text=No+Image'; }} />
                 
                 {/* زر المفضلة */}
                 <button

@@ -10,7 +10,7 @@ interface Product {
     slug: string;
     price: number;
     originalPrice?: number;
-    image: string;
+    thumbnail: string;
     stock: number;
     inStock: boolean;
 }
@@ -202,7 +202,7 @@ interface WishlistItem {
     slug: string;
     price: number;
     originalPrice?: number;
-    image: string;
+    thumbnail: string;
     stock: number;
     inStock: boolean;
     category?: string;

@@ -166,7 +166,7 @@ class PublicDataController extends Controller
             'slug' => $product->slug,
             'regular_price' => (float)$product->regular_price,
             'sale_price' => isset($product->sale_price) ? (float)$product->sale_price : null,
-            'image' => $product->image ? asset('storage/uploads/' . $product->image) : 'https://placehold.co/400x400?text=No+Image',
+            'thumbnail' => $product->thumbnail ? asset('storage/uploads/' . $product->thumbnail) : 'https://placehold.co/400x400?text=No+Image',
             'stock' => $product->quantity ?? 0,
         ];
     }
@@ -184,7 +184,7 @@ class PublicDataController extends Controller
             'short_description' => $product->short_description,
             'regular_price' => (float)$product->regular_price,
             'sale_price' => isset($product->sale_price) ? (float)$product->sale_price : null,
-            'image' => $product->image ? asset('storage/uploads/' . $product->image) : 'https://placehold.co/600x600?text=No+Image',
+            'thumbnail' => $product->thumbnail ? asset('storage/uploads/' . $product->thumbnail) : 'https://placehold.co/600x600?text=No+Image',
             'images' => array_map(fn($img) => asset('storage/uploads/' . $img), json_decode($product->images) ?? []),
         ];
 
