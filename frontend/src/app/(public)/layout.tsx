@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from 'next/navigation';
 import { User, ShoppingCart, Heart, Search, Menu, X } from "lucide-react";
 
@@ -36,8 +37,15 @@ const Navbar = () => {
         <header className="bg-white shadow-sm sticky top-0 z-50">
             <div className="container mx-auto px-6 py-4 flex items-center justify-between">
                 
-                <Link href="/" className="text-3xl font-bold text-[#eab676]">
-                    T9DA.COM
+                <Link href="/" className="flex items-center gap-3">
+                    <Image 
+                        src="/images/logo.png" 
+                        alt="T9DA.COM Logo" 
+                        width={40} 
+                        height={40}
+                        className="object-contain"
+                    />
+                    <span className="text-2xl font-bold text-[#eab676]">T9DA.COM</span>
                 </Link>
 
                 <nav className="hidden lg:flex items-center gap-8 text-base">
