@@ -42,10 +42,10 @@ interface Product {
   name: string;
   description: string;
   short_description: string;
-  price: number;
+  regular_price: number;
   sale_price: number;
   sku: string;
-  stock_quantity: number;
+  quantity: number;
   category_id: number;
   brand_id?: number;
   featured: boolean;
@@ -181,10 +181,10 @@ function EditProductPageInner() {
     name: '',
     description: '',
     short_description: '',
-    price: '',
+    regular_price: '',
     sale_price: '',
     sku: '',
-    stock_quantity: '',
+    quantity: '',
     category_id: '',
     brand_id: '',
     featured: false,
@@ -220,10 +220,10 @@ function EditProductPageInner() {
           name: p.name || '',
           description: p.description || '',
           short_description: p.short_description || '',
-          price: p.price != null ? String(p.price) : '',
+          regular_price: p.regular_price != null ? String(p.regular_price) : '',
           sale_price: p.sale_price != null ? String(p.sale_price) : '',
           sku: p.sku || '',
-          stock_quantity: p.stock_quantity != null ? String(p.stock_quantity) : '',
+          quantity: p.quantity != null ? String(p.quantity) : '',
           category_id: p.category_id != null ? String(p.category_id) : '',
           brand_id: p.brand_id != null ? String(p.brand_id) : '',
           featured: !!p.featured,
@@ -414,8 +414,8 @@ function EditProductPageInner() {
                 <div className="relative">
                   <input
                     type="number"
-                    name="price"
-                    value={formData.price}
+                    name="regular_price"
+                    value={formData.regular_price}
                     onChange={handleInputChange}
                     step="0.01"
                     min={0}
@@ -454,8 +454,8 @@ function EditProductPageInner() {
                 </label>
                 <input
                   type="number"
-                  name="stock_quantity"
-                  value={formData.stock_quantity}
+                  name="quantity"
+                  value={formData.quantity}
                   onChange={handleInputChange}
                   min={0}
                   className="w-full px-4 py-3 bg-gradient-to-r from-white to-gray-50 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/20 transition-all duration-200 text-gray-800 placeholder-gray-400"
