@@ -20,7 +20,7 @@ interface CartItem extends Product {
 
 // --- 1. سياق التنبيهات (Toast Context) ---
 const ToastContext = createContext({
-    showToast: (message: string, type?: 'success' | 'error') => {}
+    showToast: (_message: string, _type?: 'success' | 'error') => {}
 });
 
 export const useToast = () => useContext(ToastContext);
@@ -54,6 +54,7 @@ interface CartContextType {
     removeFromCart: (productId: number) => void;
     updateQuantity: (productId: number, newQuantity: number) => void;
     clearCart: () => void;
+    resetCart: () => void;
     totalItems: number;
     subtotal: number;
     savings: number;
@@ -79,15 +80,21 @@ const CartProvider = ({ children }: { children: React.ReactNode }) => {
         try {
             const localData = localStorage.getItem('cart');
             if (localData) {
-                // التأكد من أن الكمية هي رقم صحيح عند التحميل
-                const parsedData = JSON.parse(localData).map((item: any) => ({
+                // التأكد من أن البيانات صحيحة عند التحميل
+                const parsedData = JSON.parse(localData).map((item: CartItem) => ({
                     ...item,
-                    quantity: parseInt(String(item.quantity), 10) || 1
+                    quantity: parseInt(String(item.quantity), 10) > 0 ? parseInt(String(item.quantity), 10) : 1,
+                    price: parseFloat(String(item.price)) > 0 ? parseFloat(String(item.price)) : 0,
+                    originalPrice: item.originalPrice && parseFloat(String(item.originalPrice)) > 0 ? parseFloat(String(item.originalPrice)) : undefined,
+                    stock: parseInt(String(item.stock), 10) > 0 ? parseInt(String(item.stock), 10) : 999
                 }));
                 setCartItems(parsedData);
             }
         } catch (error) {
             console.error("Failed to parse cart from localStorage", error);
+            // في حالة وجود خطأ، امسح البيانات الفاسدة
+            localStorage.removeItem('cart');
+            setCartItems([]);
         }
         setIsInitialLoad(false);
     }, []);
@@ -116,11 +123,17 @@ const CartProvider = ({ children }: { children: React.ReactNode }) => {
 
         setCartItems(prevItems => prevItems.map(item => {
             if (item.id === productId) {
-                const updatedQuantity = Math.min(numQuantity, item.stock);
-                if (numQuantity > item.stock) {
-                    showToast(`الكمية القصوى المتاحة هي ${item.stock}`, 'error');
+                // التأكد من أن المخزون هو رقم صحيح
+                const availableStock = parseInt(String(item.stock), 10) || 999;
+                const updatedQuantity = Math.min(numQuantity, availableStock);
+                
+                if (numQuantity > availableStock) {
+                    showToast(`الكمية القصوى المتاحة هي ${availableStock}`, 'error');
                 }
-                return { ...item, quantity: updatedQuantity };
+                return { 
+                    ...item, 
+                    quantity: updatedQuantity
+                };
             }
             return item;
         }));
@@ -143,19 +156,41 @@ const CartProvider = ({ children }: { children: React.ReactNode }) => {
     }, [showToast]);
     
     const clearCart = useCallback(() => {
-        if (window.confirm('هل أنت متأكد من رغبتك في إفراغ السلة؟')) {
-            setCartItems([]);
-            showToast("تم إفراغ السلة.");
-        }
+        setCartItems([]);
+        showToast("تم إفراغ السلة.");
+    }, [showToast]);
+
+    const resetCart = useCallback(() => {
+        localStorage.removeItem('cart');
+        setCartItems([]);
+        showToast("تم إعادة تعيين السلة بنجاح.", 'success');
     }, [showToast]);
 
     // التأكد من أن جميع العمليات الحسابية تتم على أرقام
-    const subtotal = useMemo(() => cartItems.reduce((sum, item) => sum + (item.price * (parseInt(String(item.quantity), 10) || 0)), 0), [cartItems]);
-    const savings = useMemo(() => cartItems.reduce((sum, item) => item.originalPrice ? sum + ((item.originalPrice - item.price) * (parseInt(String(item.quantity), 10) || 0)) : sum, 0), [cartItems]);
-    const totalItems = useMemo(() => cartItems.reduce((sum, item) => sum + (parseInt(String(item.quantity), 10) || 0), 0), [cartItems]);
+    const subtotal = useMemo(() => 
+        cartItems.reduce((sum, item) => {
+            const quantity = parseInt(String(item.quantity), 10);
+            const price = parseFloat(String(item.price));
+            return sum + (isNaN(quantity) || isNaN(price) ? 0 : price * quantity);
+        }, 0), [cartItems]);
+        
+    const savings = useMemo(() => 
+        cartItems.reduce((sum, item) => {
+            if (!item.originalPrice) return sum;
+            const quantity = parseInt(String(item.quantity), 10);
+            const price = parseFloat(String(item.price));
+            const originalPrice = parseFloat(String(item.originalPrice));
+            return sum + (isNaN(quantity) || isNaN(price) || isNaN(originalPrice) ? 0 : (originalPrice - price) * quantity);
+        }, 0), [cartItems]);
+        
+    const totalItems = useMemo(() => 
+        cartItems.reduce((sum, item) => {
+            const quantity = parseInt(String(item.quantity), 10);
+            return sum + (isNaN(quantity) ? 0 : quantity);
+        }, 0), [cartItems]);
 
-    const value = useMemo(() => ({ cartItems, addToCart, removeFromCart, updateQuantity, clearCart, subtotal, savings, totalItems }), 
-    [cartItems, addToCart, removeFromCart, updateQuantity, clearCart, subtotal, savings, totalItems]);
+    const value = useMemo(() => ({ cartItems, addToCart, removeFromCart, updateQuantity, clearCart, resetCart, subtotal, savings, totalItems }), 
+    [cartItems, addToCart, removeFromCart, updateQuantity, clearCart, resetCart, subtotal, savings, totalItems]);
 
     return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 };
