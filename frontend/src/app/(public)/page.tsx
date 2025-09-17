@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, createContext, useContext, useMemo } from 'react';
+import { useCart, useWishlist } from '@/contexts/Providers';
 
 // Icons
 import { Heart, CheckCircle, ChevronLeft, ChevronRight, ShoppingCart, LoaderCircle, ShieldCheck, Truck, PhoneCall, Mail, Star, Quote } from 'lucide-react';
@@ -139,11 +140,67 @@ const formatCurrency = (price: number) => {
     return new Intl.NumberFormat('ar-MA', { style: 'currency', currency: 'MAD' }).format(price);
 };
 
-const ProductCard = React.memo(({ product }) => {
+const ProductCard = React.memo(({ product }: { product: Product }) => {
+    const { addToCart } = useCart();
+    const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
+    
+    const isWishlisted = isInWishlist(product.id);
+    
+    const handleCartClick = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const productToAdd = {
+            id: product.id,
+            name: product.name,
+            slug: product.slug,
+            price: product.sale_price || product.regular_price,
+            image: product.image,
+            inStock: true,
+            stock: 10 // افتراض توفر المنتج
+        };
+        addToCart(productToAdd, 1);
+    };
+
+    const handleWishlistClick = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (isWishlisted) {
+            removeFromWishlist(product.id);
+        } else {
+            const wishlistItem = {
+                id: product.id,
+                name: product.name,
+                slug: product.slug,
+                price: product.sale_price || product.regular_price,
+                originalPrice: product.sale_price ? product.regular_price : undefined,
+                image: product.image,
+                inStock: true,
+                stock: 10, // افتراض توفر المنتج
+                addedAt: Date.now(),
+                category: 'منتج',
+                brand: 'ماركة'
+            };
+            addToWishlist(wishlistItem);
+        }
+    };
+
     return (
-        <a href={`/product/${product.slug}`} className="cursor-pointer group relative bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-2 transition-all duration-300 flex flex-col h-full">
-            <div className="overflow-hidden h-72 p-4 bg-gray-50">
+        <a href={`/shop/${product.slug}`} className="cursor-pointer group relative bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-2 transition-all duration-300 flex flex-col h-full">
+            <div className="overflow-hidden h-72 p-4 bg-gray-50 relative">
                 <img src={product.image} alt={product.name} className="w-full h-full object-contain group-hover:scale-105 transition-transform" onError={(e) => { e.currentTarget.src = 'https://placehold.co/400x400/f0f0f0/cccccc?text=No+Image'; }} />
+                
+                {/* زر المفضلة */}
+                <button
+                    onClick={handleWishlistClick}
+                    className={`absolute top-3 left-3 w-9 h-9 rounded-full flex items-center justify-center shadow-md transition-all duration-300 ${
+                        isWishlisted 
+                            ? 'bg-red-500 text-white hover:bg-red-600' 
+                            : 'bg-white text-gray-600 hover:bg-red-50 hover:text-red-500'
+                    }`}
+                    title={isWishlisted ? "إزالة من المفضلة" : "إضافة للمفضلة"}
+                >
+                    <Heart size={18} className={isWishlisted ? 'fill-current' : ''} />
+                </button>
             </div>
             <div className="p-5 flex flex-col flex-grow">
                 <h3 className="text-lg font-semibold text-gray-900 truncate">{product.name}</h3>
@@ -156,9 +213,13 @@ const ProductCard = React.memo(({ product }) => {
                     ) : (
                         <span className="text-xl font-bold text-gray-800">{formatCurrency(product.regular_price)}</span>
                     )}
-                     <div className="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center transform group-hover:bg-blue-700 transition-colors">
+                     <button
+                        onClick={handleCartClick}
+                        className="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center transform group-hover:bg-blue-700 transition-colors hover:scale-105"
+                        title="إضافة للسلة"
+                     >
                         <ShoppingCart size={20}/>
-                     </div>
+                     </button>
                 </div>
             </div>
         </a>

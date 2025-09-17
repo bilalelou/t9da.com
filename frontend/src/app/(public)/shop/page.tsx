@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useCart } from '@/contexts/Providers'; // تأكد من أن المسار صحيح
-import { LoaderCircle, SlidersHorizontal, X, ChevronDown, ShoppingCart, CheckCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useCart, useWishlist } from '@/contexts/Providers'; // تأكد من أن المسار صحيح
+import { LoaderCircle, SlidersHorizontal, X, ChevronDown, ShoppingCart, CheckCircle, ChevronLeft, ChevronRight, Heart } from 'lucide-react';
 
 // --- الواجهات (Interfaces) ---
 interface Product {
@@ -57,14 +57,31 @@ const formatCurrency = (price: number) => new Intl.NumberFormat('ar-MA', { style
 
 const ProductCard = React.memo(({ product }: { product: Product }) => {
     const { addToCart, cartItems } = useCart();
+    const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
     
     const isInCart = useMemo(() => cartItems.some(item => item.id === product.id), [cartItems, product.id]);
+    const isWishlisted = isInWishlist(product.id);
 
     const handleCartClick = (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
         if (!isInCart) {
             addToCart(product);
+        }
+    };
+
+    const handleWishlistClick = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (isWishlisted) {
+            removeFromWishlist(product.id);
+        } else {
+            addToWishlist({
+                ...product,
+                addedAt: Date.now(),
+                category: 'منتج', // يمكن تخصيص هذا حسب البيانات المتاحة
+                brand: 'ماركة'   // يمكن تخصيص هذا حسب البيانات المتاحة
+            });
         }
     };
     
@@ -74,8 +91,23 @@ const ProductCard = React.memo(({ product }: { product: Product }) => {
                 <div className="relative overflow-hidden h-80">
                     <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onError={(e) => { (e.target as HTMLImageElement).src = 'https://placehold.co/400x400/f0f0f0/cccccc?text=No+Image'; }} />
                     
+                    {/* أزرار الإجراءات */}
+                    <div className="absolute top-3 left-3 flex flex-col gap-2">
+                        <button
+                            onClick={handleWishlistClick}
+                            className={`w-9 h-9 rounded-full flex items-center justify-center shadow-md transition-all duration-300 ${
+                                isWishlisted 
+                                    ? 'bg-red-500 text-white hover:bg-red-600' 
+                                    : 'bg-white text-gray-600 hover:bg-red-50 hover:text-red-500'
+                            }`}
+                            title={isWishlisted ? "إزالة من المفضلة" : "إضافة للمفضلة"}
+                        >
+                            <Heart size={18} className={isWishlisted ? 'fill-current' : ''} />
+                        </button>
+                    </div>
+                    
                     {isInCart && (
-                        <div className="absolute top-0 left-0 bg-blue-600 text-white text-xs font-semibold px-3 py-1 m-3 rounded-full flex items-center gap-1 z-10">
+                        <div className="absolute top-0 right-0 bg-blue-600 text-white text-xs font-semibold px-3 py-1 m-3 rounded-full flex items-center gap-1 z-10">
                             <CheckCircle size={14} />
                             <span>في السلة</span>
                         </div>
@@ -94,18 +126,32 @@ const ProductCard = React.memo(({ product }: { product: Product }) => {
                         <div><span className="text-xl font-bold text-red-600">{formatCurrency(product.price)}</span><span className="text-sm text-gray-400 line-through mr-2">{formatCurrency(product.originalPrice)}</span></div>
                     ) : (<span className="text-xl font-bold text-gray-800">{formatCurrency(product.price)}</span>)}
 
-                    <button 
-                        onClick={handleCartClick} 
-                        disabled={isInCart}
-                        aria-label={isInCart ? "المنتج في السلة" : "إضافة إلى السلة"}
-                        className={`w-10 h-10 text-white rounded-full flex items-center justify-center transition-all duration-300 transform 
-                            ${isInCart 
-                                ? 'bg-gray-300 cursor-not-allowed' 
-                                : 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50'
+                    <div className="flex gap-2">
+                        <button
+                            onClick={handleWishlistClick}
+                            className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
+                                isWishlisted 
+                                    ? 'bg-red-500 text-white hover:bg-red-600' 
+                                    : 'bg-gray-100 text-gray-600 hover:bg-red-50 hover:text-red-500'
                             }`}
-                    >
-                        {isInCart ? <CheckCircle size={20}/> : <ShoppingCart size={20}/>}
-                    </button>
+                            title={isWishlisted ? "إزالة من المفضلة" : "إضافة للمفضلة"}
+                        >
+                            <Heart size={18} className={isWishlisted ? 'fill-current' : ''} />
+                        </button>
+                        
+                        <button 
+                            onClick={handleCartClick} 
+                            disabled={isInCart}
+                            aria-label={isInCart ? "المنتج في السلة" : "إضافة إلى السلة"}
+                            className={`w-10 h-10 text-white rounded-full flex items-center justify-center transition-all duration-300 transform 
+                                ${isInCart 
+                                    ? 'bg-gray-300 cursor-not-allowed' 
+                                    : 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50'
+                                }`}
+                        >
+                            {isInCart ? <CheckCircle size={20}/> : <ShoppingCart size={20}/>}
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

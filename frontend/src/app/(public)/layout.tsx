@@ -5,16 +5,17 @@ import Link from "next/link";
 import { usePathname } from 'next/navigation';
 import { User, ShoppingCart, Heart, Search, Menu, X } from "lucide-react";
 
-// استيراد المزود الرئيسي ومعه الـ hook الخاص بالسلة
-import { AppProviders, useCart } from "@/contexts/Providers";
+// استيراد المزود الرئيسي ومعه الـ hook الخاص بالسلة والمفضلة
+import { AppProviders, useCart, useWishlist } from "@/contexts/Providers";
 
 // --- مكون شريط التنقل (Navbar) مع عدد المنتجات في السلة ---
 const Navbar = () => {
     const pathname = usePathname();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     
-    // استخدام useCart للحصول على عدد المنتجات في السلة
+    // استخدام useCart والـ useWishlist للحصول على عدد المنتجات
     const { totalItems } = useCart();
+    const { wishlistItems } = useWishlist();
 
     // إغلاق القائمة الجانبية عند تغيير المسار
     useEffect(() => {
@@ -49,7 +50,15 @@ const Navbar = () => {
 
                 <div className="hidden lg:flex items-center gap-5 text-gray-700">
                     <Link href="/search" className="hover:text-[#eab676]"><Search size={22} /></Link>
-                    <Link href="/wishlist" className="hover:text-[#eab676]"><Heart size={22} /></Link>
+                    
+                    <Link href="/wishlist" className="relative hover:text-[#eab676]">
+                        <Heart size={22} />
+                        {wishlistItems.length > 0 && (
+                            <span className="absolute -top-2 -right-3 bg-red-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                                {wishlistItems.length}
+                            </span>
+                        )}
+                    </Link>
                     
                     <Link href="/cart" className="relative hover:text-[#eab676]">
                         <ShoppingCart size={22} />
@@ -64,6 +73,14 @@ const Navbar = () => {
                 </div>
 
                 <div className="lg:hidden flex items-center gap-4">
+                     <Link href="/wishlist" className="relative hover:text-[#eab676]">
+                        <Heart size={24} />
+                        {wishlistItems.length > 0 && (
+                            <span className="absolute -top-2 -right-2 bg-red-600 text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center">
+                                {wishlistItems.length}
+                            </span>
+                        )}
+                    </Link>
                      <Link href="/cart" className="relative hover:text-[#eab676]">
                         <ShoppingCart size={24} />
                         {totalItems > 0 && (
@@ -101,8 +118,25 @@ const Navbar = () => {
                         </nav>
                         <div className="mt-auto border-t pt-6 flex justify-center gap-8 text-gray-700">
                             <Link href="/search"><Search size={24} /></Link>
-                            <Link href="/wishlist"><Heart size={24} /></Link>
-                            <Link href="/cart"><ShoppingCart size={24} /></Link>
+                            
+                            <Link href="/wishlist" className="relative">
+                                <Heart size={24} />
+                                {wishlistItems.length > 0 && (
+                                    <span className="absolute -top-2 -right-2 bg-red-600 text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center">
+                                        {wishlistItems.length}
+                                    </span>
+                                )}
+                            </Link>
+                            
+                            <Link href="/cart" className="relative">
+                                <ShoppingCart size={24} />
+                                {totalItems > 0 && (
+                                    <span className="absolute -top-2 -right-2 bg-red-600 text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center">
+                                        {totalItems}
+                                    </span>
+                                )}
+                            </Link>
+                            
                             <Link href="/login"><User size={24} /></Link>
                         </div>
                     </div>

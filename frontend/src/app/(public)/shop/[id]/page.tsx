@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, createContext, useContext, useMemo } from 'react';
+import { useCart, useWishlist } from '@/contexts/Providers';
 import { ShoppingCart, LoaderCircle, Star, CheckCircle, Heart, Share2, Minus, Plus, ShieldCheck, Truck, MessageSquare, ChevronDown } from 'lucide-react';
 
 // --- Interfaces ---
@@ -114,12 +115,13 @@ const MiniProductCard = ({ product }) => (
 // --- Product Detail Page ---
 const ProductDetailPage = ({ product, relatedProducts }: { product: Product; relatedProducts: Product[] }) => {
     const { showToast } = useToast();
-    const { favoriteIds, toggleFavorite } = useFavorites();
+    const { addToCart } = useCart();
+    const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
     const [mainImage, setMainImage] = useState(product.image);
     const [quantity, setQuantity] = useState(1);
     const [selectedColor, setSelectedColor] = useState(product.available_colors?.[0]);
     const [selectedSize, setSelectedSize] = useState(product.available_sizes?.[0]);
-    const isFavorite = favoriteIds.has(product.id);
+    const isFavorite = isInWishlist(product.id);
     
     useEffect(() => {
         setMainImage(product.image);
@@ -127,7 +129,40 @@ const ProductDetailPage = ({ product, relatedProducts }: { product: Product; rel
     }, [product]);
 
     const handleAddToCart = () => {
+        const productToAdd = {
+            id: product.id,
+            name: product.name,
+            slug: product.slug,
+            price: product.sale_price || product.regular_price,
+            image: product.image,
+            inStock: true, // افتراض أن المنتج متوفر
+            selectedColor,
+            selectedSize
+        };
+        addToCart(productToAdd, quantity);
         showToast(`تمت إضافة ${quantity}x "${product.name}" إلى السلة بنجاح!`);
+    };
+
+    const handleToggleFavorite = () => {
+        if (isFavorite) {
+            removeFromWishlist(product.id);
+            showToast('تم إزالة المنتج من المفضلة');
+        } else {
+            const wishlistItem = {
+                id: product.id,
+                name: product.name,
+                slug: product.slug,
+                price: product.sale_price || product.regular_price,
+                originalPrice: product.sale_price ? product.regular_price : undefined,
+                image: product.image,
+                inStock: true,
+                addedAt: Date.now(),
+                category: product.category,
+                brand: 'ماركة' // يمكن تخصيص هذا حسب البيانات المتاحة
+            };
+            addToWishlist(wishlistItem);
+            showToast('تم إضافة المنتج للمفضلة');
+        }
     };
     
     const allImages = [product.image, ...(product.images || [])].filter(Boolean);
@@ -205,7 +240,7 @@ const ProductDetailPage = ({ product, relatedProducts }: { product: Product; rel
                             <button onClick={handleAddToCart} className="flex-grow bg-blue-600 text-white font-bold py-4 px-8 rounded-lg hover:bg-blue-700 transition flex items-center justify-center gap-3">
                                 <ShoppingCart size={22} /><span>أضف إلى السلة</span>
                             </button>
-                             <button onClick={() => toggleFavorite(product)} className={`p-4 border rounded-lg transition-colors ${isFavorite ? 'bg-red-50 border-red-200 text-red-500' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}>
+                             <button onClick={handleToggleFavorite} className={`p-4 border rounded-lg transition-colors ${isFavorite ? 'bg-red-50 border-red-200 text-red-500' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}>
                                 <Heart size={22} fill={isFavorite ? 'currentColor' : 'none'}/>
                             </button>
                         </div>

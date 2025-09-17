@@ -195,12 +195,142 @@ const CartProvider = ({ children }: { children: React.ReactNode }) => {
     return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 };
 
-// --- 3. المزود الرئيسي للتطبيق (AppProviders) ---
+// --- 3. سياق المفضلة (Wishlist Context) ---
+interface WishlistItem {
+    id: number;
+    name: string;
+    slug: string;
+    price: number;
+    originalPrice?: number;
+    image: string;
+    stock: number;
+    inStock: boolean;
+    category?: string;
+    brand?: string;
+    rating?: number;
+    reviewCount?: number;
+    addedAt: number; // timestamp
+}
+
+interface WishlistContextType {
+    wishlistItems: WishlistItem[];
+    addToWishlist: (product: Product) => void;
+    removeFromWishlist: (productId: number) => void;
+    clearWishlist: () => void;
+    isInWishlist: (productId: number) => boolean;
+    totalWishlistItems: number;
+    moveToCart: (productId: number) => void;
+}
+
+const WishlistContext = createContext<WishlistContextType | null>(null);
+
+export const useWishlist = () => {
+    const context = useContext(WishlistContext);
+    if (!context) {
+        throw new Error('useWishlist must be used within a WishlistProvider');
+    }
+    return context;
+};
+
+const WishlistProvider = ({ children }: { children: React.ReactNode }) => {
+    const { showToast } = useToast();
+    const { addToCart } = useCart();
+    const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
+    const [isInitialLoad, setIsInitialLoad] = useState(true);
+
+    // تحميل البيانات من localStorage عند بدء تشغيل التطبيق
+    useEffect(() => {
+        try {
+            const localData = localStorage.getItem('wishlist');
+            if (localData) {
+                const parsedData = JSON.parse(localData).map((item: WishlistItem) => ({
+                    ...item,
+                    id: parseInt(String(item.id), 10),
+                    price: parseFloat(String(item.price)) || 0,
+                    originalPrice: item.originalPrice ? parseFloat(String(item.originalPrice)) : undefined,
+                    stock: parseInt(String(item.stock), 10) || 0,
+                    addedAt: item.addedAt || Date.now()
+                }));
+                setWishlistItems(parsedData);
+            }
+        } catch (error) {
+            console.error("Failed to parse wishlist from localStorage", error);
+            localStorage.removeItem('wishlist');
+            setWishlistItems([]);
+        }
+        setIsInitialLoad(false);
+    }, []);
+
+    // حفظ البيانات في localStorage عند أي تغيير في المفضلة
+    useEffect(() => {
+        if (!isInitialLoad) {
+            localStorage.setItem('wishlist', JSON.stringify(wishlistItems));
+        }
+    }, [wishlistItems, isInitialLoad]);
+
+    const addToWishlist = useCallback((product: Product) => {
+        const existingItem = wishlistItems.find(item => item.id === product.id);
+        
+        if (existingItem) {
+            showToast('المنتج موجود في المفضلة مسبقاً', 'error');
+            return;
+        }
+
+        const wishlistItem: WishlistItem = {
+            ...product,
+            addedAt: Date.now()
+        };
+
+        setWishlistItems(prev => [wishlistItem, ...prev]);
+        showToast(`تمت إضافة "${product.name}" إلى المفضلة!`);
+    }, [wishlistItems, showToast]);
+
+    const removeFromWishlist = useCallback((productId: number) => {
+        setWishlistItems(prev => prev.filter(item => item.id !== productId));
+        showToast('تم حذف المنتج من المفضلة');
+    }, [showToast]);
+
+    const clearWishlist = useCallback(() => {
+        setWishlistItems([]);
+        showToast('تم مسح جميع المنتجات من المفضلة');
+    }, [showToast]);
+
+    const isInWishlist = useCallback((productId: number) => {
+        return wishlistItems.some(item => item.id === productId);
+    }, [wishlistItems]);
+
+    const moveToCart = useCallback((productId: number) => {
+        const product = wishlistItems.find(item => item.id === productId);
+        if (product) {
+            addToCart(product, 1);
+            removeFromWishlist(productId);
+            showToast(`تم نقل "${product.name}" إلى السلة!`);
+        }
+    }, [wishlistItems, addToCart, removeFromWishlist, showToast]);
+
+    const totalWishlistItems = useMemo(() => wishlistItems.length, [wishlistItems]);
+
+    const value = useMemo(() => ({
+        wishlistItems,
+        addToWishlist,
+        removeFromWishlist,
+        clearWishlist,
+        isInWishlist,
+        totalWishlistItems,
+        moveToCart
+    }), [wishlistItems, addToWishlist, removeFromWishlist, clearWishlist, isInWishlist, totalWishlistItems, moveToCart]);
+
+    return <WishlistContext.Provider value={value}>{children}</WishlistContext.Provider>;
+};
+
+// --- 4. المزود الرئيسي للتطبيق (AppProviders) ---
 export function AppProviders({ children }: { children: React.ReactNode }) {
     return (
         <ToastProvider>
             <CartProvider>
-                {children}
+                <WishlistProvider>
+                    {children}
+                </WishlistProvider>
             </CartProvider>
         </ToastProvider>
     );
