@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { Mail, Lock, LogIn, Eye, EyeOff, LoaderCircle, Building } from 'lucide-react';
 
 export default function LoginPage() {
@@ -40,9 +41,6 @@ export default function LoginPage() {
                 
                 if (data.user && data.user.role) {
                     const userRole = data.user.role;
-                    
-                    // --- [تعديل] استخدام alert لعرض الدور قبل التوجيه ---
-                    alert('دور المستخدم المستلم من الخادم: ' + userRole);
 
                     let destination = '/'; 
                     switch (userRole) {
@@ -59,8 +57,6 @@ export default function LoginPage() {
                     }
                     window.location.href = destination;
                 } else {
-                    // استخدام alert هنا أيضاً لمعرفة البيانات في حال عدم وجود الدور
-                    alert('لم يتم العثور على دور للمستخدم في الرد. البيانات المستقبلة: ' + JSON.stringify(data));
                     window.location.href = '/user-dashboard';
                 }
 
@@ -166,9 +162,9 @@ export default function LoginPage() {
                             </div>
 
                             <div className="text-sm">
-                                <a href="#" className="font-medium text-[#1e81b0] hover:text-[#eab676]">
+                                <Link href="/forgot-password" className="font-medium text-[#1e81b0] hover:text-[#eab676]">
                                     هل نسيت كلمة المرور؟
-                                </a>
+                                </Link>
                             </div>
                         </div>
 
@@ -193,9 +189,9 @@ export default function LoginPage() {
                 
                  <p className="mt-8 text-center text-sm text-gray-600">
                     ليس لديك حساب؟{' '}
-                    <a href="#" className="font-medium text-[#1e81b0] hover:text-[#eab676]">
+                    <Link href="/register" className="font-medium text-[#1e81b0] hover:text-[#eab676]">
                         أنشئ حساباً جديداً
-                    </a>
+                    </Link>
                 </p>
             </div>
         </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 
 // Icons
 import { Mail, Lock, User, LogIn, LoaderCircle, Building, Phone, Eye, EyeOff } from 'lucide-react';
@@ -241,9 +242,9 @@ export default function RegisterPage() {
                 </div>
                  <p className="mt-8 text-center text-sm text-gray-600">
                     لديك حساب بالفعل؟{' '}
-                    <a href="/login" className="font-medium text-[#1e81b0] hover:text-[#eab676]">
+                    <Link href="/login" className="font-medium text-[#1e81b0] hover:text-[#eab676]">
                         سجل الدخول من هنا
-                    </a>
+                    </Link>
                 </p>
             </div>
         </div>
