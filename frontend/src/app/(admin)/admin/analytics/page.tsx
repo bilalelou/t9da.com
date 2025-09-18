@@ -18,6 +18,13 @@ interface AnalyticsData {
     top_categories: { name: string; total_sales: number; }[];
 }
 
+interface StatCardProps {
+    title: string;
+    value: string;
+    growth: number;
+    icon: React.ReactNode;
+}
+
 // --- API Helper ---
 const api = {
     getAnalytics: async (token: string): Promise<AnalyticsData> => {
@@ -41,7 +48,7 @@ const getGrowthColor = (growth: number) => growth >= 0 ? 'text-green-600' : 'tex
 const getGrowthIcon = (growth: number) => growth >= 0 ? <ArrowUp size={16} /> : <ArrowDown size={16} />;
 
 // --- Sub-components ---
-const StatCard = ({ title, value, growth, icon }) => (
+const StatCard: React.FC<StatCardProps> = ({ title, value, growth, icon }) => (
     <div className="bg-white rounded-2xl shadow-md p-5 border border-gray-100">
         <div className="flex items-start justify-between">
             <div>
@@ -114,7 +121,7 @@ const AnalyticsPage = ({ data }) => {
                                     fill="#8884d8"
                                     dataKey="total_sales"
                                     nameKey="name"
-                                    label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}
+                                    // label={({ percent }: any) => `${(percent * 100).toFixed(0)}%`}
                                 >
                                     {(data?.top_categories ?? []).map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />

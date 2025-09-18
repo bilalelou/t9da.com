@@ -2,8 +2,26 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useCart } from '@/contexts/CartContext';
+import { useCart } from '@/contexts/Providers';
 import { Pencil, Trash2, ArrowLeft, ShoppingBag, CreditCard, Truck, MapPin, CheckCircle } from 'lucide-react';
+
+// Types
+interface Product {
+    id: number;
+    name: string;
+    slug: string;
+    price: number;
+    originalPrice?: number;
+    thumbnail: string;
+    image?: string;
+    stock: number;
+    inStock: boolean;
+}
+
+interface CartItem extends Product {
+    quantity: number;
+    variant?: string;
+}
 
 interface OrderSummary {
   subtotal: number;
@@ -27,7 +45,7 @@ interface ShippingInfo {
 
 export default function FinalOrderReviewPage() {
   const router = useRouter();
-  const { items, removeFromCart, updateQuantity, getTotalPrice, clearCart } = useCart();
+  const { cartItems, removeFromCart, updateQuantity, subtotal, clearCart } = useCart();
   const [orderSummary, setOrderSummary] = useState<OrderSummary>({
     subtotal: 0,
     shipping: 0,
@@ -51,20 +69,20 @@ export default function FinalOrderReviewPage() {
     }
 
     // حساب ملخص الطلب
-    const subtotal = getTotalPrice();
-    const shipping = subtotal > 500 ? 0 : 50; // شحن مجاني للطلبات أكثر من 500 درهم
-    const tax = subtotal * 0.2; // ضريبة 20%
+    const orderSubtotal = subtotal;
+    const shipping = orderSubtotal > 500 ? 0 : 50; // شحن مجاني للطلبات أكثر من 500 درهم
+    const tax = orderSubtotal * 0.2; // ضريبة 20%
     const discount = parseFloat(localStorage.getItem('appliedDiscount') || '0');
-    const total = subtotal + shipping + tax - discount;
+    const total = orderSubtotal + shipping + tax - discount;
 
     setOrderSummary({
-      subtotal,
+      subtotal: orderSubtotal,
       shipping,
       tax,
       discount,
       total
     });
-  }, [getTotalPrice, router]);
+  }, [subtotal, router]);
 
   const handleQuantityChange = (productId: number, newQuantity: number) => {
     if (newQuantity <= 0) {
@@ -81,7 +99,7 @@ export default function FinalOrderReviewPage() {
       return;
     }
 
-    if (items.length === 0) {
+    if (cartItems.length === 0) {
       alert('السلة فارغة');
       return;
     }
@@ -95,7 +113,7 @@ export default function FinalOrderReviewPage() {
     try {
       // إعداد بيانات الطلب
       const orderData = {
-        items: items.map(item => ({
+        items: cartItems.map((item: CartItem) => ({
           product_id: item.id,
           quantity: item.quantity,
           price: item.price,
@@ -132,7 +150,7 @@ export default function FinalOrderReviewPage() {
     }
   };
 
-  if (items.length === 0) {
+  if (cartItems.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -267,12 +285,12 @@ export default function FinalOrderReviewPage() {
 
             {/* Cart Items */}
             <div className="bg-white rounded-lg shadow-sm p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-6">المنتجات المطلوبة ({items.length})</h2>
+              <h2 className="text-xl font-bold text-gray-900 mb-6">المنتجات المطلوبة ({cartItems.length})</h2>
               <div className="space-y-4">
-                {items.map((item) => (
+                {cartItems.map((item: CartItem) => (
                   <div key={item.id} className="flex items-center space-x-4 space-x-reverse p-4 border border-gray-200 rounded-lg hover:shadow-sm transition-shadow">
                     <img
-                      src={item.image || '/placeholder.png'}
+                      src={item.image || item.thumbnail || '/placeholder.png'}
                       alt={item.name}
                       className="w-20 h-20 object-cover rounded-lg"
                     />
@@ -376,7 +394,7 @@ export default function FinalOrderReviewPage() {
               <div className="mt-6 space-y-3">
                 <button
                   onClick={handleConfirmOrder}
-                  disabled={!shippingInfo || items.length === 0}
+                  disabled={!shippingInfo || cartItems.length === 0}
                   className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
                 >
                   تأكيد وإرسال الطلب
@@ -390,7 +408,7 @@ export default function FinalOrderReviewPage() {
                 </button>
               </div>
 
-              {(!shippingInfo || items.length === 0) && (
+              {(!shippingInfo || cartItems.length === 0) && (
                 <p className="text-sm text-red-600 mt-3 text-center">
                   {!shippingInfo ? 'يرجى إدخال معلومات الشحن أولاً' : 'السلة فارغة'}
                 </p>
