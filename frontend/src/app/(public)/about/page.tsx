@@ -112,7 +112,7 @@ const Counter = ({ value }: { value: number }) => {
 
   useEffect(() => {
     if (inView) {
-      let start = 0;
+      const start = 0;
       const end = value;
       if (start === end) return;
 

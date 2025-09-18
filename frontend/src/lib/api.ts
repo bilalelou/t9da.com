@@ -47,8 +47,19 @@ export default api;
 
 // --- Checkout API Functions ---
 export const createOrder = async (orderData: {
-  items: any[];
-  shipping_address: any;
+  items: Array<{
+    id: number;
+    name: string;
+    price: number;
+    quantity: number;
+    image?: string;
+  }>;
+  shipping_address: {
+    name: string;
+    phone: string;
+    address: string;
+    city: string;
+  };
   payment_method: string;
   subtotal: number;
   shipping_cost: number;

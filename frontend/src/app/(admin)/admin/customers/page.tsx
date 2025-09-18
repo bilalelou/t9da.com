@@ -115,7 +115,7 @@ const CustomersPage = ({ customers }) => {
     const [selectedCustomers, setSelectedCustomers] = useState<string[]>([]);
 
     const filteredAndSortedCustomers = useMemo(() => {
-        let filtered = customers.filter(customer => {
+        const filtered = customers.filter(customer => {
             const matchesSearch = customer.name.toLowerCase().includes(searchTerm.toLowerCase()) || customer.email.toLowerCase().includes(searchTerm.toLowerCase());
             const matchesStatus = selectedStatus === 'all' || customer.status === selectedStatus;
             return matchesSearch && matchesStatus;
