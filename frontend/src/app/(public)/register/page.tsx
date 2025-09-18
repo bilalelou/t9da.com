@@ -41,10 +41,6 @@ export default function RegisterPage() {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-    // --- Gemini API State ---
-    const [welcomeEmail, setWelcomeEmail] = useState('');
-    const [isGeneratingEmail, setIsGeneratingEmail] = useState(false);
-
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -55,65 +51,17 @@ export default function RegisterPage() {
         const fullName = name; 
 
         try {
-            const data = await api.register(fullName, email, phone, password, passwordConfirmation);
+            await api.register(fullName, email, phone, password, passwordConfirmation);
             setSuccess(true);
-        } catch (err: any) {
-             if (err.errors) {
-                setValidationErrors(err.errors);
+        } catch (err: unknown) {
+             if (err && typeof err === 'object' && 'errors' in err) {
+                setValidationErrors((err as { errors: Record<string, string[]> }).errors);
                 setError('الرجاء مراجعة الأخطاء في النموذج.');
             } else {
-                setError(err.message || 'فشل في إنشاء الحساب.');
+                setError((err as { message?: string }).message || 'فشل في إنشاء الحساب.');
             }
         } finally {
             setLoading(false);
-        }
-    };
-
-    // --- Gemini API Call ---
-    const handleGenerateWelcomeEmail = async () => {
-        if (!name || !email) {
-            setError('الرجاء إدخال الاسم والبريد الإلكتروني أولاً.');
-            return;
-        }
-        setIsGeneratingEmail(true);
-        setError('');
-        setWelcomeEmail('');
-
-        const systemPrompt = `أنت مساعد ودود لمتجر إلكتروني اسمه 'متجري'. مهمتك هي كتابة رسائل ترحيبية للمستخدمين الجدد.`;
-        const userQuery = `اكتب مسودة بريد إلكتروني ترحيبي قصير وشخصي باللغة العربية لمستخدم جديد اسمه "${name}". يجب أن يشكره البريد الإلكتروني على انضمامه، ويذكر اسم المتجر 'متجري'، ويسلط الضوء بإيجاز على مزايا إنشاء حساب (مثل العروض الحصرية أو إتمام الشراء بشكل أسرع). اجعل الرسالة موجزة وودية.`;
-
-        const apiKey = ""; // Leave as-is for Canvas environment
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-
-        const payload = {
-            contents: [{ parts: [{ text: userQuery }] }],
-            systemInstruction: { parts: [{ text: systemPrompt }] },
-        };
-
-        try {
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            if (!response.ok) {
-                throw new Error('فشل في إنشاء البريد الإلكتروني. الرجاء المحاولة مرة أخرى.');
-            }
-
-            const result = await response.json();
-            const candidate = result.candidates?.[0];
-
-            if (candidate && candidate.content?.parts?.[0]?.text) {
-                setWelcomeEmail(candidate.content.parts[0].text);
-            } else {
-                throw new Error('لم يتمكن الذكاء الاصطناعي من إنشاء رد.');
-            }
-
-        } catch (err: any) {
-            setError(err.message);
-        } finally {
-            setIsGeneratingEmail(false);
         }
     };
 
@@ -209,34 +157,6 @@ export default function RegisterPage() {
                                 </button>
                             </div>
                         </form>
-
-                        {/* --- Gemini Feature --- */}
-                        {name && email && (
-                            <div className="mt-6 text-center">
-                                <button
-                                    type="button"
-                                    onClick={handleGenerateWelcomeEmail}
-                                    disabled={isGeneratingEmail}
-                                    className="w-full flex items-center justify-center gap-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 py-2.5 px-4 rounded-lg transition-colors disabled:opacity-50"
-                                >
-                                    {isGeneratingEmail ? (
-                                        <>
-                                            <LoaderCircle className="animate-spin h-5 w-5" />
-                                            <span>جاري إنشاء البريد الترحيبي...</span>
-                                        </>
-                                    ) : (
-                                        "✨ إنشاء بريد ترحيبي بواسطة Gemini"
-                                    )}
-                                </button>
-                            </div>
-                        )}
-
-                        {welcomeEmail && (
-                            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                                <h4 className="font-semibold text-gray-800">مسودة البريد الإلكتروني الترحيبي:</h4>
-                                <p className="mt-2 text-sm text-gray-700 whitespace-pre-wrap">{welcomeEmail}</p>
-                            </div>
-                        )}
                         </>
                     )}
                 </div>
