@@ -1,14 +1,24 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   typescript: {
-    // تجاهل أخطاء TypeScript أثناء البناء للنشر
     ignoreBuildErrors: true,
   },
   eslint: {
-    // تجاهل أخطاء ESLint أثناء البناء للنشر
     ignoreDuringBuilds: true,
   },
+  // إعدادات مهمة لحل مشكلة CSS في النشر
+  output: 'standalone',
+  poweredByHeader: false,
+  compress: true,
+  // إعدادات الـ static file serving
+  assetPrefix: process.env.NODE_ENV === 'production' ? '' : '',
+  trailingSlash: false,
+  // إعدادات CSS
+  experimental: {
+    optimizeCss: false, // إيقاف تحسين CSS الذي قد يسبب مشاكل
+  },
   images: {
+    unoptimized: process.env.NODE_ENV === 'production',
     remotePatterns: [
       {
         protocol: 'https',
