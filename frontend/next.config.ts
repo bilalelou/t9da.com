@@ -6,17 +6,13 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  // إعدادات مهمة لحل مشكلة CSS في النشر
-  output: 'standalone',
+  // إعدادات للنشر فقط
+  ...(process.env.NODE_ENV === 'production' && {
+    output: 'standalone',
+    compress: true,
+  }),
   poweredByHeader: false,
-  compress: true,
-  // إعدادات الـ static file serving
-  assetPrefix: process.env.NODE_ENV === 'production' ? '' : '',
   trailingSlash: false,
-  // إعدادات CSS
-  experimental: {
-    optimizeCss: false, // إيقاف تحسين CSS الذي قد يسبب مشاكل
-  },
   images: {
     unoptimized: process.env.NODE_ENV === 'production',
     remotePatterns: [
