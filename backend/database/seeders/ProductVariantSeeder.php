@@ -23,13 +23,13 @@ class ProductVariantSeeder extends Seeder
 
         // === متغيرات الهواتف الذكية ===
         $this->createSmartphoneVariants();
-        
+
         // === متغيرات أجهزة الكمبيوتر ===
         $this->createLaptopVariants();
-        
+
         // === متغيرات الأزياء ===
         $this->createFashionVariants();
-        
+
         // === متغيرات الإكسسوارات ===
         $this->createAccessoryVariants();
 
@@ -179,7 +179,7 @@ class ProductVariantSeeder extends Seeder
         foreach ($variants as $variantData) {
             $color = Color::where('name', $variantData['color'])->first();
             $size = Size::where('name', $variantData['size'])->first();
-            
+
             if ($color && $size) {
                 ProductVariant::create([
                     'product_id' => $product->id,

@@ -20,7 +20,7 @@ class SizeSeeder extends Seeder
             ['name' => 'L', 'display_name' => 'كبير', 'sort_order' => 4],
             ['name' => 'XL', 'display_name' => 'كبير جداً', 'sort_order' => 5],
             ['name' => 'XXL', 'display_name' => 'كبير جداً جداً', 'sort_order' => 6],
-            
+
             // أحجام الأحذية
             ['name' => '32', 'display_name' => 'مقاس 32', 'sort_order' => 7],
             ['name' => '34', 'display_name' => 'مقاس 34', 'sort_order' => 8],
@@ -28,20 +28,20 @@ class SizeSeeder extends Seeder
             ['name' => '38', 'display_name' => 'مقاس 38', 'sort_order' => 10],
             ['name' => '40', 'display_name' => 'مقاس 40', 'sort_order' => 11],
             ['name' => '42', 'display_name' => 'مقاس 42', 'sort_order' => 12],
-            
+
             // أحجام الهواتف والأجهزة
             ['name' => '128GB', 'display_name' => '128 جيجابايت', 'sort_order' => 13],
             ['name' => '256GB', 'display_name' => '256 جيجابايت', 'sort_order' => 14],
             ['name' => '512GB', 'display_name' => '512 جيجابايت', 'sort_order' => 15],
             ['name' => '1TB', 'display_name' => '1 تيرابايت', 'sort_order' => 16],
             ['name' => '2TB', 'display_name' => '2 تيرابايت', 'sort_order' => 17],
-            
+
             // أحجام الساعات
             ['name' => '38mm', 'display_name' => '38 مليمتر', 'sort_order' => 18],
             ['name' => '41mm', 'display_name' => '41 مليمتر', 'sort_order' => 19],
             ['name' => '42mm', 'display_name' => '42 مليمتر', 'sort_order' => 20],
             ['name' => '45mm', 'display_name' => '45 مليمتر', 'sort_order' => 21],
-            
+
             // أحجام عامة
             ['name' => 'عادي', 'display_name' => 'حجم عادي', 'sort_order' => 22],
         ];

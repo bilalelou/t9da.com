@@ -264,10 +264,10 @@ class ProductSeeder extends Seeder
         foreach ($products as $productData) {
             $videos = $productData['videos'] ?? [];
             unset($productData['videos']);
-            
+
             // إنشاء المنتج
             $product = Product::create($productData);
-            
+
             // إضافة الفيديوهات إذا كانت موجودة
             foreach ($videos as $videoData) {
                 ProductVideo::create([
