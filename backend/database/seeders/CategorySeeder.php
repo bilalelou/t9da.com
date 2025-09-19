@@ -46,6 +46,14 @@ class CategorySeeder extends Seeder
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
+            [
+                'name' => 'Accessories',
+                'slug' => Str::slug('Accessories'),
+                'image' => 'accessories.png',
+                'parent_id' => null, // هذه فئة رئيسية
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
         ]);
 
         // إضافة فئات فرعية

@@ -19,6 +19,14 @@ class RolesAndUsersSeeder extends Seeder
         // إعادة تعيين الأدوار والصلاحيات المخزنة مؤقتاً
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
+        // تنظيف البيانات القديمة
+        \Illuminate\Support\Facades\DB::table('model_has_roles')->truncate();
+        \Illuminate\Support\Facades\DB::table('role_has_permissions')->truncate();
+        \Illuminate\Support\Facades\DB::table('model_has_permissions')->truncate();
+        \Illuminate\Support\Facades\DB::table('users')->truncate();
+        \Illuminate\Support\Facades\DB::table('roles')->truncate();
+        \Illuminate\Support\Facades\DB::table('permissions')->truncate();
+
         // 1. إنشاء الأدوار لكلا الحارسين (web و sanctum)
         $adminRoleWeb = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
         $customerRoleWeb = Role::firstOrCreate(['name' => 'customer', 'guard_name' => 'web']);

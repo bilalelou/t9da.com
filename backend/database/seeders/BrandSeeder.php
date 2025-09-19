@@ -31,7 +31,7 @@ class BrandSeeder extends Seeder
             [
                 'name' => 'Samsung',
                 'slug' => Str::slug('Samsung'),
-                'image' => 'samsung.jpg', // اسم الصورة، تأكد من وجودها في المجلد المناسب
+                'image' => 'samsung.jpg',
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
@@ -53,6 +53,34 @@ class BrandSeeder extends Seeder
                 'name' => 'Huawei',
                 'slug' => Str::slug('Huawei'),
                 'image' => 'huawei.jpg',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'name' => 'Nike',
+                'slug' => Str::slug('Nike'),
+                'image' => 'nike.png',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'name' => 'Adidas',
+                'slug' => Str::slug('Adidas'),
+                'image' => 'adidas.png',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'name' => 'Dell',
+                'slug' => Str::slug('Dell'),
+                'image' => 'dell.png',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'name' => 'HP',
+                'slug' => Str::slug('HP'),
+                'image' => 'hp.png',
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
