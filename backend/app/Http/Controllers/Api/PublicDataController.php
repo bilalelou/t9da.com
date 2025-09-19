@@ -155,8 +155,8 @@ class PublicDataController extends Controller
                 return [
                     'id' => $variant->id,
                     'sku' => $variant->sku,
-                    'price' => $variant->price,
-                    'quantity' => $variant->quantity,
+                    'price' => (float)($variant->price ?? 0),
+                    'stock' => (int)($variant->quantity ?? 0),
                     'color' => $variant->color ? [
                         'id' => $variant->color->id,
                         'name' => $variant->color->name,
@@ -232,7 +232,8 @@ class PublicDataController extends Controller
             'regular_price' => (float)$product->regular_price,
             'sale_price' => isset($product->sale_price) ? (float)$product->sale_price : null,
             'thumbnail' => $product->thumbnail ? asset('storage/uploads/' . $product->thumbnail) : 'https://placehold.co/400x400?text=No+Image',
-            'stock' => $product->quantity ?? 0,
+            'stock' => (int)($product->quantity ?? 0),
+            'stock_status' => $product->stock_status ?? 'instock',
         ];
     }
     /**
@@ -251,6 +252,8 @@ class PublicDataController extends Controller
             'sale_price' => isset($product->sale_price) ? (float)$product->sale_price : null,
             'thumbnail' => $product->thumbnail ? asset('storage/uploads/' . $product->thumbnail) : 'https://placehold.co/600x600?text=No+Image',
             'images' => array_map(fn($img) => asset('storage/uploads/' . $img), json_decode($product->images) ?? []),
+            'stock' => (int)($product->quantity ?? 0),
+            'stock_status' => $product->stock_status ?? 'instock',
         ];
 
         if ($withDetails) {

@@ -131,7 +131,12 @@ const api = {
 };
 
 // --- Components ---
-const formatCurrency = (price: number) => new Intl.NumberFormat('ar-MA', { style: 'currency', currency: 'MAD' }).format(price);
+const formatCurrency = (price: number) => {
+    if (typeof price !== 'number' || isNaN(price) || price === null || price === undefined) {
+        return 'غير محدد';
+    }
+    return new Intl.NumberFormat('ar-MA', { style: 'currency', currency: 'MAD' }).format(price);
+};
 
 const AccordionItem = ({ title, children, defaultOpen = false }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) => {
     const [isOpen, setIsOpen] = useState(defaultOpen);
@@ -168,7 +173,7 @@ const ProductDetailPage = ({ product, relatedProducts }: { product: Product; rel
     const { addToCart } = useCart();
     const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
     const [mainImage, setMainImage] = useState(product.thumbnail);
-    const [quantity, setQuantity] = useState(1);
+    const [quantity, setQuantity] = useState<number>(1);
     const [selectedColor, setSelectedColor] = useState<Color | null>(product.available_colors?.[0] || null);
     const [selectedSize, setSelectedSize] = useState<Size | null>(product.available_sizes?.[0] || null);
     const isFavorite = isInWishlist(product.id);
@@ -182,26 +187,35 @@ const ProductDetailPage = ({ product, relatedProducts }: { product: Product; rel
     }, [product.variants, selectedColor, selectedSize]);
 
     // حساب السعر الحالي (إما من variant أو من المنتج الأساسي)
-    const currentPrice = selectedVariant?.price || product.sale_price || product.regular_price;
-    const currentStock = selectedVariant?.stock || product.stock;
+    const currentPrice = selectedVariant?.price ?? product.sale_price ?? product.regular_price ?? 0;
+    const currentStock = Math.max(0, selectedVariant?.stock ?? product.stock ?? 0);
     
     useEffect(() => {
         setMainImage(product.thumbnail);
         setQuantity(1);
-    }, [product]);
+        // إعادة تعيين اللون والحجم إذا لم تكن متوفرة
+        if (!product.available_colors?.includes(selectedColor)) {
+            setSelectedColor(product.available_colors?.[0] || null);
+        }
+        if (!product.available_sizes?.includes(selectedSize)) {
+            setSelectedSize(product.available_sizes?.[0] || null);
+        }
+    }, [product, selectedColor, selectedSize]);
 
     const handleAddToCart = () => {
+        const finalQuantity = Math.max(1, quantity || 1);
+        const finalPrice = currentPrice || 0;
         const productToAdd = {
             ...product,
-            price: currentPrice,
+            price: finalPrice,
             image: product.thumbnail,
             inStock: currentStock > 0,
             selectedColor,
             selectedSize,
             variantSku: selectedVariant?.sku
         };
-        addToCart(productToAdd, quantity);
-        showToast(`تمت إضافة ${quantity}x "${product.name}" إلى السلة بنجاح!`);
+        addToCart(productToAdd, finalQuantity);
+        showToast(`تمت إضافة ${finalQuantity}x "${product.name}" إلى السلة بنجاح!`);
     };
 
     const handleToggleFavorite = () => {
@@ -257,17 +271,17 @@ const ProductDetailPage = ({ product, relatedProducts }: { product: Product; rel
                         <div className="mb-6">
                              {selectedVariant ? (
                                 <div className="flex items-baseline gap-3">
-                                    <span className="text-4xl font-bold text-blue-600">{formatCurrency(selectedVariant.price)}</span>
+                                    <span className="text-4xl font-bold text-blue-600">{formatCurrency(selectedVariant.price ?? 0)}</span>
                                     {product.sale_price && selectedVariant.price !== product.regular_price && (
-                                        <span className="text-2xl text-gray-400 line-through">{formatCurrency(product.regular_price)}</span>
+                                        <span className="text-2xl text-gray-400 line-through">{formatCurrency(product.regular_price ?? 0)}</span>
                                     )}
                                 </div>
                             ) : product.sale_price ? (
                                 <div className="flex items-baseline gap-3">
-                                    <span className="text-4xl font-bold text-red-600">{formatCurrency(product.sale_price)}</span>
-                                    <span className="text-2xl text-gray-400 line-through">{formatCurrency(product.regular_price)}</span>
+                                    <span className="text-4xl font-bold text-red-600">{formatCurrency(product.sale_price ?? 0)}</span>
+                                    <span className="text-2xl text-gray-400 line-through">{formatCurrency(product.regular_price ?? 0)}</span>
                                 </div>
-                            ) : (<span className="text-4xl font-bold text-gray-900">{formatCurrency(product.regular_price)}</span>)}
+                            ) : (<span className="text-4xl font-bold text-gray-900">{formatCurrency(product.regular_price ?? 0)}</span>)}
                         </div>
 
                         {/* SKU Display */}
@@ -282,7 +296,7 @@ const ProductDetailPage = ({ product, relatedProducts }: { product: Product; rel
                             {currentStock > 0 ? (
                                 <span className="text-green-600 text-sm">
                                     <CheckCircle size={16} className="inline mr-1" />
-                                    متوفر في المخزون ({currentStock} قطعة)
+                                    متوفر في المخزون ({currentStock || 0} قطعة)
                                 </span>
                             ) : (
                                 <span className="text-red-600 text-sm">غير متوفر حالياً</span>
@@ -330,17 +344,17 @@ const ProductDetailPage = ({ product, relatedProducts }: { product: Product; rel
                             <p className="font-semibold">الكمية:</p>
                             <div className="flex items-center border rounded-lg bg-white">
                                 <button 
-                                    onClick={() => setQuantity(q => Math.max(1, q-1))} 
+                                    onClick={() => setQuantity(q => Math.max(1, (q || 1) - 1))} 
                                     className="px-4 py-3 text-gray-500 hover:text-gray-800"
                                     disabled={currentStock === 0}
                                 >
                                     <Minus size={16}/>
                                 </button>
-                                <span className="px-4 font-bold text-lg">{quantity}</span>
+                                <span className="px-4 font-bold text-lg">{quantity || 1}</span>
                                 <button 
-                                    onClick={() => setQuantity(q => Math.min(currentStock, q+1))} 
+                                    onClick={() => setQuantity(q => Math.min(currentStock, (q || 1) + 1))} 
                                     className="px-4 py-3 text-gray-500 hover:text-gray-800"
-                                    disabled={currentStock === 0 || quantity >= currentStock}
+                                    disabled={currentStock === 0 || (quantity || 1) >= currentStock}
                                 >
                                     <Plus size={16}/>
                                 </button>

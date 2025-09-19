@@ -49,7 +49,30 @@ interface PaginationInfo {
 
 // --- المكونات الفرعية للصفحة ---
 
-const formatCurrency = (price: number) => new Intl.NumberFormat('ar-MA', { style: 'currency', currency: 'MAD' }).format(price);
+const formatCurrency = (price: number) => {
+    if (typeof price !== 'number' || isNaN(price) || price === null || price === undefined) {
+        return 'غير محدد';
+    }
+    return new Intl.NumberFormat('ar-MA', { style: 'currency', currency: 'MAD' }).format(price);
+};
+
+// دالة لتحويل بيانات المنتج من API إلى format المطلوب
+const transformProduct = (apiProduct: any): Product => {
+    const salePrice = apiProduct.sale_price && parseFloat(apiProduct.sale_price) > 0 ? parseFloat(apiProduct.sale_price) : null;
+    const regularPrice = parseFloat(apiProduct.regular_price) || 0;
+    
+    return {
+        id: apiProduct.id,
+        name: apiProduct.name,
+        slug: apiProduct.slug,
+        price: salePrice || regularPrice,
+        originalPrice: salePrice ? regularPrice : undefined,
+        thumbnail: apiProduct.thumbnail,
+        stock: apiProduct.stock || 0,
+        inStock: (apiProduct.stock || 0) > 0,
+        short_description: apiProduct.short_description
+    };
+};
 
 const ProductCard = React.memo(({ product }: { product: Product }) => {
     const { addToCart, cartItems } = useCart();
@@ -383,7 +406,14 @@ export default function ShopPage() {
                 api.getColors(),
                 api.getSizes()
             ]);
-            setShopData(data);
+            
+            // تحويل بيانات المنتجات إلى الشكل المطلوب
+            const transformedData = {
+                ...data,
+                products: data.products.map(transformProduct)
+            };
+            
+            setShopData(transformedData);
             setColors(colorsData);
             setSizes(sizesData);
         } catch (err) {
