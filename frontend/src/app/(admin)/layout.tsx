@@ -39,7 +39,7 @@ const AdminProviders = ({ children }: { children: React.ReactNode }) => (<ToastP
 const navigationItems = [
     { id: 'dashboard', name: 'لوحة التحكم', href: '/admin/dashboard', icon: <LayoutGrid size={20}/> },
     { id: 'products', name: 'المنتجات', href: '/admin/products', icon: <Package size={20}/> },
-    { id: 'orders', name: 'الطلبات', href: '/admin/orders', icon: <ShoppingCart size={20}/>, badge: 5 },
+    { id: 'orders', name: 'الطلبات', href: '/admin/orders', icon: <ShoppingCart size={20}/> },
     { id: 'users', name: 'المستخدمون', href: '/admin/users', icon: <Users size={20}/> },
     { id: 'categories', name: 'التصنيفات', href: '/admin/categories', icon: <Folder size={20}/> },
     { id: 'brands', name: 'الماركات', href: '/admin/brands', icon: <Tag size={20}/> },
