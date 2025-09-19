@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useCart, useWishlist } from '@/contexts/Providers'; // تأكد من أن المسار صحيح
 import { LoaderCircle, SlidersHorizontal, X, ChevronDown, ShoppingCart, CheckCircle, ChevronLeft, ChevronRight, Heart } from 'lucide-react';
+import * as api from '@/lib/api';
 
 // --- الواجهات (Interfaces) ---
 interface Product {
@@ -26,30 +27,25 @@ interface Brand {
     name: string;
     slug: string;
 }
+
+interface Color {
+    id: number;
+    name: string;
+    hex_code: string;
+}
+
+interface Size {
+    id: number;
+    name: string;
+    display_name: string;
+}
+
 interface PaginationInfo {
     total: number;
     per_page: number;
     current_page: number;
     last_page: number;
 }
-
-// --- مساعد جلب البيانات من الـ API ---
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
-const api = {
-    getShopData: async (filters: any): Promise<{ products: Product[], categories: Category[], brands: Brand[], pagination: PaginationInfo }> => {
-        const params = new URLSearchParams(filters).toString();
-        const response = await fetch(`${API_BASE_URL}/shop?${params}`);
-        if (!response.ok) throw new Error('فشل في جلب بيانات المتجر.');
-        const data = await response.json();
-        const adaptedProducts = data.products.map((p: any) => ({
-            ...p,
-            price: p.sale_price ?? p.regular_price,
-            originalPrice: p.sale_price ? p.regular_price : undefined,
-            inStock: p.stock > 0,
-        }));
-        return { ...data, products: adaptedProducts };
-    }
-};
 
 // --- المكونات الفرعية للصفحة ---
 
@@ -76,12 +72,7 @@ const ProductCard = React.memo(({ product }: { product: Product }) => {
         if (isWishlisted) {
             removeFromWishlist(product.id);
         } else {
-            addToWishlist({
-                ...product,
-                addedAt: Date.now(),
-                category: 'منتج', // يمكن تخصيص هذا حسب البيانات المتاحة
-                brand: 'ماركة'   // يمكن تخصيص هذا حسب البيانات المتاحة
-            });
+            addToWishlist(product);
         }
     };
     
@@ -172,25 +163,154 @@ const AccordionItem = ({ title, children, defaultOpen = false }: { title: string
     );
 };
 
-const FilterSidebar = ({ categories, brands, filters, setFilters, isOpen, onClose }: any) => {
-    const handleCheckboxChange = (filterKey: string, value: string) => {
-        const currentValues = filters[filterKey] ? filters[filterKey].split(',') : [];
-        const newValues = currentValues.includes(value) ? currentValues.filter((v: string) => v !== value) : [...currentValues, value];
-        setFilters((prev: any) => ({ ...prev, [filterKey]: newValues.join(','), page: 1 }));
+const FilterSidebar: React.FC<{
+    categories: Category[];
+    brands: Brand[];
+    colors: Color[];
+    sizes: Size[];
+    filters: any;
+    setFilters: any;
+    applyFilters: (filters: any) => void;
+    isOpen: boolean;
+    onClose: () => void;
+}> = ({ categories, brands, colors, sizes, filters, setFilters, applyFilters, isOpen, onClose }) => {
+    const [localFilters, setLocalFilters] = useState({
+        categories: filters.categories || [],
+        brands: filters.brands || [],
+        color: filters.color || '',
+        size: filters.size || ''
+    });
+
+    const handleCategoryChange = (categoryName: string) => {
+        const newCategories = localFilters.categories.includes(categoryName)
+            ? localFilters.categories.filter((c: string) => c !== categoryName)
+            : [...localFilters.categories, categoryName];
+        
+        setLocalFilters(prev => ({ ...prev, categories: newCategories }));
+        applyFilters({ categories: newCategories });
+    };
+
+    const handleBrandChange = (brandName: string) => {
+        const newBrands = localFilters.brands.includes(brandName)
+            ? localFilters.brands.filter((b: string) => b !== brandName)
+            : [...localFilters.brands, brandName];
+        
+        setLocalFilters(prev => ({ ...prev, brands: newBrands }));
+        applyFilters({ brands: newBrands });
+    };
+
+    const handleColorChange = (colorName: string) => {
+        const newColor = localFilters.color === colorName ? '' : colorName;
+        setLocalFilters(prev => ({ ...prev, color: newColor }));
+        applyFilters({ color: newColor });
+    };
+
+    const handleSizeChange = (sizeName: string) => {
+        const newSize = localFilters.size === sizeName ? '' : sizeName;
+        setLocalFilters(prev => ({ ...prev, size: newSize }));
+        applyFilters({ size: newSize });
+    };
+
+    const clearAllFilters = () => {
+        const clearedFilters = { categories: [], brands: [], color: '', size: '' };
+        setLocalFilters(clearedFilters);
+        applyFilters(clearedFilters);
     };
 
     const content = (
        <div className="px-4">
-            <div className="flex justify-between items-center py-4 border-b border-gray-200 mb-2"><h3 className="font-bold text-lg text-gray-900">الفلترة</h3><button onClick={() => setFilters({ page: 1, sort: filters.sort, per_page: filters.per_page })} className="text-sm text-red-500 hover:underline">مسح الكل</button></div>
-            <AccordionItem title="التصنيفات" defaultOpen={true}><ul className="space-y-3 max-h-60 overflow-y-auto pr-2">{categories.map((c: Category) => (<li key={c.id}><label className="flex items-center cursor-pointer"><input type="checkbox" checked={(filters.categories || '').includes(c.slug)} onChange={() => handleCheckboxChange('categories', c.slug)} className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"/> <span className="mr-3 text-sm text-gray-700">{c.name}</span></label></li>))}</ul></AccordionItem>
-            <AccordionItem title="الماركات"><ul className="space-y-3 max-h-60 overflow-y-auto pr-2">{brands.map((b: Brand) => (<li key={b.id}><label className="flex items-center cursor-pointer"><input type="checkbox" checked={(filters.brands || '').includes(b.slug)} onChange={() => handleCheckboxChange('brands', b.slug)} className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"/> <span className="mr-3 text-sm text-gray-700">{b.name}</span></label></li>))}</ul></AccordionItem>
-            <AccordionItem title="السعر" defaultOpen={true}><div className="pt-2"><input type="range" min="0" max="10000" value={filters.max_price || 10000} onChange={e => setFilters((prev: any) => ({...prev, max_price: e.target.value, page: 1}))} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"/><div className="flex justify-between text-sm text-gray-600 mt-2"><span>0 د.م.</span><span>{formatCurrency(filters.max_price || 10000)}</span></div></div></AccordionItem>
+            <div className="flex justify-between items-center py-4 border-b border-gray-200 mb-2">
+                <h3 className="font-bold text-lg text-gray-900">الفلترة</h3>
+                <button onClick={clearAllFilters} className="text-sm text-red-500 hover:underline">مسح الكل</button>
+            </div>
+            
+            <AccordionItem title="التصنيفات" defaultOpen={true}>
+                <ul className="space-y-3 max-h-60 overflow-y-auto pr-2">
+                    {categories.map((c: Category) => (
+                        <li key={c.id}>
+                            <label className="flex items-center cursor-pointer">
+                                <input 
+                                    type="checkbox" 
+                                    checked={localFilters.categories.includes(c.name)} 
+                                    onChange={() => handleCategoryChange(c.name)} 
+                                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                /> 
+                                <span className="mr-3 text-sm text-gray-700">{c.name}</span>
+                            </label>
+                        </li>
+                    ))}
+                </ul>
+            </AccordionItem>
+            
+            <AccordionItem title="الماركات">
+                <ul className="space-y-3 max-h-60 overflow-y-auto pr-2">
+                    {brands.map((b: Brand) => (
+                        <li key={b.id}>
+                            <label className="flex items-center cursor-pointer">
+                                <input 
+                                    type="checkbox" 
+                                    checked={localFilters.brands.includes(b.name)} 
+                                    onChange={() => handleBrandChange(b.name)} 
+                                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                /> 
+                                <span className="mr-3 text-sm text-gray-700">{b.name}</span>
+                            </label>
+                        </li>
+                    ))}
+                </ul>
+            </AccordionItem>
+            
+            <AccordionItem title="الألوان">
+                <div className="grid grid-cols-3 gap-3 max-h-60 overflow-y-auto pr-2">
+                    {colors.map((color: Color) => (
+                        <div key={color.id} className="flex flex-col items-center">
+                            <label className="flex flex-col items-center cursor-pointer">
+                                <input 
+                                    type="radio" 
+                                    name="color"
+                                    checked={localFilters.color === color.name} 
+                                    onChange={() => handleColorChange(color.name)} 
+                                    className="sr-only"
+                                /> 
+                                <div 
+                                    className={`w-8 h-8 rounded-full border-2 ${localFilters.color === color.name ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-300'}`} 
+                                    style={{ backgroundColor: color.hex_code }}
+                                ></div>
+                                <span className="text-xs text-gray-600 mt-1">{color.name}</span>
+                            </label>
+                        </div>
+                    ))}
+                </div>
+            </AccordionItem>
+            
+            <AccordionItem title="الأحجام">
+                <div className="grid grid-cols-4 gap-2 max-h-60 overflow-y-auto pr-2">
+                    {sizes.map((size: Size) => (
+                        <div key={size.id}>
+                            <label className="flex items-center justify-center cursor-pointer">
+                                <input 
+                                    type="radio" 
+                                    name="size"
+                                    checked={localFilters.size === size.name} 
+                                    onChange={() => handleSizeChange(size.name)} 
+                                    className="sr-only"
+                                /> 
+                                <div 
+                                    className={`w-12 h-8 border-2 rounded-md flex items-center justify-center text-xs font-medium ${localFilters.size === size.name ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-300 text-gray-600 hover:border-gray-400'}`}
+                                >
+                                    {size.name}
+                                </div>
+                            </label>
+                        </div>
+                    ))}
+                </div>
+            </AccordionItem>
         </div>
     );
     
     return (
         <>
-            <aside className={`fixed top-0 right-0 h-full w-full max-w-xs bg-white shadow-xl z-[100] transform transition-transform lg:relative lg:max-w-none lg:w-72 lg:flex-shrink-0 lg:h-auto lg:shadow-none lg:border lg:rounded-2xl lg:bg-white lg:sticky lg:top-24 ${isOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}`}>
+            <aside className={`fixed top-0 right-0 h-full w-full max-w-xs bg-white shadow-xl z-[100] transform transition-transform lg:max-w-none lg:w-72 lg:flex-shrink-0 lg:h-auto lg:shadow-none lg:border lg:rounded-2xl lg:bg-white lg:sticky lg:top-24 ${isOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}`}>
                 <div className="flex justify-between items-center p-4 border-b lg:hidden"><h3 className="font-bold">الفلترة</h3><button onClick={onClose}><X size={24}/></button></div>
                 <div className="overflow-y-auto h-[calc(100vh-60px)] lg:h-auto">{content}</div>
             </aside>
@@ -211,13 +331,17 @@ const Pagination = ({ pagination, onPageChange }: { pagination: PaginationInfo, 
 };
 
 const ActiveFilters = ({ filters, setFilters, categories, brands }: any) => {
-    const activeCategories = (filters.categories || '').split(',').filter(Boolean).map((slug: string) => categories.find((c: Category) => c.slug === slug)?.name).filter(Boolean);
-    const activeBrands = (filters.brands || '').split(',').filter(Boolean).map((slug: string) => brands.find((b: Brand) => b.slug === slug)?.name).filter(Boolean);
+    // تحويل arrays إلى arrays إذا لم تكن كذلك
+    const categoriesArray = Array.isArray(filters.categories) ? filters.categories : (filters.categories || '').split(',').filter(Boolean);
+    const brandsArray = Array.isArray(filters.brands) ? filters.brands : (filters.brands || '').split(',').filter(Boolean);
+    
+    const activeCategories = categoriesArray.map((slug: string) => categories.find((c: Category) => c.slug === slug)?.name).filter(Boolean);
+    const activeBrands = brandsArray.map((slug: string) => brands.find((b: Brand) => b.slug === slug)?.name).filter(Boolean);
 
     const removeFilter = (key: string, value: string) => {
         const slug = key === 'categories' ? categories.find((c: Category) => c.name === value)?.slug : brands.find((b: Brand) => b.name === value)?.slug;
-        const current = filters[key].split(',');
-        const updated = current.filter((item: string) => item !== slug).join(',');
+        const currentArray = Array.isArray(filters[key]) ? filters[key] : (filters[key] || '').split(',').filter(Boolean);
+        const updated = currentArray.filter((item: string) => item !== slug);
         setFilters((prev: any) => ({...prev, [key]: updated}));
     };
     
@@ -235,19 +359,35 @@ const ActiveFilters = ({ filters, setFilters, categories, brands }: any) => {
 // --- المكون الرئيسي لصفحة المتجر ---
 export default function ShopPage() {
     const [shopData, setShopData] = useState<{ products: Product[], categories: Category[], brands: Brand[], pagination: PaginationInfo } | null>(null);
+    const [colors, setColors] = useState<Color[]>([]);
+    const [sizes, setSizes] = useState<Size[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isFilterOpen, setIsFilterOpen] = useState(false);
-    const [filters, setFilters] = useState({ page: 1, sort: 'latest', per_page: 9 });
+    const [filters, setFilters] = useState({ 
+        page: 1, 
+        sort: 'latest', 
+        per_page: 9,
+        color: '',
+        size: '',
+        categories: [] as string[],
+        brands: [] as string[]
+    });
 
     const fetchShopData = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
-            const data = await api.getShopData(filters);
+            const [data, colorsData, sizesData] = await Promise.all([
+                api.getShopData(filters),
+                api.getColors(),
+                api.getSizes()
+            ]);
             setShopData(data);
-        } catch (err: any) {
-            setError(err.message);
+            setColors(colorsData);
+            setSizes(sizesData);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'حدث خطأ غير معروف');
         } finally {
             setLoading(false);
         }
@@ -256,6 +396,16 @@ export default function ShopPage() {
     useEffect(() => {
         fetchShopData();
     }, [fetchShopData]);
+    
+    const applyFilters = (newFilters: {
+        categories?: string[];
+        brands?: string[];
+        sort?: string;
+        color?: string;
+        size?: string;
+    }) => {
+        setFilters(prev => ({ ...prev, page: 1, ...newFilters }));
+    };
     
     const handlePageChange = (newPage: number) => {
         if(shopData && newPage > 0 && newPage <= shopData.pagination.last_page) {
@@ -279,7 +429,17 @@ export default function ShopPage() {
                 
                 <div className="flex flex-col lg:flex-row-reverse items-start gap-8">
                     
-                    <FilterSidebar categories={categories} brands={brands} filters={filters} setFilters={setFilters} isOpen={isFilterOpen} onClose={() => setIsFilterOpen(false)} />
+                    <FilterSidebar 
+                        categories={categories} 
+                        brands={brands} 
+                        colors={colors}
+                        sizes={sizes}
+                        filters={filters} 
+                        setFilters={setFilters}
+                        applyFilters={applyFilters}
+                        isOpen={isFilterOpen} 
+                        onClose={() => setIsFilterOpen(false)} 
+                    />
                     
                     <main className="flex-grow w-full">
                         <div className="flex flex-col sm:flex-row justify-between items-center mb-6 p-4 bg-white rounded-2xl border border-gray-200">

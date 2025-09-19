@@ -48,9 +48,11 @@ class PublicDataController extends Controller
     public function shop(Request $request)
     {
         try {
-            // جلب كل التصنيفات والماركات لعرضها في الفلتر
+            // جلب كل التصنيفات والماركات والألوان والأحجام لعرضها في الفلتر
             $categories = Category::all(['id', 'name', 'slug']);
             $brands = Brand::all(['id', 'name', 'slug']);
+            $colors = \App\Models\Color::where('is_active', true)->get(['id', 'name', 'hex_code']);
+            $sizes = \App\Models\Size::where('is_active', true)->get(['id', 'name', 'display_name']);
 
             // بناء استعلام المنتجات
             $query = Product::query()->with('category', 'brand');
@@ -68,6 +70,22 @@ class PublicDataController extends Controller
                 $brandSlugs = explode(',', $request->input('brands'));
                 $query->whereHas('brand', function ($q) use ($brandSlugs) {
                     $q->whereIn('slug', $brandSlugs);
+                });
+            }
+
+            // الفلترة حسب اللون
+            if ($request->has('color') && !empty($request->input('color'))) {
+                $colorName = $request->input('color');
+                $query->whereHas('variants.color', function ($q) use ($colorName) {
+                    $q->where('name', $colorName);
+                });
+            }
+
+            // الفلترة حسب الحجم
+            if ($request->has('size') && !empty($request->input('size'))) {
+                $sizeName = $request->input('size');
+                $query->whereHas('variants.size', function ($q) use ($sizeName) {
+                    $q->where('name', $sizeName);
                 });
             }
 
@@ -98,6 +116,8 @@ class PublicDataController extends Controller
                 'products' => $formattedProducts,
                 'categories' => $categories,
                 'brands' => $brands,
+                'colors' => $colors,
+                'sizes' => $sizes,
                 'pagination' => [
                     'total' => $products->total(),
                     'per_page' => $products->perPage(),
@@ -115,7 +135,9 @@ class PublicDataController extends Controller
     public function show($slug)
     {
         try {
-            $product = Product::where('slug', $slug)->with('category')->firstOrFail();
+            $product = Product::where('slug', $slug)
+                ->with(['category', 'variants.color', 'variants.size'])
+                ->firstOrFail();
 
             // جلب المنتجات ذات الصلة (من نفس التصنيف)
             $relatedProducts = Product::where('category_id', $product->category_id)
@@ -125,8 +147,51 @@ class PublicDataController extends Controller
                 ->get()
                 ->map(fn($p) => $this->formatProduct($p));
 
+            // تنسيق بيانات المنتج مع المتغيرات
+            $formattedProduct = $this->formatProduct($product, true);
+
+            // إضافة معلومات المتغيرات
+            $formattedProduct['variants'] = $product->variants->map(function($variant) {
+                return [
+                    'id' => $variant->id,
+                    'sku' => $variant->sku,
+                    'price' => $variant->price,
+                    'quantity' => $variant->quantity,
+                    'color' => $variant->color ? [
+                        'id' => $variant->color->id,
+                        'name' => $variant->color->name,
+                        'hex_code' => $variant->color->hex_code
+                    ] : null,
+                    'size' => $variant->size ? [
+                        'id' => $variant->size->id,
+                        'name' => $variant->size->name,
+                        'display_name' => $variant->size->display_name
+                    ] : null,
+                ];
+            });
+
+            // استخراج الألوان والأحجام المتاحة
+            $availableColors = $product->variants->whereNotNull('color')->pluck('color')->unique('id')->values();
+            $availableSizes = $product->variants->whereNotNull('size')->pluck('size')->unique('id')->values();
+
+            $formattedProduct['available_colors'] = $availableColors->map(function($color) {
+                return [
+                    'id' => $color->id,
+                    'name' => $color->name,
+                    'hex_code' => $color->hex_code
+                ];
+            });
+
+            $formattedProduct['available_sizes'] = $availableSizes->map(function($size) {
+                return [
+                    'id' => $size->id,
+                    'name' => $size->name,
+                    'display_name' => $size->display_name
+                ];
+            });
+
             return response()->json([
-                'product' => $this->formatProduct($product, true), // true لتضمين الوصف الكامل
+                'product' => $formattedProduct,
                 'related' => $relatedProducts,
             ]);
 
@@ -138,7 +203,7 @@ class PublicDataController extends Controller
         }
     }
 
-        public function productsByIds(Request $request)
+    public function productsByIds(Request $request)
     {
         $validated = $request->validate([
             'ids' => 'required|array',

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import ProductVariantsManager from '@/components/admin/ProductVariantsManager';
 
 // Icons
 import { 
@@ -36,6 +37,18 @@ interface Brand {
     id: number;
     name: string;
     logo?: string;
+}
+
+interface ProductVariant {
+    id?: number;
+    color_id: number | null;
+    size_id: number | null;
+    sku: string;
+    price: number;
+    compare_price?: number;
+    quantity: number;
+    image?: string;
+    is_active: boolean;
 }
 
 // --- API Helper ---
@@ -89,6 +102,9 @@ export default function AddProductPage() {
     const [quantity, setQuantity] = useState('');
     const [categoryId, setCategoryId] = useState('');
     const [brandId, setBrandId] = useState(''); // جديد - العلامة التجارية (اختياري)
+    
+    // Product variants
+    const [productVariants, setProductVariants] = useState<ProductVariant[]>([]);
     
     // Main image
     const [image, setImage] = useState<File | null>(null);
@@ -197,6 +213,9 @@ export default function AddProductPage() {
         if (brandId) {
             formData.append('brand_id', brandId);
         }
+
+        // Add has_variants flag
+        formData.append('has_variants', productVariants.length > 0 ? 'true' : 'false');
         
         if (image) {
             formData.append('image', image);
@@ -229,6 +248,31 @@ export default function AddProductPage() {
 
         try {
             const result = await api.addProduct(formData, token);
+            
+            // إضافة المتغيرات إذا كانت موجودة
+            if (productVariants.length > 0 && result.data?.id) {
+                try {
+                    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api';
+                    const variantsResponse = await fetch(`${apiUrl}/product-variants/bulk`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            product_id: result.data.id,
+                            variants: productVariants
+                        }),
+                    });
+
+                    if (!variantsResponse.ok) {
+                        console.error('فشل في إضافة متغيرات المنتج');
+                    }
+                } catch (variantError) {
+                    console.error('خطأ في إضافة المتغيرات:', variantError);
+                }
+            }
             
             if (primaryVideo.url || primaryVideo.file || secondaryVideo.url || secondaryVideo.file) {
                 const confirmManage = confirm('تم حفظ المنتج مع الفيديوهات. هل تريد إدارة المزيد من الفيديوهات؟');
@@ -492,6 +536,12 @@ export default function AddProductPage() {
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Product Variants Manager */}
+                            <ProductVariantsManager 
+                                onVariantsChange={setProductVariants}
+                                initialVariants={productVariants}
+                            />
                         </div>
 
                         {/* الشريط الجانبي - الوسائط */}

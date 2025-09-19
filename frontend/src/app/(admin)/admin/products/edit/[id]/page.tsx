@@ -4,6 +4,7 @@ import { useEffect, useState, createContext, useContext, useCallback } from 'rea
 import type { ChangeEvent, FormEvent } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
+import ProductVariantsManager from '@/components/admin/ProductVariantsManager';
 
 import {
   Package,
@@ -49,10 +50,12 @@ interface Product {
   category_id: number;
   brand_id?: number;
   featured: boolean;
+  has_variants?: boolean;
   status: string;
   thumbnail: string | null;
   images?: string[];
   videos?: ProductVideo[];
+  variants?: ProductVariant[];
 }
 
 interface Category {
@@ -63,6 +66,18 @@ interface Category {
 interface Brand {
   id: number;
   name: string;
+}
+
+interface ProductVariant {
+  id?: number;
+  color_id: number | null;
+  size_id: number | null;
+  sku: string;
+  price: number;
+  compare_price?: number;
+  quantity: number;
+  image?: string;
+  is_active: boolean;
 }
 
 interface VideoData {
@@ -80,7 +95,25 @@ const api = {
     const res = await fetch(`${API_BASE}/test/products/${id}`, { headers: { Accept: 'application/json' } });
     if (!res.ok) throw new Error('خطأ في تحميل المنتج');
     const data = await res.json();
-    return (data && data.data) ? data.data : data;
+    const product = (data && data.data) ? data.data : data;
+    
+    // جلب variants للمنتج إذا كان لديه variants
+    if (product && product.has_variants) {
+      try {
+        const variantsRes = await fetch(`${API_BASE}/public/products/${product.id}/variants`, {
+          headers: { Accept: 'application/json' }
+        });
+        if (variantsRes.ok) {
+          const variantsData = await variantsRes.json();
+          product.variants = variantsData.success ? variantsData.data : [];
+        }
+      } catch (error) {
+        console.error('Error fetching variants:', error);
+        product.variants = [];
+      }
+    }
+    
+    return product;
   },
   getCategories: async (): Promise<Category[]> => {
     const res = await fetch(`${API_BASE}/test/categories`, { headers: { Accept: 'application/json' } });
@@ -93,6 +126,17 @@ const api = {
     if (!res.ok) throw new Error('خطأ في تحميل الماركات');
     const data = await res.json();
     return Array.isArray(data?.data) ? data.data : data;
+  },
+  getProductVariants: async (productId: string, token?: string): Promise<ProductVariant[]> => {
+    const res = await fetch(`${API_BASE}/product-variants?product_id=${productId}`, {
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        Accept: 'application/json',
+      },
+    });
+    if (!res.ok) throw new Error('خطأ في تحميل متغيرات المنتج');
+    const data = await res.json();
+    return Array.isArray(data?.data) ? data.data : [];
   },
   updateProduct: async (id: string, productData: FormData, token?: string) => {
     const res = await fetch(`${API_BASE}/products/${id}`, {
@@ -199,6 +243,9 @@ function EditProductPageInner() {
   const [videos, setVideos] = useState<ProductVideo[]>([]);
   const [newVideo, setNewVideo] = useState<VideoData>({ video_url: '', title: '', description: '' });
 
+  // Product variants state
+  const [productVariants, setProductVariants] = useState<ProductVariant[]>([]);
+
   // toast will show transient messages; no local banners needed
 
   useEffect(() => {
@@ -216,6 +263,17 @@ function EditProductPageInner() {
         setCategories(cats);
         setBrands(brs);
         setVideos(p.videos || []);
+        
+        // Load product variants if the product has variants
+        if (p.has_variants) {
+          try {
+            const variants = await api.getProductVariants(id, getToken());
+            setProductVariants(variants);
+          } catch (error) {
+            console.error('Error loading variants:', error);
+          }
+        }
+        
         setFormData({
           name: p.name || '',
           description: p.description || '',
@@ -608,6 +666,14 @@ function EditProductPageInner() {
             </div>
           </div>
 
+          {/* Product Variants Management */}
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-white/20 shadow-xl p-8">
+            <ProductVariantsManager 
+              onVariantsChange={setProductVariants}
+              initialVariants={productVariants}
+            />
+          </div>
+
           <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-white/20 shadow-xl p-8">
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-md">
@@ -773,6 +839,24 @@ function EditProductPageInner() {
                 إضافة الفيديو
               </button>
             </div>
+          </div>
+
+          {/* Product Variants Section */}
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-white/20 shadow-xl p-8">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-md">
+                <Package className="w-5 h-5 text-white" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-800">متغيرات المنتج</h2>
+            </div>
+
+            <ProductVariantsManager
+              initialVariants={product?.variants || []}
+              onVariantsChange={(variants) => {
+                // يمكن إضافة logic هنا لحفظ الـ variants
+                console.log('Variants updated:', variants);
+              }}
+            />
           </div>
 
           <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-white/20 shadow-xl p-8">

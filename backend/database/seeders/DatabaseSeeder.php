@@ -17,6 +17,8 @@ class DatabaseSeeder extends Seeder
             RolesAndUsersSeeder::class,
             BrandSeeder::class,
             CategorySeeder::class,
+            ColorSeeder::class,
+            SizeSeeder::class,
             ProductSeeder::class,
         ]);
     }

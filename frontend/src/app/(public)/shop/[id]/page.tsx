@@ -6,6 +6,27 @@ import { ShoppingCart, LoaderCircle, Star, CheckCircle, Heart, Share2, Minus, Pl
 import ProductVideoGallery from '@/components/ProductVideoGallery';
 
 // --- Interfaces ---
+interface Color {
+    id: number;
+    name: string;
+    hex_code: string;
+}
+
+interface Size {
+    id: number;
+    name: string;
+    display_name: string;
+}
+
+interface ProductVariant {
+    id: number;
+    sku: string;
+    price: number;
+    stock: number;
+    color: Color | null;
+    size: Size | null;
+}
+
 interface Product {
     id: number;
     name: string;
@@ -17,10 +38,10 @@ interface Product {
     description: string;
     category: string;
     SKU: string;
-    stock: number; // Added stock
-    // بيانات وهمية للخيارات
-    available_colors?: string[];
-    available_sizes?: string[];
+    stock: number;
+    variants?: ProductVariant[];
+    available_colors?: Color[];
+    available_sizes?: Size[];
 }
 
 // --- Toast & Favorites Contexts ---
@@ -78,14 +99,41 @@ const api = {
             if(response.status === 404) throw new Error('المنتج المطلوب غير موجود.');
             throw new Error('فشل في جلب بيانات المنتج.');
         }
-        return response.json();
+        const data = await response.json();
+        
+        // جلب variants للمنتج
+        if (data.product && data.product.has_variants) {
+            try {
+                const variantsResponse = await fetch(`${API_BASE_URL}/public/products/${data.product.id}/variants`);
+                if (variantsResponse.ok) {
+                    const variantsData = await variantsResponse.json();
+                    data.product.variants = variantsData.data;
+                    
+                    // استخراج الألوان والأحجام المتاحة من variants
+                    const colors = new Map();
+                    const sizes = new Map();
+                    
+                    variantsData.data.forEach((variant: ProductVariant) => {
+                        if (variant.color) colors.set(variant.color.id, variant.color);
+                        if (variant.size) sizes.set(variant.size.id, variant.size);
+                    });
+                    
+                    data.product.available_colors = Array.from(colors.values());
+                    data.product.available_sizes = Array.from(sizes.values());
+                }
+            } catch (error) {
+                console.error('Error fetching variants:', error);
+            }
+        }
+        
+        return data;
     }
 };
 
 // --- Components ---
 const formatCurrency = (price: number) => new Intl.NumberFormat('ar-MA', { style: 'currency', currency: 'MAD' }).format(price);
 
-const AccordionItem = ({ title, children, defaultOpen = false }) => {
+const AccordionItem = ({ title, children, defaultOpen = false }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) => {
     const [isOpen, setIsOpen] = useState(defaultOpen);
     return (
         <div className="border-b">
@@ -121,9 +169,21 @@ const ProductDetailPage = ({ product, relatedProducts }: { product: Product; rel
     const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
     const [mainImage, setMainImage] = useState(product.thumbnail);
     const [quantity, setQuantity] = useState(1);
-    const [selectedColor, setSelectedColor] = useState(product.available_colors?.[0]);
-    const [selectedSize, setSelectedSize] = useState(product.available_sizes?.[0]);
+    const [selectedColor, setSelectedColor] = useState<Color | null>(product.available_colors?.[0] || null);
+    const [selectedSize, setSelectedSize] = useState<Size | null>(product.available_sizes?.[0] || null);
     const isFavorite = isInWishlist(product.id);
+
+    // حساب variant المحدد الحالي
+    const selectedVariant = useMemo(() => {
+        if (!product.variants || !selectedColor || !selectedSize) return null;
+        return product.variants.find(variant => 
+            variant.color?.id === selectedColor.id && variant.size?.id === selectedSize.id
+        );
+    }, [product.variants, selectedColor, selectedSize]);
+
+    // حساب السعر الحالي (إما من variant أو من المنتج الأساسي)
+    const currentPrice = selectedVariant?.price || product.sale_price || product.regular_price;
+    const currentStock = selectedVariant?.stock || product.stock;
     
     useEffect(() => {
         setMainImage(product.thumbnail);
@@ -132,15 +192,13 @@ const ProductDetailPage = ({ product, relatedProducts }: { product: Product; rel
 
     const handleAddToCart = () => {
         const productToAdd = {
-            id: product.id,
-            name: product.name,
-            slug: product.slug,
-            price: product.sale_price || product.regular_price,
-            image: product.thumbnail, // Use thumbnail
-            stock: product.stock,
-            inStock: product.stock > 0,
+            ...product,
+            price: currentPrice,
+            image: product.thumbnail,
+            inStock: currentStock > 0,
             selectedColor,
-            selectedSize
+            selectedSize,
+            variantSku: selectedVariant?.sku
         };
         addToCart(productToAdd, quantity);
         showToast(`تمت إضافة ${quantity}x "${product.name}" إلى السلة بنجاح!`);
@@ -151,20 +209,12 @@ const ProductDetailPage = ({ product, relatedProducts }: { product: Product; rel
             removeFromWishlist(product.id);
             showToast('تم إزالة المنتج من المفضلة');
         } else {
-            const wishlistItem = {
-                id: product.id,
-                name: product.name,
-                slug: product.slug,
-                price: product.sale_price || product.regular_price,
-                originalPrice: product.sale_price ? product.regular_price : undefined,
-                image: product.thumbnail, // Use thumbnail
-                inStock: product.stock > 0,
-                stock: product.stock,
-                addedAt: Date.now(),
-                category: product.category,
-                brand: 'ماركة' // يمكن تخصيص هذا حسب البيانات المتاحة
+            const productForWishlist = {
+                ...product,
+                price: currentPrice,
+                inStock: currentStock > 0
             };
-            addToWishlist(wishlistItem);
+            addToWishlist(productForWishlist);
             showToast('تم إضافة المنتج للمفضلة');
         }
     };
@@ -205,12 +255,38 @@ const ProductDetailPage = ({ product, relatedProducts }: { product: Product; rel
                         </div>
                         
                         <div className="mb-6">
-                             {product.sale_price ? (
+                             {selectedVariant ? (
+                                <div className="flex items-baseline gap-3">
+                                    <span className="text-4xl font-bold text-blue-600">{formatCurrency(selectedVariant.price)}</span>
+                                    {product.sale_price && selectedVariant.price !== product.regular_price && (
+                                        <span className="text-2xl text-gray-400 line-through">{formatCurrency(product.regular_price)}</span>
+                                    )}
+                                </div>
+                            ) : product.sale_price ? (
                                 <div className="flex items-baseline gap-3">
                                     <span className="text-4xl font-bold text-red-600">{formatCurrency(product.sale_price)}</span>
                                     <span className="text-2xl text-gray-400 line-through">{formatCurrency(product.regular_price)}</span>
                                 </div>
                             ) : (<span className="text-4xl font-bold text-gray-900">{formatCurrency(product.regular_price)}</span>)}
+                        </div>
+
+                        {/* SKU Display */}
+                        {selectedVariant?.sku && (
+                            <div className="mb-4">
+                                <span className="text-sm text-gray-500">رقم المنتج: {selectedVariant.sku}</span>
+                            </div>
+                        )}
+
+                        {/* Stock Status */}
+                        <div className="mb-4">
+                            {currentStock > 0 ? (
+                                <span className="text-green-600 text-sm">
+                                    <CheckCircle size={16} className="inline mr-1" />
+                                    متوفر في المخزون ({currentStock} قطعة)
+                                </span>
+                            ) : (
+                                <span className="text-red-600 text-sm">غير متوفر حالياً</span>
+                            )}
                         </div>
 
                          {/* Color Options */}
@@ -219,7 +295,13 @@ const ProductDetailPage = ({ product, relatedProducts }: { product: Product; rel
                                 <p className="font-semibold mb-2">اللون:</p>
                                 <div className="flex items-center gap-2">
                                     {(product.available_colors || []).map(color => (
-                                        <button key={color} onClick={() => setSelectedColor(color)} className={`w-8 h-8 rounded-full border-2 transition-all ${selectedColor === color ? 'ring-2 ring-offset-1 ring-blue-500 border-white' : 'border-gray-200'}`} style={{backgroundColor: color}}></button>
+                                        <button 
+                                            key={color.id} 
+                                            onClick={() => setSelectedColor(color)} 
+                                            className={`w-8 h-8 rounded-full border-2 transition-all ${selectedColor?.id === color.id ? 'ring-2 ring-offset-1 ring-blue-500 border-white' : 'border-gray-200'}`} 
+                                            style={{backgroundColor: color.hex_code}}
+                                            title={color.name}
+                                        ></button>
                                     ))}
                                 </div>
                             </div>
@@ -232,7 +314,13 @@ const ProductDetailPage = ({ product, relatedProducts }: { product: Product; rel
                                 <p className="font-semibold mb-2">المقاس:</p>
                                 <div className="flex items-center gap-2">
                                     {(product.available_sizes || []).map(size => (
-                                        <button key={size} onClick={() => setSelectedSize(size)} className={`px-4 py-2 rounded-lg border text-sm font-semibold transition-colors ${selectedSize === size ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 hover:bg-gray-100'}`}>{size}</button>
+                                        <button 
+                                            key={size.id} 
+                                            onClick={() => setSelectedSize(size)} 
+                                            className={`px-4 py-2 rounded-lg border text-sm font-semibold transition-colors ${selectedSize?.id === size.id ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 hover:bg-gray-100'}`}
+                                        >
+                                            {size.display_name}
+                                        </button>
                                     ))}
                                 </div>
                             </div>
@@ -241,15 +329,43 @@ const ProductDetailPage = ({ product, relatedProducts }: { product: Product; rel
                         <div className="flex items-center gap-4 my-6">
                             <p className="font-semibold">الكمية:</p>
                             <div className="flex items-center border rounded-lg bg-white">
-                                <button onClick={() => setQuantity(q => Math.max(1, q-1))} className="px-4 py-3 text-gray-500 hover:text-gray-800"><Minus size={16}/></button>
+                                <button 
+                                    onClick={() => setQuantity(q => Math.max(1, q-1))} 
+                                    className="px-4 py-3 text-gray-500 hover:text-gray-800"
+                                    disabled={currentStock === 0}
+                                >
+                                    <Minus size={16}/>
+                                </button>
                                 <span className="px-4 font-bold text-lg">{quantity}</span>
-                                <button onClick={() => setQuantity(q => q+1)} className="px-4 py-3 text-gray-500 hover:text-gray-800"><Plus size={16}/></button>
+                                <button 
+                                    onClick={() => setQuantity(q => Math.min(currentStock, q+1))} 
+                                    className="px-4 py-3 text-gray-500 hover:text-gray-800"
+                                    disabled={currentStock === 0 || quantity >= currentStock}
+                                >
+                                    <Plus size={16}/>
+                                </button>
                             </div>
                         </div>
 
                         <div className="flex items-stretch gap-3">
-                            <button onClick={handleAddToCart} className="flex-grow bg-blue-600 text-white font-bold py-4 px-8 rounded-lg hover:bg-blue-700 transition flex items-center justify-center gap-3">
-                                <ShoppingCart size={22} /><span>أضف إلى السلة</span>
+                            <button 
+                                onClick={handleAddToCart} 
+                                disabled={currentStock === 0 || (product.variants && (!selectedColor || !selectedSize))}
+                                className={`flex-grow font-bold py-4 px-8 rounded-lg transition flex items-center justify-center gap-3 ${
+                                    currentStock === 0 || (product.variants && (!selectedColor || !selectedSize))
+                                        ? 'bg-gray-400 text-gray-600 cursor-not-allowed' 
+                                        : 'bg-blue-600 text-white hover:bg-blue-700'
+                                }`}
+                            >
+                                <ShoppingCart size={22} />
+                                <span>
+                                    {currentStock === 0 
+                                        ? 'غير متوفر' 
+                                        : (product.variants && (!selectedColor || !selectedSize))
+                                            ? 'اختر اللون والمقاس'
+                                            : 'أضف إلى السلة'
+                                    }
+                                </span>
                             </button>
                              <button onClick={handleToggleFavorite} className={`p-4 border rounded-lg transition-colors ${isFavorite ? 'bg-red-50 border-red-200 text-red-500' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}>
                                 <Heart size={22} fill={isFavorite ? 'currentColor' : 'none'}/>

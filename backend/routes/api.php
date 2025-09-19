@@ -18,6 +18,9 @@ use App\Http\Controllers\Api\UserDashboardController;
 use App\Http\Controllers\Api\CouponController;
 use App\Http\Controllers\Admin\ProductVideoController;
 use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\ColorController;
+use App\Http\Controllers\Api\SizeController;
+use App\Http\Controllers\Api\ProductVariantController;
 
 use App\Http\Controllers\Api\UserController;
 
@@ -29,6 +32,11 @@ Route::get('/products/{slug}', [PublicDataController::class, 'show']);
 Route::post('/products-by-ids', [PublicDataController::class, 'productsByIds']);
 Route::post('/contact', [ContactController::class, 'store']);
 
+// Public routes
+Route::get('/public/colors', [ColorController::class, 'index']);
+Route::get('/public/sizes', [SizeController::class, 'index']);
+Route::get('/public/products/{product}/variants', [ProductVariantController::class, 'getProductVariants']);
+
 // Public Checkout Routes (لا تحتاج authentication)
 Route::post('/validate-coupon', [OrderController::class, 'validateCoupon']);
 Route::post('/shipping-costs', [OrderController::class, 'getShippingCosts']);
@@ -37,6 +45,23 @@ Route::post('/shipping-costs', [OrderController::class, 'getShippingCosts']);
 Route::get('/test/products/{product}', [ProductController::class, 'show']);
 Route::get('/test/categories', [CategoryController::class, 'index']);
 Route::get('/test/brands', [BrandController::class, 'index']);
+Route::get('/test/colors', function() {
+    try {
+        $colors = \App\Models\Color::active()->get();
+        return response()->json([
+            'success' => true,
+            'data' => $colors,
+            'count' => $colors->count()
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => $e->getMessage(),
+            'line' => $e->getLine(),
+            'file' => $e->getFile()
+        ], 500);
+    }
+});
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [LoginController::class, 'logout']);
@@ -67,6 +92,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('categories', CategoryController::class);
     Route::apiResource('brands', BrandController::class);
 
+    // Colors & Sizes & Product Variants Routes
+    Route::apiResource('colors', ColorController::class);
+    Route::apiResource('sizes', SizeController::class);
+    Route::apiResource('product-variants', ProductVariantController::class);
+    Route::post('/product-variants/bulk', [ProductVariantController::class, 'storeBulk']);
 
     // [إضافة] Inventory Routes
     Route::get('/inventory', [InventoryController::class, 'index']);

@@ -39,7 +39,7 @@ class ProductSeeder extends Seeder
                 'stock_status' => 'instock',
                 'featured' => true,
                 'quantity' => 50,
-                'image' => 's22.jpg',
+                'thumbnail' => 's22.jpg',
                 'images' => json_encode(['s22_1.jpg', 's22_2.jpg']), // تخزين صور متعددة كـ JSON
                 'category_id' => 3, // ID لفئة Smartphones
                 'brand_id' => 1, // ID لعلامة Samsung
@@ -57,7 +57,7 @@ class ProductSeeder extends Seeder
                 'stock_status' => 'instock',
                 'featured' => true,
                 'quantity' => 30,
-                'image' => 'iphone14.jpg',
+                'thumbnail' => 'iphone14.jpg',
                 'images' => json_encode(['iphone14_1.jpg', 'iphone14_2.jpg']),
                 'category_id' => 3, // ID لفئة Smartphones
                 'brand_id' => 2, // ID لعلامة Apple
@@ -75,7 +75,7 @@ class ProductSeeder extends Seeder
                 'stock_status' => 'instock',
                 'featured' => false,
                 'quantity' => 20,
-                'image' => 'macbook14.jpg',
+                'thumbnail' => 'macbook14.jpg',
                 'images' => null, // لا توجد صور إضافية
                 'category_id' => 4, // ID لفئة Laptops
                 'brand_id' => 2, // ID لعلامة Apple

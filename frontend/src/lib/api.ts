@@ -122,3 +122,60 @@ export const getShippingCosts = async () => {
 
   return response.json();
 };
+
+// --- Shop API Functions ---
+export const getShopData = async (filters: any = {}) => {
+  const queryParams = new URLSearchParams();
+  
+  Object.keys(filters).forEach(key => {
+    if (filters[key] && filters[key] !== '') {
+      if (Array.isArray(filters[key])) {
+        queryParams.append(key, filters[key].join(','));
+      } else {
+        queryParams.append(key, filters[key]);
+      }
+    }
+  });
+
+  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/shop?${queryParams}`, {
+    headers: {
+      'Accept': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('فشل في جلب بيانات المتجر');
+  }
+
+  return response.json();
+};
+
+export const getColors = async () => {
+  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/public/colors`, {
+    headers: {
+      'Accept': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('فشل في جلب الألوان');
+  }
+
+  const result = await response.json();
+  return result.data || [];
+};
+
+export const getSizes = async () => {
+  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/public/sizes`, {
+    headers: {
+      'Accept': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('فشل في جلب الأحجام');
+  }
+
+  const result = await response.json();
+  return result.data || [];
+};

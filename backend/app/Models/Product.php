@@ -31,17 +31,14 @@ class Product extends Model
         'images',
         'category_id',
         'brand_id',
-        'has_variants',
     ];
 
     protected $casts = [
-        'price' => 'decimal:2',
-        'compare_price' => 'decimal:2',
-        'cost_price' => 'decimal:2',
-        'track_quantity' => 'boolean',
+        'regular_price' => 'decimal:2',
+        'sale_price' => 'decimal:2',
         'featured' => 'boolean',
-        'digital' => 'boolean',
-        'dimensions' => 'json',
+        'has_variants' => 'boolean',
+        'quantity' => 'integer',
     ];
 
     /**
@@ -84,11 +81,6 @@ class Product extends Model
     public function attributes()
     {
         return $this->hasMany(ProductAttribute::class);
-    }
-
-    public function reviews()
-    {
-        return $this->hasMany(Review::class);
     }
 
     /**
