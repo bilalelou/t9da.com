@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\ColorController;
 use App\Http\Controllers\Api\SizeController;
 use App\Http\Controllers\Api\ProductVariantController;
+use App\Http\Controllers\ProductReviewController;
 
 use App\Http\Controllers\Api\UserController;
 
@@ -36,6 +37,9 @@ Route::post('/contact', [ContactController::class, 'store']);
 Route::get('/public/colors', [ColorController::class, 'index']);
 Route::get('/public/sizes', [SizeController::class, 'index']);
 Route::get('/public/products/{product}/variants', [ProductVariantController::class, 'getProductVariants']);
+
+// Product Reviews Public Routes
+Route::get('/products/{product}/reviews', [ProductReviewController::class, 'index']);
 
 // Public Checkout Routes (لا تحتاج authentication)
 Route::post('/validate-coupon', [OrderController::class, 'validateCoupon']);
@@ -118,5 +122,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/notifications/mark-all-as-read', [NotificationController::class, 'markAllAsRead']);
     Route::delete('/notifications/delete-read', [NotificationController::class, 'deleteRead']);
     Route::get('/notifications-recent', [NotificationController::class, 'recent']);
+
+    // Product Reviews Routes (Authenticated)
+    Route::prefix('products/{product}')->group(function () {
+        Route::post('reviews', [ProductReviewController::class, 'store']);
+        Route::get('reviews/user', [ProductReviewController::class, 'getUserReview']);
+        Route::put('reviews/{review}', [ProductReviewController::class, 'update']);
+        Route::delete('reviews/{review}', [ProductReviewController::class, 'destroy']);
+    });
+    Route::post('/reviews/{review}/helpful', [ProductReviewController::class, 'markHelpful']);
 });
 

@@ -246,7 +246,16 @@ class PublicDataController extends Controller
             'name' => $product->name,
             'slug' => $product->slug,
             'SKU' => $product->SKU,
-            'category' => $product->category->name ?? 'غير مصنف',
+            'category' => $product->category ? [
+                'id' => $product->category->id,
+                'name' => $product->category->name,
+                'slug' => $product->category->slug,
+            ] : null,
+            'brand' => $product->brand ? [
+                'id' => $product->brand->id,
+                'name' => $product->brand->name,
+                'slug' => $product->brand->slug,
+            ] : null,
             'short_description' => $product->short_description,
             'regular_price' => (float)$product->regular_price,
             'sale_price' => isset($product->sale_price) ? (float)$product->sale_price : null,
@@ -254,10 +263,14 @@ class PublicDataController extends Controller
             'images' => array_map(fn($img) => asset('storage/uploads/' . $img), json_decode($product->images) ?? []),
             'stock' => (int)($product->quantity ?? 0),
             'stock_status' => $product->stock_status ?? 'instock',
+            'has_variants' => (bool)$product->has_variants,
+            'average_rating' => round($product->average_rating, 1),
+            'total_reviews' => $product->total_reviews,
         ];
 
         if ($withDetails) {
             $data['description'] = $product->description;
+            $data['rating_breakdown'] = $product->rating_breakdown;
         }
 
         return $data;

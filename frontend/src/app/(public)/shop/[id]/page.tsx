@@ -261,7 +261,7 @@ const ProductDetailPage = ({ product, relatedProducts }: { product: Product; rel
                     
                     {/* Product Details */}
                     <div>
-                        <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-1 rounded-full">{product.category}</span>
+                        <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-1 rounded-full">{product.category?.name || 'غير مصنف'}</span>
                         <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 my-3">{product.name}</h1>
                          <div className="flex items-center mb-4">
                             <div className="flex text-yellow-400">{[...Array(5)].map((_,i) => <Star key={i} size={20} fill="currentColor" />)}</div>
@@ -393,7 +393,7 @@ const ProductDetailPage = ({ product, relatedProducts }: { product: Product; rel
                              <AccordionItem title="المواصفات">
                                  <ul className="list-disc pr-5">
                                      <li><span className="font-semibold">SKU:</span> {product.SKU}</li>
-                                     <li><span className="font-semibold">التصنيف:</span> {product.category}</li>
+                                     <li><span className="font-semibold">التصنيف:</span> {product.category?.name || 'غير مصنف'}</li>
                                  </ul>
                              </AccordionItem>
                              <AccordionItem title="الشحن والإرجاع">

@@ -30,14 +30,17 @@ class DatabaseSeeder extends Seeder
             ProductSeeder::class,
             ProductVariantSeeder::class,
 
-            // 4. الكوبونات وأسعار الشحن
+            // 4. التقييمات (يجب أن تكون بعد المنتجات والمستخدمين)
+            ProductReviewSeeder::class,
+
+            // 5. الكوبونات وأسعار الشحن
             CouponSeeder::class,
             ShippingFeeSeeder::class,
 
-            // 5. الطلبات (يجب أن تكون بعد المنتجات والمستخدمين)
+            // 6. الطلبات (يجب أن تكون بعد المنتجات والمستخدمين)
             OrderSeeder::class,
 
-            // 6. الشهور والإشعارات
+            // 7. الشهور والإشعارات
             MonthSeeder::class,
             NotificationSeeder::class,
         ]);

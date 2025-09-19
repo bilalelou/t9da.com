@@ -70,6 +70,23 @@ class User extends Authenticatable
     {
         return $this->hasMany(Order::class);
     }
+
+    /**
+     * Get all reviews written by this user.
+     */
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(ProductReview::class);
+    }
+
+    /**
+     * Get verified reviews written by this user.
+     */
+    public function verifiedReviews(): HasMany
+    {
+        return $this->hasMany(ProductReview::class)->where('is_verified', true);
+    }
+
         public function getRoleAttribute()
     {
         // هذه الدالة الآن ستعمل بشكل صحيح لأن الأدوار ستكون محملة دائماً

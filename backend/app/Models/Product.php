@@ -106,4 +106,48 @@ class Product extends Model
     {
         return $this->hasOne(ProductVideo::class)->where('is_featured', true)->where('is_active', true);
     }
+
+    /**
+     * Get all reviews for the product.
+     */
+    public function reviews()
+    {
+        return $this->hasMany(ProductReview::class);
+    }
+
+    /**
+     * Get verified reviews for the product.
+     */
+    public function verifiedReviews()
+    {
+        return $this->hasMany(ProductReview::class)->where('is_verified', true);
+    }
+
+    /**
+     * Get average rating for the product.
+     */
+    public function getAverageRatingAttribute()
+    {
+        return $this->verifiedReviews()->avg('rating') ?: 0;
+    }
+
+    /**
+     * Get total reviews count.
+     */
+    public function getTotalReviewsAttribute()
+    {
+        return $this->verifiedReviews()->count();
+    }
+
+    /**
+     * Get rating breakdown (count for each star rating).
+     */
+    public function getRatingBreakdownAttribute()
+    {
+        $breakdown = [];
+        for ($i = 1; $i <= 5; $i++) {
+            $breakdown[$i] = $this->verifiedReviews()->where('rating', $i)->count();
+        }
+        return $breakdown;
+    }
 }
