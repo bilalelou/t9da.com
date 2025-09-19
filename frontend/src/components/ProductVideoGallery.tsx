@@ -6,12 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { 
   Play, 
-  Volume2, 
-  VolumeX, 
-  Maximize, 
-  Minimize, 
-  SkipBack, 
-  SkipForward,
   Youtube,
   Video,
   Clock,
@@ -24,10 +18,11 @@ interface ProductVideo {
   id: number;
   title: string;
   description: string;
-  video_type: 'file' | 'youtube' | 'vimeo';
-  embed_url: string;
-  thumbnail_url: string;
-  duration: string;
+  video_url: string; // تغيير من embed_url إلى video_url
+  video_type?: string;
+  thumbnail_url?: string;
+  duration?: string;
+  sort_order?: number;
   is_featured: boolean;
   is_active: boolean;
 }
@@ -40,44 +35,43 @@ interface ProductVideoGalleryProps {
 export default function ProductVideoGallery({ productId, className = '' }: ProductVideoGalleryProps) {
   const [videos, setVideos] = useState<ProductVideo[]>([]);
   const [selectedVideo, setSelectedVideo] = useState<ProductVideo | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
   const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
+    const fetchVideos = async () => {
+      try {
+        const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace(/\/?$/, '') || 'http://127.0.0.1:8000/api';
+        const response = await fetch(`${API_BASE}/products/${productId}/videos`);
+
+        if (response.ok) {
+          const data = await response.json();
+          const activeVideos = data.data.filter((video: ProductVideo) => video.is_active);
+          setVideos(activeVideos);
+          
+          // Set featured video as default or first video
+          const featuredVideo = activeVideos.find((video: ProductVideo) => video.is_featured);
+          if (featuredVideo) {
+            setSelectedVideo(featuredVideo);
+            setCurrentIndex(activeVideos.indexOf(featuredVideo));
+          } else if (activeVideos.length > 0) {
+            setSelectedVideo(activeVideos[0]);
+            setCurrentIndex(0);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching videos:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchVideos();
   }, [productId]);
-
-  const fetchVideos = async () => {
-    try {
-      const response = await fetch(`/api/products/${productId}/videos`);
-
-      if (response.ok) {
-        const data = await response.json();
-        const activeVideos = data.data.filter((video: ProductVideo) => video.is_active);
-        setVideos(activeVideos);
-        
-        // Set featured video as default or first video
-        const featuredVideo = activeVideos.find((video: ProductVideo) => video.is_featured);
-        if (featuredVideo) {
-          setSelectedVideo(featuredVideo);
-          setCurrentIndex(activeVideos.indexOf(featuredVideo));
-        } else if (activeVideos.length > 0) {
-          setSelectedVideo(activeVideos[0]);
-          setCurrentIndex(0);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching videos:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const selectVideo = (video: ProductVideo, index: number) => {
     setSelectedVideo(video);
     setCurrentIndex(index);
-    setIsPlaying(false);
   };
 
   const nextVideo = () => {
@@ -108,7 +102,7 @@ export default function ProductVideoGallery({ productId, className = '' }: Produ
   const renderVideoPlayer = () => {
     if (!selectedVideo) return null;
 
-    if (selectedVideo.video_type === 'file') {
+    if (selectedVideo.video_type === 'file' || selectedVideo.video_type === 'local') {
       return (
         <video 
           className="w-full h-full object-cover rounded-lg"
@@ -116,14 +110,14 @@ export default function ProductVideoGallery({ productId, className = '' }: Produ
           controls
           key={selectedVideo.id}
         >
-          <source src={selectedVideo.embed_url} type="video/mp4" />
+          <source src={selectedVideo.video_url} type="video/mp4" />
           متصفحك لا يدعم تشغيل الفيديو.
         </video>
       );
     } else {
       return (
         <iframe
-          src={selectedVideo.embed_url}
+          src={selectedVideo.video_url}
           className="w-full h-full rounded-lg"
           frameBorder="0"
           allowFullScreen
@@ -191,7 +185,7 @@ export default function ProductVideoGallery({ productId, className = '' }: Produ
                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
                   <div className="text-white">
                     <div className="flex items-center gap-2 mb-2">
-                      {getVideoIcon(selectedVideo.video_type)}
+                      {getVideoIcon(selectedVideo.video_type || 'file')}
                       <h3 className="font-medium">
                         {selectedVideo.title || 'فيديو المنتج'}
                       </h3>
@@ -246,7 +240,7 @@ export default function ProductVideoGallery({ productId, className = '' }: Produ
                       />
                     ) : (
                       <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-                        {getVideoIcon(video.video_type)}
+                        {getVideoIcon(video.video_type || 'file')}
                       </div>
                     )}
                     

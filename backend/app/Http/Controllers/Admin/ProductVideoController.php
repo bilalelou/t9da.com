@@ -27,7 +27,7 @@ class ProductVideoController extends Controller
                     'title' => $video->title,
                     'description' => $video->description,
                     'video_type' => $video->video_type,
-                    'video_url' => $video->video_url,
+                    'video_url' => $video->full_video_url, // Use full URL for proper access
                     'embed_url' => $video->embed_url,
                     'thumbnail_url' => $video->thumbnail_url,
                     'duration' => $video->formatted_duration,
@@ -105,9 +105,12 @@ class ProductVideoController extends Controller
                 'data' => [
                     'id' => $video->id,
                     'title' => $video->title,
+                    'description' => $video->description,
                     'video_type' => $video->video_type,
+                    'video_url' => $video->full_video_url, // Use full URL for consistency
                     'thumbnail_url' => $video->thumbnail_url,
                     'embed_url' => $video->embed_url,
+                    'sort_order' => $video->sort_order,
                     'is_featured' => $video->is_featured,
                     'is_active' => $video->is_active,
                 ]
@@ -309,5 +312,83 @@ class ProductVideoController extends Controller
                 'is_active' => $video->is_active,
             ]
         ]);
+    }
+
+    /**
+     * Upload a video file for the product
+     */
+    public function uploadVideo(Request $request, Product $product)
+    {
+        try {
+            $validated = $request->validate([
+                'video_file' => 'required|file|mimes:mp4,avi,mov,wmv,flv,webm|max:102400', // 100MB max
+                'title' => 'required|string|max:255',
+                'description' => 'nullable|string',
+                'sort_order' => 'nullable|integer|min:0',
+                'is_featured' => 'nullable|in:0,1,true,false', // قبول 0,1,true,false
+            ]);
+
+            $videoFile = $request->file('video_file');
+
+            // Generate unique filename
+            $fileName = 'videos/' . uniqid() . '_' . time() . '.' . $videoFile->getClientOriginalExtension();
+
+            // Store the video file
+            $path = $videoFile->storeAs('public', $fileName);
+
+            if (!$path) {
+                throw new \Exception('فشل في رفع الملف');
+            }
+
+            // Create video record - store the file name without 'videos/' prefix for consistency
+            $isFeatured = in_array($validated['is_featured'] ?? false, ['1', 'true', true], true);
+
+            $data = [
+                'product_id' => $product->id,
+                'title' => $validated['title'],
+                'description' => $validated['description'] ?? '',
+                'video_url' => $fileName, // Store just the filename path
+                'video_type' => 'local',
+                'sort_order' => $validated['sort_order'] ?? 0,
+                'is_featured' => $isFeatured,
+                'is_active' => true,
+            ];
+
+            // If this is featured, remove featured from other videos
+            if ($isFeatured) {
+                ProductVideo::where('product_id', $product->id)
+                    ->where('is_featured', true)
+                    ->update(['is_featured' => false]);
+            }
+
+            $video = ProductVideo::create($data);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'تم رفع الفيديو بنجاح',
+                'data' => [
+                    'id' => $video->id,
+                    'title' => $video->title,
+                    'description' => $video->description,
+                    'video_url' => $video->full_video_url, // Use the full URL accessor
+                    'video_type' => $video->video_type,
+                    'sort_order' => $video->sort_order,
+                    'is_featured' => $video->is_featured,
+                ]
+            ], 201);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'بيانات غير صحيحة',
+                'errors' => $e->errors()
+            ], 422);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'حدث خطأ أثناء رفع الفيديو: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

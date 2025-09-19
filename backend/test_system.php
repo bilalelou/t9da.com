@@ -13,25 +13,25 @@ $product = App\Models\Product::find(12);
 if ($product) {
     echo "✅ تم العثور على المنتج: {$product->name}\n";
     echo "   - has_variants: " . ($product->has_variants ? 'نعم' : 'لا') . "\n";
-    
+
     // فحص الـ variants
     $variants = $product->variants;
     echo "   - عدد الـ variants: " . $variants->count() . "\n";
-    
+
     if ($variants->count() > 0) {
         $firstVariant = $variants->first();
-        echo "   - أول variant: " . ($firstVariant->color ? $firstVariant->color->name : 'بدون لون') . 
-             " - " . ($firstVariant->size ? $firstVariant->size->name : 'بدون حجم') . 
+        echo "   - أول variant: " . ($firstVariant->color ? $firstVariant->color->name : 'بدون لون') .
+             " - " . ($firstVariant->size ? $firstVariant->size->name : 'بدون حجم') .
              " (السعر: {$firstVariant->price})\n";
-        
+
         // فحص الألوان والأحجام المتاحة
         $colors = collect($variants->pluck('color')->filter());
         $sizes = collect($variants->pluck('size')->filter());
-        
+
         echo "   - الألوان المتاحة: " . $colors->pluck('name')->unique()->implode(', ') . "\n";
         echo "   - الأحجام المتاحة: " . $sizes->pluck('name')->unique()->implode(', ') . "\n";
     }
-    
+
     // محاولة جلب التقييمات (للتأكد من أن جدول product_reviews يعمل)
     try {
         $avgRating = $product->reviews()->where('is_verified', true)->avg('rating');
@@ -40,7 +40,7 @@ if ($product) {
     } catch (Exception $e) {
         echo "❌ خطأ في جدول product_reviews: " . $e->getMessage() . "\n";
     }
-    
+
 } else {
     echo "❌ لم يتم العثور على المنتج 12\n";
 }

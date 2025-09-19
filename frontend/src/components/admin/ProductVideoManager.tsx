@@ -30,7 +30,7 @@ interface ProductVideo {
   id: number;
   title: string;
   description: string;
-  video_type: 'file' | 'youtube' | 'vimeo';
+  video_type: 'file' | 'local' | 'youtube' | 'vimeo';
   video_url: string;
   embed_url: string;
   thumbnail_url: string;
@@ -58,7 +58,7 @@ export default function ProductVideoManager({ productId, productTitle }: Product
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    video_type: 'youtube' as 'file' | 'youtube' | 'vimeo',
+    video_type: 'local' as 'file' | 'local' | 'youtube' | 'vimeo',
     video_url: '',
     duration: '',
     resolution: '',
@@ -212,7 +212,7 @@ export default function ProductVideoManager({ productId, productTitle }: Product
   };
 
   const getEmbedPreview = (video: ProductVideo) => {
-    if (video.video_type === 'file') {
+    if (video.video_type === 'file' || video.video_type === 'local') {
       return (
         <video 
           className="w-full h-32 object-cover rounded"
@@ -392,7 +392,7 @@ export default function ProductVideoManager({ productId, productTitle }: Product
                     <SelectContent>
                       <SelectItem value="youtube">YouTube</SelectItem>
                       <SelectItem value="vimeo">Vimeo</SelectItem>
-                      <SelectItem value="file">ملف محلي</SelectItem>
+                      <SelectItem value="local">ملف محلي</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -422,11 +422,11 @@ export default function ProductVideoManager({ productId, productTitle }: Product
                       ? 'https://vimeo.com/...'
                       : 'سيتم تحديد الرابط تلقائياً عند رفع الملف'
                   }
-                  disabled={formData.video_type === 'file'}
+                  disabled={formData.video_type === 'file' || formData.video_type === 'local'}
                 />
               </div>
 
-              {formData.video_type === 'file' && (
+              {(formData.video_type === 'file' || formData.video_type === 'local') && (
                 <div className="space-y-2">
                   <Label htmlFor="video_file">ملف الفيديو</Label>
                   <Input

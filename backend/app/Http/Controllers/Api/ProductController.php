@@ -276,6 +276,19 @@ class ProductController extends Controller
             $data['variants'] = [];
         }
 
+        // إضافة الفيديوهات
+        $videos = $product->videos()->orderBy('sort_order')->get();
+        $data['videos'] = $videos->map(function($video) {
+            return [
+                'id' => $video->id,
+                'video_url' => $video->video_url,
+                'title' => $video->title,
+                'description' => $video->description,
+                'sort_order' => $video->sort_order,
+                'is_featured' => (bool)$video->is_featured,
+            ];
+        });
+
         return $data;
     }
 

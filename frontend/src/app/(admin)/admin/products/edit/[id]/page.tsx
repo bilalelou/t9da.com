@@ -16,7 +16,6 @@ import {
   FileText,
   Images,
   Video,
-  Youtube,
   Tag,
   Hash,
   Type,
@@ -84,6 +83,8 @@ interface VideoData {
   video_url: string;
   title: string;
   description: string;
+  sort_order?: number;
+  is_featured?: boolean;
 }
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace(/\/?$/, '') || 'http://127.0.0.1:8000/api';
@@ -226,7 +227,16 @@ function EditProductPageInner() {
   const [imagesPreviews, setImagesPreviews] = useState<string[]>([]);
 
   const [videos, setVideos] = useState<ProductVideo[]>([]);
-  const [newVideo, setNewVideo] = useState<VideoData>({ video_url: '', title: '', description: '' });
+  const [newVideo, setNewVideo] = useState<VideoData>({ 
+    video_url: '', 
+    title: '', 
+    description: '', 
+    sort_order: 0, 
+    is_featured: false 
+  });
+  const [selectedVideoFile, setSelectedVideoFile] = useState<File | null>(null);
+  const [videoPreview, setVideoPreview] = useState<string>('');
+  const [uploadingVideo, setUploadingVideo] = useState(false);
 
   // Product variants state
   const [productVariants, setProductVariants] = useState<ProductVariant[]>([]);
@@ -322,20 +332,144 @@ function EditProductPageInner() {
     Promise.all(previews).then(setImagesPreviews);
   };
 
+  // Clean up video preview URL on unmount
+  useEffect(() => {
+    return () => {
+      if (videoPreview) {
+        URL.revokeObjectURL(videoPreview);
+      }
+    };
+  }, [videoPreview]);
+
+  const handleVideoFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedVideoFile(file);
+      const url = URL.createObjectURL(file);
+      setVideoPreview(url);
+      // Auto-fill title with filename
+      if (!newVideo.title) {
+        setNewVideo(prev => ({ 
+          ...prev, 
+          title: file.name.replace(/\.[^/.]+$/, '') // Remove extension
+        }));
+      }
+    }
+  };
+
   const handleAddVideo = async () => {
     if (!id) return;
-    if (!newVideo.video_url.trim()) {
-      showToast('يرجى إدخال رابط الفيديو', 'error');
+    
+    // تحقق من وجود ملف فيديو أو رابط
+    if (!selectedVideoFile && !newVideo.video_url.trim()) {
+      showToast('يرجى اختيار ملف فيديو أو إدخال رابط', 'error');
       return;
     }
+    
+    // تحقق من وجود عنوان
+    if (!newVideo.title.trim()) {
+      showToast('يرجى إدخال عنوان للفيديو', 'error');
+      return;
+    }
+    
+    setUploadingVideo(true);
+    
+    console.log('بدء رفع الفيديو...', {
+      hasFile: !!selectedVideoFile,
+      fileName: selectedVideoFile?.name,
+      title: newVideo.title,
+      apiEndpoint: `${API_BASE}/products/${id}/videos/upload`
+    });
+    
     try {
-      const video = await api.addVideo(id, newVideo, getToken());
-      setVideos((prev) => [...prev, video]);
-      setNewVideo({ video_url: '', title: '', description: '' });
+      // إذا كان هناك ملف محلي، رفعه أولاً
+      if (selectedVideoFile) {
+        const formData = new FormData();
+        formData.append('video_file', selectedVideoFile);
+        formData.append('title', newVideo.title);
+        formData.append('description', newVideo.description);
+        formData.append('sort_order', String(newVideo.sort_order || 0));
+        formData.append('is_featured', newVideo.is_featured ? '1' : '0'); // تصحيح: إرسال 1 أو 0 بدلاً من true/false
+        
+        console.log('إرسال البيانات...', {
+          fileSize: selectedVideoFile.size,
+          fileType: selectedVideoFile.type,
+          is_featured: newVideo.is_featured ? '1' : '0'
+        });
+        
+        // Call API to upload video file
+        const response = await fetch(`${API_BASE}/products/${id}/videos/upload`, {
+          method: 'POST',
+          headers: {
+            ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}),
+            Accept: 'application/json',
+          },
+          body: formData,
+        });
+        
+        console.log('استجابة الخادم:', response.status, response.statusText);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('خطأ من الخادم:', errorText);
+          throw new Error(`خطأ في رفع الفيديو: ${response.status} - ${errorText}`);
+        }
+        
+        const uploadedVideo = await response.json();
+        console.log('تم رفع الفيديو بنجاح - استجابة الخادم:', uploadedVideo);
+        console.log('بيانات الفيديو:', uploadedVideo.data);
+        
+        // Validate video response structure
+        if (uploadedVideo && uploadedVideo.success && uploadedVideo.data) {
+          const videoData = uploadedVideo.data;
+          if (videoData.id && videoData.video_url) {
+            setVideos((prev) => [...prev, videoData]);
+          } else {
+            console.error('Invalid video data structure:', videoData);
+            throw new Error('بيانات الفيديو غير مكتملة');
+          }
+        } else {
+          console.error('Invalid video response:', uploadedVideo);
+          throw new Error('استجابة غير صحيحة من الخادم');
+        }
+      } else {
+        // استخدام رابط مباشر
+        console.log('استخدام رابط مباشر...');
+        const video = await api.addVideo(id, newVideo, getToken());
+        console.log('استجابة إضافة فيديو URL:', video);
+        console.log('بيانات الفيديو:', video.data);
+        
+        // Validate video response structure
+        if (video && video.success && video.data) {
+          const videoData = video.data;
+          if (videoData.id) {
+            setVideos((prev) => [...prev, videoData]);
+          } else {
+            console.error('Invalid video data structure:', videoData);
+            throw new Error('بيانات الفيديو غير مكتملة');
+          }
+        } else {
+          console.error('Invalid video response:', video);
+          throw new Error('استجابة غير صحيحة من الخادم');
+        }
+      }
+      
+      // Reset form
+      setNewVideo({ 
+        video_url: '', 
+        title: '', 
+        description: '', 
+        sort_order: 0, 
+        is_featured: false 
+      });
+      setSelectedVideoFile(null);
+      setVideoPreview('');
       showToast('تم إضافة الفيديو بنجاح', 'success');
     } catch (e) {
-      console.error(e);
-      showToast('خطأ في إضافة الفيديو', 'error');
+      console.error('خطأ في إضافة الفيديو:', e);
+      showToast(`خطأ في إضافة الفيديو: ${e instanceof Error ? e.message : 'خطأ غير معروف'}`, 'error');
+    } finally {
+      setUploadingVideo(false);
     }
   };
 
@@ -747,25 +881,38 @@ function EditProductPageInner() {
               <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center shadow-md">
                 <Video className="w-5 h-5 text-white" />
               </div>
-              <h2 className="text-2xl font-bold text-gray-800">إدارة الفيديوهات</h2>
+              <h2 className="text-2xl font-bold text-gray-800">إدارة الفيديوهات المحلية</h2>
             </div>
 
             {videos.length > 0 && (
               <div className="mb-8">
                 <h3 className="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
-                  <Play className="w-5 h-5 text-purple-600" />الفيديوهات الحالية
+                  <Play className="w-5 h-5 text-purple-600" />الفيديوهات المحفوظة
                 </h3>
                 <div className="grid md:grid-cols-2 gap-4">
-                  {videos.map((video) => (
+                  {videos.filter(video => video && video.id).map((video) => (
                     <div key={video.id} className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-xl border border-purple-200">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1">
                           <h4 className="font-semibold text-gray-800 mb-1">{video.title || 'فيديو بدون عنوان'}</h4>
-                          <p className="text-sm text-gray-600 mb-2">{video.description}</p>
-                          <a href={video.video_url} target="_blank" rel="noopener noreferrer" className="text-purple-600 hover:text-purple-700 text-sm flex items-center gap-1">
-                            <Youtube className="w-4 h-4" />
-                            مشاهدة الفيديو
-                          </a>
+                          <p className="text-sm text-gray-600 mb-2">{video.description || 'لا يوجد وصف'}</p>
+                          <div className="bg-gray-800 rounded-lg p-2 mb-2">
+                            {video.video_url ? (
+                              <video 
+                                src={video.video_url} 
+                                controls 
+                                className="w-full h-32 object-cover rounded"
+                                preload="metadata"
+                              >
+                                متصفحك لا يدعم تشغيل الفيديو
+                              </video>
+                            ) : (
+                              <div className="w-full h-32 bg-gray-600 rounded flex items-center justify-center text-gray-300 text-sm">
+                                فيديو غير متوفر
+                              </div>
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-500">الملف: {video.video_url ? video.video_url.split('/').pop() : 'ملف غير محدد'}</p>
                         </div>
                         <button type="button" onClick={() => handleDeleteVideo(video.id)} className="w-8 h-8 bg-red-500 text-white rounded-lg flex items-center justify-center hover:bg-red-600 transition-colors duration-200 shadow-sm">
                           <X className="w-4 h-4" />
@@ -779,50 +926,131 @@ function EditProductPageInner() {
 
             <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-xl border border-purple-200">
               <h3 className="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
-                <Video className="w-5 h-5 text-purple-600" />إضافة فيديو جديد
+                <Video className="w-5 h-5 text-purple-600" />رفع فيديو محلي جديد
               </h3>
-              <div className="grid md:grid-cols-2 gap-4">
+              
+              <div className="space-y-4">
                 <div className="space-y-2">
                   <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                    <Youtube className="w-4 h-4 text-red-600" />رابط الفيديو *
+                    <Camera className="w-4 h-4 text-purple-600" />اختيار ملف الفيديو *
                   </label>
-                  <input
-                    type="url"
-                    value={newVideo.video_url}
-                    onChange={(e) => setNewVideo((prev) => ({ ...prev, video_url: e.target.value }))}
-                    className="w-full px-4 py-3 bg-white border-2 border-purple-200 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/20 transition-all duration-200 text-gray-800 placeholder-gray-400"
-                    placeholder="https://youtube.com/watch?v=..."
-                  />
+                  <div className="relative">
+                    <input
+                      type="file"
+                      accept="video/*"
+                      onChange={handleVideoFileChange}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                    <div className="border-2 border-dashed border-purple-300 rounded-xl p-6 text-center hover:border-purple-400 hover:bg-purple-50/50 transition-all duration-200 cursor-pointer">
+                      <Video className="w-8 h-8 text-purple-500 mx-auto mb-2" />
+                      <p className="text-purple-600 font-medium">
+                        {selectedVideoFile ? `تم اختيار: ${selectedVideoFile.name}` : 'اختر ملف فيديو'}
+                      </p>
+                      <p className="text-sm text-gray-500 mt-1">MP4, AVI, MOV, WebM (حد أقصى 100MB)</p>
+                    </div>
+                  </div>
+                  
+                  {/* Video Preview */}
+                  {videoPreview && (
+                    <div className="mt-4">
+                      <p className="text-sm font-medium text-gray-700 mb-2">معاينة الفيديو:</p>
+                      <video 
+                        src={videoPreview} 
+                        controls 
+                        className="w-full max-w-md h-48 rounded-lg border-2 border-purple-200"
+                      />
+                    </div>
+                  )}
                 </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                      <Type className="w-4 h-4 text-purple-600" />عنوان الفيديو *
+                    </label>
+                    <input
+                      type="text"
+                      value={newVideo.title}
+                      onChange={(e) => setNewVideo((prev) => ({ ...prev, title: e.target.value }))}
+                      className="w-full px-4 py-3 bg-white border-2 border-purple-200 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/20 transition-all duration-200 text-gray-800 placeholder-gray-400"
+                      placeholder="عنوان الفيديو"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                      <Hash className="w-4 h-4 text-purple-600" />ترتيب العرض
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={newVideo.sort_order || 0}
+                      onChange={(e) => setNewVideo(prev => ({ ...prev, sort_order: parseInt(e.target.value) || 0 }))}
+                      className="w-full px-4 py-3 bg-white border-2 border-purple-200 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/20 transition-all duration-200 text-gray-800 placeholder-gray-400"
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+
                 <div className="space-y-2">
                   <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                    <Type className="w-4 h-4 text-purple-600" />عنوان الفيديو
+                    <AlignLeft className="w-4 h-4 text-purple-600" />وصف الفيديو
                   </label>
-                  <input
-                    type="text"
-                    value={newVideo.title}
-                    onChange={(e) => setNewVideo((prev) => ({ ...prev, title: e.target.value }))}
-                    className="w-full px-4 py-3 bg-white border-2 border-purple-200 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/20 transition-all duration-200 text-gray-800 placeholder-gray-400"
-                    placeholder="عنوان الفيديو"
+                  <textarea
+                    value={newVideo.description}
+                    onChange={(e) => setNewVideo((prev) => ({ ...prev, description: e.target.value }))}
+                    rows={3}
+                    className="w-full px-4 py-3 bg-white border-2 border-purple-200 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/20 transition-all duration-200 text-gray-800 placeholder-gray-400 resize-none"
+                    placeholder="وصف مختصر للفيديو"
                   />
                 </div>
+
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-3 cursor-pointer group">
+                    <div className="relative">
+                      <input 
+                        type="checkbox" 
+                        checked={newVideo.is_featured || false}
+                        onChange={(e) => setNewVideo(prev => ({ ...prev, is_featured: e.target.checked }))}
+                        className="sr-only" 
+                      />
+                      <div className={`w-6 h-6 rounded-lg border-2 transition-all duration-200 flex items-center justify-center ${
+                        newVideo.is_featured 
+                          ? 'bg-purple-500 border-purple-500' 
+                          : 'bg-white border-gray-300 group-hover:border-purple-400'
+                      }`}>
+                        {newVideo.is_featured && (
+                          <Star className="w-4 h-4 text-white fill-current" />
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Star className="w-5 h-5 text-purple-500" />
+                      <span className="text-gray-700 font-medium">فيديو مميز</span>
+                      <span className="text-sm text-gray-500">(سيظهر أولاً في المعرض)</span>
+                    </div>
+                  </label>
+                </div>
+
+                <button 
+                  type="button" 
+                  onClick={handleAddVideo} 
+                  disabled={uploadingVideo}
+                  className="w-full mt-4 px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-xl hover:from-purple-600 hover:to-pink-700 transition-all duration-200 flex items-center justify-center gap-2 font-medium shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {uploadingVideo ? (
+                    <>
+                      <LoaderCircle className="w-4 h-4 animate-spin" />
+                      جاري رفع الفيديو...
+                    </>
+                  ) : (
+                    <>
+                      <Video className="w-4 h-4" />
+                      رفع وحفظ الفيديو
+                    </>
+                  )}
+                </button>
               </div>
-              <div className="mt-4 space-y-2">
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                  <AlignLeft className="w-4 h-4 text-purple-600" />وصف الفيديو
-                </label>
-                <textarea
-                  value={newVideo.description}
-                  onChange={(e) => setNewVideo((prev) => ({ ...prev, description: e.target.value }))}
-                  rows={3}
-                  className="w-full px-4 py-3 bg-white border-2 border-purple-200 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/20 transition-all duration-200 text-gray-800 placeholder-gray-400 resize-none"
-                  placeholder="وصف مختصر للفيديو"
-                />
-              </div>
-              <button type="button" onClick={handleAddVideo} className="mt-4 px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-xl hover:from-purple-600 hover:to-pink-700 transition-all duration-200 flex items-center gap-2 font-medium shadow-md hover:shadow-lg">
-                <Video className="w-4 h-4" />
-                إضافة الفيديو
-              </button>
             </div>
           </div>
 

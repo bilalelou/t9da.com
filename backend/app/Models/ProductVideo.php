@@ -53,12 +53,30 @@ class ProductVideo extends Model
     {
         switch ($this->video_type) {
             case 'youtube':
-                return "https://www.youtube.com/watch?v={$this->video_url}";
+                // Check if it's already a full URL or just an ID
+                if (str_starts_with($this->video_url, 'http')) {
+                    return $this->video_url;
+                } else {
+                    return "https://www.youtube.com/watch?v={$this->video_url}";
+                }
             case 'vimeo':
-                return "https://vimeo.com/{$this->video_url}";
+                // Check if it's already a full URL or just an ID
+                if (str_starts_with($this->video_url, 'http')) {
+                    return $this->video_url;
+                } else {
+                    return "https://vimeo.com/{$this->video_url}";
+                }
+            case 'local':
             case 'file':
             default:
-                return asset('storage/' . $this->video_url);
+                // For local files, check if video_url already starts with /storage/
+                if (str_starts_with($this->video_url, '/storage/')) {
+                    // It's already a full storage URL, just return it
+                    return $this->video_url;
+                } else {
+                    // It's a relative path, use Storage::url
+                    return Storage::url($this->video_url);
+                }
         }
     }
 
@@ -72,6 +90,7 @@ class ProductVideo extends Model
                 return "https://www.youtube.com/embed/{$this->video_url}";
             case 'vimeo':
                 return "https://player.vimeo.com/video/{$this->video_url}";
+            case 'local':
             case 'file':
             default:
                 return $this->full_video_url;

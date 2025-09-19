@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, createContext, useContext, useMemo } from 'react';
 import { useCart, useWishlist } from '@/contexts/Providers';
 import { ShoppingCart, LoaderCircle, Star, CheckCircle, Heart, Minus, Plus, ChevronDown } from 'lucide-react';
-import ProductVideoGallery from '@/components/ProductVideoGallery';
+import ProductVideoGallery, { VideoPlayer, VideoThumbnail } from '@/components/ProductVideoGalleryNew';
 
 // --- Interfaces ---
 interface Color {
@@ -31,6 +31,19 @@ interface Category {
     id: number;
     name: string;
     slug: string;
+}
+
+interface ProductVideo {
+  id: number;
+  title: string;
+  description: string;
+  video_url: string;
+  video_type?: string;
+  thumbnail_url?: string;
+  duration?: string;
+  sort_order?: number;
+  is_featured: boolean;
+  is_active: boolean;
 }
 
 interface Product {
@@ -176,6 +189,9 @@ const ProductDetailPage = ({ product, relatedProducts }: { product: Product; rel
     const [quantity, setQuantity] = useState<number>(1);
     const [selectedColor, setSelectedColor] = useState<Color | null>(product.available_colors?.[0] || null);
     const [selectedSize, setSelectedSize] = useState<Size | null>(product.available_sizes?.[0] || null);
+    const [productVideos, setProductVideos] = useState<ProductVideo[]>([]);
+    const [selectedVideo, setSelectedVideo] = useState<ProductVideo | null>(null);
+    const [currentMediaType, setCurrentMediaType] = useState<'image' | 'video'>('image'); // لتتبع نوع الوسائط المعروضة
     const isFavorite = isInWishlist(product.id);
 
     // متغيرات للتحقق من وجود الألوان والأحجام
@@ -269,24 +285,76 @@ const ProductDetailPage = ({ product, relatedProducts }: { product: Product; rel
         }
     };
     
+    // دالة لمعالجة تحديث الفيديوهات من المكون الفرعي
+    const handleVideosLoaded = (videos: ProductVideo[]) => {
+        setProductVideos(videos);
+    };
+
+    // دالة لاختيار صورة
+    const selectImage = (imageUrl: string) => {
+        setMainImage(imageUrl);
+        setCurrentMediaType('image');
+        setSelectedVideo(null);
+    };
+
+    // دالة لاختيار فيديو
+    const selectVideo = (video: ProductVideo) => {
+        setSelectedVideo(video);
+        setCurrentMediaType('video');
+        setMainImage(''); // مسح الصورة المحددة
+    };
+
     const allImages = [product.thumbnail, ...(product.images || [])].filter(Boolean);
 
     return (
         <div className="bg-gray-50">
             <div className="container mx-auto px-4 sm:px-6 py-12" dir="rtl">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-                    {/* Image Gallery */}
+                    {/* Image & Video Gallery */}
                     <div>
                         <div className="border rounded-xl overflow-hidden mb-4 bg-white shadow-sm">
-                            <img src={mainImage} alt={product.name} className="w-full h-auto object-contain transition-all duration-300" style={{aspectRatio: '1/1'}} />
+                            {currentMediaType === 'image' ? (
+                                <img src={mainImage} alt={product.name} className="w-full h-auto object-contain transition-all duration-300" style={{aspectRatio: '1/1'}} />
+                            ) : selectedVideo ? (
+                                <VideoPlayer video={selectedVideo} className="w-full aspect-square" />
+                            ) : (
+                                <img src={mainImage} alt={product.name} className="w-full h-auto object-contain transition-all duration-300" style={{aspectRatio: '1/1'}} />
+                            )}
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 overflow-x-auto pb-2">
+                            {/* الصور المصغرة */}
                             {allImages.map((img, index) => (
-                                <div key={index} onClick={() => setMainImage(img)} className={`w-20 h-20 border-2 rounded-lg overflow-hidden cursor-pointer transition-all ${mainImage === img ? 'border-blue-500' : 'border-transparent hover:border-gray-300'}`}>
+                                <div 
+                                    key={`image-${index}`} 
+                                    onClick={() => selectImage(img)} 
+                                    className={`
+                                        w-20 h-20 border-2 rounded-lg overflow-hidden cursor-pointer transition-all flex-shrink-0
+                                        ${mainImage === img && currentMediaType === 'image' 
+                                            ? 'border-blue-500 ring-2 ring-blue-200' 
+                                            : 'border-transparent hover:border-gray-300'
+                                        }
+                                    `}
+                                >
                                     <img src={img} alt={`${product.name} thumbnail ${index + 1}`} className="w-full h-full object-cover" />
                                 </div>
                             ))}
+                            
+                            {/* الفيديوهات المصغرة */}
+                            {productVideos.map((video) => (
+                                <VideoThumbnail
+                                    key={`video-${video.id}`}
+                                    video={video}
+                                    isSelected={selectedVideo?.id === video.id && currentMediaType === 'video'}
+                                    onClick={() => selectVideo(video)}
+                                />
+                            ))}
                         </div>
+                        
+                        {/* مكون تحميل الفيديوهات (مخفي) */}
+                        <ProductVideoGallery 
+                            productId={product.id} 
+                            onVideosLoaded={handleVideosLoaded}
+                        />
                     </div>
                     
                     {/* Product Videos Section */}

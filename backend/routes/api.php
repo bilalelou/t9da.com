@@ -41,6 +41,9 @@ Route::get('/public/products/{product}/variants', [ProductVariantController::cla
 // Product Reviews Public Routes
 Route::get('/products/{product}/reviews', [ProductReviewController::class, 'index']);
 
+// Product Videos Public Routes
+Route::get('/products/{product}/videos', [ProductVideoController::class, 'index']);
+
 // Public Checkout Routes (لا تحتاج authentication)
 Route::post('/validate-coupon', [OrderController::class, 'validateCoupon']);
 Route::post('/shipping-costs', [OrderController::class, 'getShippingCosts']);
@@ -86,8 +89,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Product Videos Routes
     Route::prefix('products/{product}')->group(function () {
-        Route::get('videos', [ProductVideoController::class, 'index']);
+        // Route::get('videos', [ProductVideoController::class, 'index']); // Moved to public routes
         Route::post('videos', [ProductVideoController::class, 'store']);
+        Route::post('videos/upload', [ProductVideoController::class, 'uploadVideo']); // رفع فيديو محلي
         Route::get('videos/{video}', [ProductVideoController::class, 'show']);
         Route::put('videos/{video}', [ProductVideoController::class, 'update']);
         Route::delete('videos/{video}', [ProductVideoController::class, 'destroy']);
