@@ -24,7 +24,7 @@ return new class extends Migration
             $table->boolean('is_read')->default(false); // هل تم قراءة الإشعار
             $table->string('action_url')->nullable(); // رابط للانتقال عند النقر
             $table->timestamps();
-            
+
             // Indexes للبحث السريع
             $table->index(['is_read', 'created_at']);
             $table->index(['type', 'created_at']);

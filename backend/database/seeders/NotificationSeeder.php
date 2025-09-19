@@ -38,7 +38,7 @@ class NotificationSeeder extends Seeder
                 'action_url' => '/admin/orders/' . (Order::first()?->id ?? 1),
                 'created_at' => Carbon::now()->subHours(2),
             ],
-            
+
             // إشعارات المستخدمين
             [
                 'title' => 'مستخدم جديد',
@@ -58,7 +58,7 @@ class NotificationSeeder extends Seeder
                 'action_url' => '/admin/users/' . (User::where('email', 'bilal.12elou@gmail.com')->first()?->id ?? 1),
                 'created_at' => Carbon::now()->subHours(8),
             ],
-            
+
             // إشعارات المنتجات
             [
                 'title' => 'نفاد المخزون',
@@ -78,7 +78,7 @@ class NotificationSeeder extends Seeder
                 'action_url' => '/admin/products',
                 'created_at' => Carbon::now()->subDay(),
             ],
-            
+
             // إشعارات النظام
             [
                 'title' => 'تحديث النظام',
@@ -99,7 +99,7 @@ class NotificationSeeder extends Seeder
                 'is_read' => true,
                 'read_at' => Carbon::now()->subDays(2),
             ],
-            
+
             // إشعارات التحذير
             [
                 'title' => 'محاولة دخول مشبوهة',
@@ -120,7 +120,7 @@ class NotificationSeeder extends Seeder
                 'is_read' => true,
                 'read_at' => Carbon::now()->subDays(4),
             ],
-            
+
             // إشعارات قديمة
             [
                 'title' => 'تقرير المبيعات الأسبوعي',

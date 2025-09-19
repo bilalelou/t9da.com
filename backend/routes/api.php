@@ -80,7 +80,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/analytics', [AnalyticsController::class, 'index']);
     Route::apiResource('coupons', CouponController::class);
-    
+
     // Notifications Routes
     Route::apiResource('notifications', NotificationController::class);
     Route::post('/notifications/{notification}/mark-as-read', [NotificationController::class, 'markAsRead']);

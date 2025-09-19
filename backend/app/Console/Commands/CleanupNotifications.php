@@ -12,7 +12,7 @@ class CleanupNotifications extends Command
      *
      * @var string
      */
-    protected $signature = 'notifications:cleanup 
+    protected $signature = 'notifications:cleanup
                             {--days=30 : Number of days to keep read notifications}
                             {--force : Force cleanup without confirmation}';
 
@@ -47,7 +47,7 @@ class CleanupNotifications extends Command
 
             if ($deletedCount > 0) {
                 $this->info("✅ تم حذف {$deletedCount} إشعار مقروء بنجاح.");
-                
+
                 // إنشاء إشعار حول التنظيف
                 NotificationHelper::systemInfo(
                     'تنظيف الإشعارات',

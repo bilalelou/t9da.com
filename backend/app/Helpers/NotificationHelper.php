@@ -65,7 +65,7 @@ class NotificationHelper
     public static function lowStock(Product $product, $currentStock)
     {
         $priority = $currentStock == 0 ? 'urgent' : 'high';
-        $message = $currentStock == 0 
+        $message = $currentStock == 0
             ? "تحذير عاجل: المنتج \"{$product->name}\" نفد من المخزن!"
             : "تحذير: المنتج \"{$product->name}\" أوشك على النفاد (متبقي {$currentStock} قطع)";
 
