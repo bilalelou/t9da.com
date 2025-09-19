@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\RegisterController;
 use App\Http\Controllers\Api\UserDashboardController;
 use App\Http\Controllers\Api\CouponController;
 use App\Http\Controllers\Admin\ProductVideoController;
+use App\Http\Controllers\Api\NotificationController;
 
 use App\Http\Controllers\Api\UserController;
 
@@ -79,5 +80,13 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/analytics', [AnalyticsController::class, 'index']);
     Route::apiResource('coupons', CouponController::class);
+    
+    // Notifications Routes
+    Route::apiResource('notifications', NotificationController::class);
+    Route::post('/notifications/{notification}/mark-as-read', [NotificationController::class, 'markAsRead']);
+    Route::post('/notifications/{notification}/mark-as-unread', [NotificationController::class, 'markAsUnread']);
+    Route::post('/notifications/mark-all-as-read', [NotificationController::class, 'markAllAsRead']);
+    Route::delete('/notifications/delete-read', [NotificationController::class, 'deleteRead']);
+    Route::get('/notifications-recent', [NotificationController::class, 'recent']);
 });
 

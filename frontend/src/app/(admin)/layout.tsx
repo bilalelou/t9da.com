@@ -6,9 +6,10 @@ import AuthGuard from './AuthGuard'; // استيراد المكون الجديد
 
 // Icons
 import { 
-    LogOut, Menu, X, Bell, ShieldCheck, Tag, Ticket, BellDot, CheckCircle,
+    LogOut, Menu, X, ShieldCheck, Tag, Ticket, BellDot, CheckCircle,
     LayoutGrid, Package, ShoppingCart, Users, Folder, BarChart4, Settings
 } from 'lucide-react';
+import NotificationDropdown from '@/components/admin/NotificationDropdown';
 
 // --- نظام التنبيهات (يمكن نقله إلى ملف contexts/Providers.tsx) ---
 const ToastContext = createContext<{ showToast: (message: string, type?: 'success' | 'error') => void }>({ showToast: () => {} });
@@ -96,7 +97,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
                     <header className="flex items-center justify-between h-16 px-6 bg-white border-b lg:justify-end">
                         <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 rounded-md"><Menu className="w-6 h-6" /></button>
                         <div className="flex items-center gap-4">
-                            <button className="relative p-2 rounded-full hover:bg-gray-100"><Bell className="w-6 h-6 text-gray-600" /><span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span></button>
+                            <NotificationDropdown />
                             <div className="w-10 h-10 bg-gray-200 rounded-full"></div>
                         </div>
                     </header>
