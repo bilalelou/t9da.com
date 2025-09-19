@@ -19,9 +19,12 @@ class RolesAndUsersSeeder extends Seeder
         // إعادة تعيين الأدوار والصلاحيات المخزنة مؤقتاً
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
-        // 1. إنشاء الأدوار
-        $adminRole = Role::create(['name' => 'admin']);
-        $customerRole = Role::create(['name' => 'customer']);
+        // 1. إنشاء الأدوار لكلا الحارسين (web و sanctum)
+        $adminRoleWeb = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
+        $customerRoleWeb = Role::firstOrCreate(['name' => 'customer', 'guard_name' => 'web']);
+
+        $adminRoleSanctum = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'sanctum']);
+        $customerRoleSanctum = Role::firstOrCreate(['name' => 'customer', 'guard_name' => 'sanctum']);
 
         // 2. إنشاء مستخدم مدير (Admin)
         $adminUser = User::create([
@@ -30,8 +33,15 @@ class RolesAndUsersSeeder extends Seeder
             'password' => Hash::make('password'), // استخدم كلمة مرور قوية في مشروعك الحقيقي
             'utype' => 'ADM', // ADM for Admin
         ]);
-        // إسناد دور 'admin' للمستخدم
-        $adminUser->assignRole($adminRole);
+        // إسناد أدوار 'admin' للمستخدم (للحارسين web و sanctum)
+        $adminUser->assignRole($adminRoleWeb);
+
+        // إدراج دور sanctum يدوياً في جدول model_has_roles
+        \Illuminate\Support\Facades\DB::table('model_has_roles')->insertOrIgnore([
+            'role_id' => $adminRoleSanctum->id,
+            'model_type' => 'App\Models\User',
+            'model_id' => $adminUser->id,
+        ]);
 
         // 3. إنشاء مستخدم زبون (Customer)
         $customerUser = User::create([
@@ -40,7 +50,14 @@ class RolesAndUsersSeeder extends Seeder
             'password' => Hash::make('password'),
             'utype' => 'USR', // USR for User or Customer
         ]);
-        // إسناد دور 'customer' للمستخدم
-        $customerUser->assignRole($customerRole);
+        // إسناد أدوار 'customer' للمستخدم (للحارسين web و sanctum)
+        $customerUser->assignRole($customerRoleWeb);
+
+        // إدراج دور sanctum يدوياً في جدول model_has_roles
+        \Illuminate\Support\Facades\DB::table('model_has_roles')->insertOrIgnore([
+            'role_id' => $customerRoleSanctum->id,
+            'model_type' => 'App\Models\User',
+            'model_id' => $customerUser->id,
+        ]);
     }
 }

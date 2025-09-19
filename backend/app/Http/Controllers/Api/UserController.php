@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Spatie\Permission\Models\Role;
 
@@ -18,27 +19,45 @@ class UserController extends Controller
 
     public function index(Request $request)
     {
-        $query = User::role(['customer'])->withCount('orders')->withSum('orders', 'total');
+        try {
+            $query = User::role(['customer'])->withCount('orders')->withSum('orders', 'total');
 
-        // Filtering
-        if ($request->has('name')) {
-            $query->where('name', 'like', '%' . $request->name . '%');
+            // Filtering
+            if ($request->has('name')) {
+                $query->where('name', 'like', '%' . $request->name . '%');
+            }
+            if ($request->has('email')) {
+                $query->where('email', 'like', '%' . $request->email . '%');
+            }
+            if ($request->has('is_active')) {
+                $query->where('is_active', $request->is_active);
+            }
+
+            // Sorting
+            $sortBy = $request->get('sort_by', 'created_at');
+            $sortDirection = $request->get('sort_direction', 'desc');
+            $query->orderBy($sortBy, $sortDirection);
+
+            $users = $query->paginate(15);
+
+            return response()->json($users);
+        } catch (\Spatie\Permission\Exceptions\RoleDoesNotExist $e) {
+            // إذا لم يوجد دور customer للحارس الحالي، نحاول جلب جميع المستخدمين
+            Log::warning('Customer role not found for current guard: ' . $e->getMessage());
+
+            // أو يمكن إرجاع خطأ مناسب للمستخدم
+            return response()->json([
+                'error' => 'Configuration error: User roles not properly set up.',
+                'message' => 'Please contact system administrator.'
+            ], 500);
+        } catch (\Exception $e) {
+            Log::error('Error in UserController::index: ' . $e->getMessage());
+
+            return response()->json([
+                'error' => 'An error occurred while fetching users.',
+                'message' => 'Please try again later.'
+            ], 500);
         }
-        if ($request->has('email')) {
-            $query->where('email', 'like', '%' . $request->email . '%');
-        }
-        if ($request->has('is_active')) {
-            $query->where('is_active', $request->is_active);
-        }
-
-        // Sorting
-        $sortBy = $request->get('sort_by', 'created_at');
-        $sortDirection = $request->get('sort_direction', 'desc');
-        $query->orderBy($sortBy, $sortDirection);
-
-        $users = $query->paginate(15);
-
-        return response()->json($users);
     }
 
     public function store(Request $request)
