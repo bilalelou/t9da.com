@@ -39,7 +39,7 @@ const ProductVariantsManager: React.FC<Props> = ({ onVariantsChange, initialVari
   const [colors, setColors] = useState<Color[]>([]);
   const [sizes, setSizes] = useState<Size[]>([]);
   const [variants, setVariants] = useState<ProductVariant[]>(initialVariants);
-  const [hasVariants, setHasVariants] = useState(false);
+  const [hasVariants, setHasVariants] = useState(initialVariants.length > 0);
   const [error, setError] = useState<string | null>(null);
 
   // States for adding new variants
@@ -57,6 +57,12 @@ const ProductVariantsManager: React.FC<Props> = ({ onVariantsChange, initialVari
   useEffect(() => {
     fetchColorsAndSizes();
   }, []);
+
+  // Update local state when initialVariants change
+  useEffect(() => {
+    setVariants(initialVariants);
+    setHasVariants(initialVariants.length > 0);
+  }, [initialVariants]);
 
   // Update parent component when variants change
   useEffect(() => {
@@ -173,7 +179,7 @@ const ProductVariantsManager: React.FC<Props> = ({ onVariantsChange, initialVari
           <div className="p-2 bg-purple-100 rounded-lg">
             <Package className="w-6 h-6 text-purple-600" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-800">الألوان والأحجام</h2>
+          <h2 className="text-2xl font-bold text-gray-800">متغيرات المنتج (الألوان والأحجام)</h2>
         </div>
 
         <div className="text-center py-8">
@@ -206,7 +212,7 @@ const ProductVariantsManager: React.FC<Props> = ({ onVariantsChange, initialVari
           <div className="p-2 bg-purple-100 rounded-lg">
             <Package className="w-6 h-6 text-purple-600" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-800">الألوان والأحجام</h2>
+          <h2 className="text-2xl font-bold text-gray-800">متغيرات المنتج (الألوان والأحجام)</h2>
         </div>
         <button
           type="button"
@@ -319,7 +325,7 @@ const ProductVariantsManager: React.FC<Props> = ({ onVariantsChange, initialVari
           <h3 className="text-lg font-medium text-gray-800 mb-4">المتغيرات المضافة</h3>
           <div className="space-y-3">
             {variants.map((variant, index) => (
-              <div key={index} className="bg-white border border-gray-200 rounded-lg p-4">
+              <div key={variant.id || `variant-${index}-${variant.color_id}-${variant.size_id}`} className="bg-white border border-gray-200 rounded-lg p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     {/* Color indicator */}

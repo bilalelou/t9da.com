@@ -97,22 +97,7 @@ const api = {
     const data = await res.json();
     const product = (data && data.data) ? data.data : data;
     
-    // جلب variants للمنتج إذا كان لديه variants
-    if (product && product.has_variants) {
-      try {
-        const variantsRes = await fetch(`${API_BASE}/public/products/${product.id}/variants`, {
-          headers: { Accept: 'application/json' }
-        });
-        if (variantsRes.ok) {
-          const variantsData = await variantsRes.json();
-          product.variants = variantsData.success ? variantsData.data : [];
-        }
-      } catch (error) {
-        console.error('Error fetching variants:', error);
-        product.variants = [];
-      }
-    }
-    
+    // البيانات تأتي مع variants مباشرة من API
     return product;
   },
   getCategories: async (): Promise<Category[]> => {
@@ -843,13 +828,6 @@ function EditProductPageInner() {
 
           {/* Product Variants Section */}
           <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-white/20 shadow-xl p-8">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-md">
-                <Package className="w-5 h-5 text-white" />
-              </div>
-              <h2 className="text-2xl font-bold text-gray-800">متغيرات المنتج</h2>
-            </div>
-
             <ProductVariantsManager
               initialVariants={product?.variants || []}
               onVariantsChange={(variants) => {

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, createContext, useContext, useMemo } from 'react';
 import { useCart, useWishlist } from '@/contexts/Providers';
-import { ShoppingCart, LoaderCircle, Star, CheckCircle, Heart, Share2, Minus, Plus, ShieldCheck, Truck, MessageSquare, ChevronDown } from 'lucide-react';
+import { ShoppingCart, LoaderCircle, Star, CheckCircle, Heart, Minus, Plus, ChevronDown } from 'lucide-react';
 import ProductVideoGallery from '@/components/ProductVideoGallery';
 
 // --- Interfaces ---
@@ -27,6 +27,12 @@ interface ProductVariant {
     size: Size | null;
 }
 
+interface Category {
+    id: number;
+    name: string;
+    slug: string;
+}
+
 interface Product {
     id: number;
     name: string;
@@ -36,7 +42,7 @@ interface Product {
     thumbnail: string;
     images?: string[];
     description: string;
-    category: string;
+    category: Category | string;
     SKU: string;
     stock: number;
     variants?: ProductVariant[];
@@ -46,9 +52,9 @@ interface Product {
 
 // --- Toast & Favorites Contexts ---
 const ToastContext = createContext<{ showToast: (message: string, type?: 'success' | 'error') => void }>({ showToast: () => {} });
-const ToastProvider = ({ children }) => {
+const ToastProvider = ({ children }: { children: React.ReactNode }) => {
     const [toast, setToast] = useState({ message: '', visible: false, type: 'success' });
-    const showToast = useCallback((message, type = 'success') => {
+    const showToast = useCallback((message: string, type = 'success') => {
         setToast({ message, visible: true, type });
         setTimeout(() => setToast({ message: '', visible: false, type: 'success' }), 3000);
     }, []);
@@ -67,7 +73,7 @@ const ToastProvider = ({ children }) => {
 const useToast = () => useContext(ToastContext);
 
 const FavoritesContext = createContext<{ favoriteIds: Set<number>; toggleFavorite: (product: Product) => void; }>({ favoriteIds: new Set(), toggleFavorite: () => {} });
-const FavoritesProvider = ({ children }) => {
+const FavoritesProvider = ({ children }: { children: React.ReactNode }) => {
     const { showToast } = useToast();
     const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
     const toggleFavorite = useCallback((product: Product) => {
@@ -87,7 +93,6 @@ const FavoritesProvider = ({ children }) => {
     const value = useMemo(() => ({ favoriteIds, toggleFavorite }), [favoriteIds, toggleFavorite]);
     return <FavoritesContext.Provider value={value}>{children}</FavoritesContext.Provider>;
 };
-const useFavorites = () => useContext(FavoritesContext);
 
 
 // --- API Helper ---
@@ -101,29 +106,24 @@ const api = {
         }
         const data = await response.json();
         
-        // جلب variants للمنتج
-        if (data.product && data.product.has_variants) {
-            try {
-                const variantsResponse = await fetch(`${API_BASE_URL}/public/products/${data.product.id}/variants`);
-                if (variantsResponse.ok) {
-                    const variantsData = await variantsResponse.json();
-                    data.product.variants = variantsData.data;
-                    
-                    // استخراج الألوان والأحجام المتاحة من variants
-                    const colors = new Map();
-                    const sizes = new Map();
-                    
-                    variantsData.data.forEach((variant: ProductVariant) => {
-                        if (variant.color) colors.set(variant.color.id, variant.color);
-                        if (variant.size) sizes.set(variant.size.id, variant.size);
-                    });
-                    
-                    data.product.available_colors = Array.from(colors.values());
-                    data.product.available_sizes = Array.from(sizes.values());
-                }
-            } catch (error) {
-                console.error('Error fetching variants:', error);
-            }
+        // Debug info لفحص البيانات الواردة من API
+        console.log('API Response received:', {
+            productId: data.product?.id,
+            productName: data.product?.name,
+            hasVariants: data.product?.has_variants,
+            variantsCount: data.product?.variants?.length || 0,
+            availableColorsFromAPI: data.product?.available_colors?.length || 0,
+            availableSizesFromAPI: data.product?.available_sizes?.length || 0,
+            colors: data.product?.available_colors,
+            sizes: data.product?.available_sizes
+        });
+        
+        // إذا لم تكن available_colors أو available_sizes موجودة، تأكد من أنها arrays فارغة
+        if (!data.product.available_colors) {
+            data.product.available_colors = [];
+        }
+        if (!data.product.available_sizes) {
+            data.product.available_sizes = [];
         }
         
         return data;
@@ -178,13 +178,43 @@ const ProductDetailPage = ({ product, relatedProducts }: { product: Product; rel
     const [selectedSize, setSelectedSize] = useState<Size | null>(product.available_sizes?.[0] || null);
     const isFavorite = isInWishlist(product.id);
 
+    // متغيرات للتحقق من وجود الألوان والأحجام
+    const hasColors = product.available_colors && product.available_colors.length > 0;
+    const hasSizes = product.available_sizes && product.available_sizes.length > 0;
+
     // حساب variant المحدد الحالي
     const selectedVariant = useMemo(() => {
-        if (!product.variants || !selectedColor || !selectedSize) return null;
-        return product.variants.find(variant => 
-            variant.color?.id === selectedColor.id && variant.size?.id === selectedSize.id
-        );
-    }, [product.variants, selectedColor, selectedSize]);
+        if (!product.variants || product.variants.length === 0) return null;
+        
+        // إذا لم تكن هناك ألوان أو أحجام، استخدم أول variant
+        if (!hasColors && !hasSizes) {
+            return product.variants[0] || null;
+        }
+        
+        // إذا كان هناك ألوان وأحجام، يجب أن يكون كلاهما محدد
+        if (hasColors && hasSizes) {
+            if (!selectedColor || !selectedSize) return null;
+            return product.variants.find(variant => 
+                variant.color?.id === selectedColor.id && variant.size?.id === selectedSize.id
+            ) || null;
+        }
+        
+        // إذا كان هناك ألوان فقط
+        if (hasColors && selectedColor) {
+            return product.variants.find(variant => 
+                variant.color?.id === selectedColor.id
+            ) || null;
+        }
+        
+        // إذا كان هناك أحجام فقط
+        if (hasSizes && selectedSize) {
+            return product.variants.find(variant => 
+                variant.size?.id === selectedSize.id
+            ) || null;
+        }
+        
+        return null;
+    }, [product.variants, selectedColor, selectedSize, hasColors, hasSizes]);
 
     // حساب السعر الحالي (إما من variant أو من المنتج الأساسي)
     const currentPrice = selectedVariant?.price ?? product.sale_price ?? product.regular_price ?? 0;
@@ -193,14 +223,20 @@ const ProductDetailPage = ({ product, relatedProducts }: { product: Product; rel
     useEffect(() => {
         setMainImage(product.thumbnail);
         setQuantity(1);
-        // إعادة تعيين اللون والحجم إذا لم تكن متوفرة
-        if (!product.available_colors?.includes(selectedColor)) {
+        
+        // تحديد الألوان والأحجام الافتراضية
+        if (hasColors && (!selectedColor || !product.available_colors?.includes(selectedColor))) {
             setSelectedColor(product.available_colors?.[0] || null);
+        } else if (!hasColors) {
+            setSelectedColor(null);
         }
-        if (!product.available_sizes?.includes(selectedSize)) {
+        
+        if (hasSizes && (!selectedSize || !product.available_sizes?.includes(selectedSize))) {
             setSelectedSize(product.available_sizes?.[0] || null);
+        } else if (!hasSizes) {
+            setSelectedSize(null);
         }
-    }, [product, selectedColor, selectedSize]);
+    }, [product, hasColors, hasSizes, selectedColor, selectedSize]);
 
     const handleAddToCart = () => {
         const finalQuantity = Math.max(1, quantity || 1);
@@ -261,7 +297,9 @@ const ProductDetailPage = ({ product, relatedProducts }: { product: Product; rel
                     
                     {/* Product Details */}
                     <div>
-                        <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-1 rounded-full">{product.category?.name || 'غير مصنف'}</span>
+                        <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-1 rounded-full">
+                            {typeof product.category === 'string' ? product.category : product.category?.name || 'غير مصنف'}
+                        </span>
                         <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 my-3">{product.name}</h1>
                          <div className="flex items-center mb-4">
                             <div className="flex text-yellow-400">{[...Array(5)].map((_,i) => <Star key={i} size={20} fill="currentColor" />)}</div>
@@ -304,7 +342,7 @@ const ProductDetailPage = ({ product, relatedProducts }: { product: Product; rel
                         </div>
 
                          {/* Color Options */}
-                         {(product.available_colors && product.available_colors.length > 0) && (
+                         {hasColors && (
                             <div>
                                 <p className="font-semibold mb-2">اللون:</p>
                                 <div className="flex items-center gap-2">
@@ -323,7 +361,7 @@ const ProductDetailPage = ({ product, relatedProducts }: { product: Product; rel
 
 
                         {/* Size Options */}
-                        {(product.available_sizes && product.available_sizes.length > 0) && (
+                        {hasSizes && (
                             <div className="mt-4">
                                 <p className="font-semibold mb-2">المقاس:</p>
                                 <div className="flex items-center gap-2">
@@ -364,9 +402,9 @@ const ProductDetailPage = ({ product, relatedProducts }: { product: Product; rel
                         <div className="flex items-stretch gap-3">
                             <button 
                                 onClick={handleAddToCart} 
-                                disabled={currentStock === 0 || (product.variants && (!selectedColor || !selectedSize))}
+                                disabled={currentStock === 0 || (hasColors && !selectedColor) || (hasSizes && !selectedSize)}
                                 className={`flex-grow font-bold py-4 px-8 rounded-lg transition flex items-center justify-center gap-3 ${
-                                    currentStock === 0 || (product.variants && (!selectedColor || !selectedSize))
+                                    currentStock === 0 || (hasColors && !selectedColor) || (hasSizes && !selectedSize)
                                         ? 'bg-gray-400 text-gray-600 cursor-not-allowed' 
                                         : 'bg-blue-600 text-white hover:bg-blue-700'
                                 }`}
@@ -375,9 +413,13 @@ const ProductDetailPage = ({ product, relatedProducts }: { product: Product; rel
                                 <span>
                                     {currentStock === 0 
                                         ? 'غير متوفر' 
-                                        : (product.variants && (!selectedColor || !selectedSize))
-                                            ? 'اختر اللون والمقاس'
-                                            : 'أضف إلى السلة'
+                                        : (hasColors && !selectedColor)
+                                            ? 'اختر اللون'
+                                            : (hasSizes && !selectedSize)
+                                                ? 'اختر المقاس'
+                                                : (hasColors && hasSizes && (!selectedColor || !selectedSize))
+                                                    ? 'اختر اللون والمقاس'
+                                                    : 'أضف إلى السلة'
                                     }
                                 </span>
                             </button>
@@ -393,7 +435,7 @@ const ProductDetailPage = ({ product, relatedProducts }: { product: Product; rel
                              <AccordionItem title="المواصفات">
                                  <ul className="list-disc pr-5">
                                      <li><span className="font-semibold">SKU:</span> {product.SKU}</li>
-                                     <li><span className="font-semibold">التصنيف:</span> {product.category?.name || 'غير مصنف'}</li>
+                                     <li><span className="font-semibold">التصنيف:</span> {typeof product.category === 'string' ? product.category : product.category?.name || 'غير مصنف'}</li>
                                  </ul>
                              </AccordionItem>
                              <AccordionItem title="الشحن والإرجاع">

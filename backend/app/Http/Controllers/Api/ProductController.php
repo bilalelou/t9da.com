@@ -229,7 +229,7 @@ class ProductController extends Controller
     private function formatProductForEdit(Product $product)
     {
         $gallery = json_decode($product->images, true) ?? [];
-        return [
+        $data = [
             'id' => $product->id, 'name' => $product->name,
             'short_description' => $product->short_description,
             'description' => $product->description,
@@ -238,9 +238,45 @@ class ProductController extends Controller
             'quantity' => $product->quantity,
             'category_id' => $product->category_id,
             'brand_id' => $product->brand_id, // إضافة العلامة التجارية
+            'has_variants' => (bool)$product->has_variants,
             'thumbnail' => $product->thumbnail ? asset('storage/uploads/' . $product->thumbnail) : null,
             'images' => array_map(fn($img) => asset('storage/uploads/' . $img), $gallery),
         ];
+
+        // إضافة الـ variants إذا كان المنتج يحتوي عليها
+        if ($product->has_variants) {
+            $variants = $product->variants()->with(['color', 'size'])->get();
+            $data['variants'] = $variants->map(function($variant) {
+                return [
+                    'id' => $variant->id,
+                    'color_id' => $variant->color_id,
+                    'size_id' => $variant->size_id,
+                    'sku' => $variant->sku,
+                    'price' => (float)$variant->price,
+                    'compare_price' => $variant->compare_price ? (float)$variant->compare_price : null,
+                    'quantity' => (int)$variant->quantity,
+                    'image' => $variant->image ? asset('storage/uploads/' . $variant->image) : null,
+                    'is_active' => (bool)$variant->is_active,
+                    'color' => $variant->color ? [
+                        'id' => $variant->color->id,
+                        'name' => $variant->color->name,
+                        'hex_code' => $variant->color->hex_code,
+                        'is_active' => $variant->color->is_active,
+                    ] : null,
+                    'size' => $variant->size ? [
+                        'id' => $variant->size->id,
+                        'name' => $variant->size->name,
+                        'display_name' => $variant->size->display_name,
+                        'sort_order' => $variant->size->sort_order,
+                        'is_active' => $variant->size->is_active,
+                    ] : null,
+                ];
+            });
+        } else {
+            $data['variants'] = [];
+        }
+
+        return $data;
     }
 
     /**
