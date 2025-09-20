@@ -44,6 +44,14 @@ class BrandController extends Controller
         return response()->json(['message' => 'تمت إضافة الماركة بنجاح!'], 201);
     }
 
+    public function show(Brand $brand)
+    {
+        // Add logo URL if exists
+        $brand->logo = $brand->logo ? asset('storage/logos/' . $brand->logo) : null;
+
+        return response()->json(['data' => $brand]);
+    }
+
     public function update(Request $request, Brand $brand)
     {
         $validator = Validator::make($request->all(), [

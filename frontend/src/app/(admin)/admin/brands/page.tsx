@@ -166,6 +166,10 @@ const BrandsPage = ({ initialBrands, token }: {
         }
     };
 
+    const handleEdit = (id: number) => {
+        window.location.href = `/admin/brands/edit/${id}`;
+    };
+
     const handleDelete = (id: number) => { setDeletingBrandId(id); setIsDeleteModalOpen(true); };
 
     const confirmDelete = async () => {
@@ -256,7 +260,7 @@ const BrandsPage = ({ initialBrands, token }: {
                                 <BrandTableRow 
                                     key={brand.id} 
                                     brand={brand} 
-                                    onEdit={() => {}} 
+                                    onEdit={handleEdit} 
                                     onDelete={handleDelete} 
                                 />
                             ))}
@@ -294,7 +298,7 @@ const BrandsPage = ({ initialBrands, token }: {
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <button
-                                            onClick={() => {}}
+                                            onClick={() => handleEdit(brand.id)}
                                             className="flex-1 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200 transition-colors"
                                         >
                                             تعديل
