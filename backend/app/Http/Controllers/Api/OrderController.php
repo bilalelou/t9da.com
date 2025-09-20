@@ -29,12 +29,15 @@ class OrderController extends Controller
 
             // تنسيق البيانات لتناسب الواجهة الأمامية
             $formattedOrders = $orders->getCollection()->transform(function ($order) {
+                // تحويل delivered إلى completed للتوافق مع Frontend
+                $status = $order->status === 'delivered' ? 'completed' : $order->status;
+
                 return [
                     'id' => $order->id,
                     'order_number' => $order->order_number ?? "#" . $order->id, // استخدم رقم الطلب إن وجد
                     'customer_name' => $order->user->name ?? 'عميل غير مسجل',
                     'total_price' => $order->total_price ?? 0, // تأكد من وجود هذا الحقل
-                    'status' => $order->status ?? 'pending', // تأكد من وجود هذا الحقل
+                    'status' => $status, // استخدم الحالة المحولة
                     'created_at' => $order->created_at,
                 ];
             });
@@ -299,7 +302,8 @@ class OrderController extends Controller
     public function updateStatus(Request $request, $id)
     {
         $validator = Validator::make($request->all(), [
-            'status' => 'required|in:pending,confirmed,processing,shipped,delivered,cancelled',
+            'status' => 'required|in:pending,confirmed,processing,shipped,completed,delivered,cancelled',
+            'notes' => 'nullable|string|max:1000', // إضافة دعم للملاحظات
         ]);
 
         if ($validator->fails()) {
@@ -312,12 +316,29 @@ class OrderController extends Controller
 
         try {
             $order = Order::findOrFail($id);
-            $order->update(['status' => $request->status]);
+
+            // تحويل completed إلى delivered للتوافق مع قاعدة البيانات
+            $status = $request->status === 'completed' ? 'delivered' : $request->status;
+
+            $updateData = ['status' => $status];
+
+            // إضافة الملاحظات إذا تم توفيرها
+            if ($request->has('notes') && !empty($request->notes)) {
+                $updateData['notes'] = $request->notes;
+            }
+
+            $order->update($updateData);
+
+            // إرجاع الحالة كما يتوقعها Frontend
+            $orderData = $order->toArray();
+            if ($orderData['status'] === 'delivered') {
+                $orderData['status'] = 'completed';
+            }
 
             return response()->json([
                 'success' => true,
                 'message' => 'تم تحديث حالة الطلب بنجاح',
-                'data' => $order
+                'data' => $orderData
             ]);
 
         } catch (Exception $e) {
