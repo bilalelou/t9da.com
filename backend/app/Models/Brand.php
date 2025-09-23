@@ -20,4 +20,19 @@ class Brand extends Model
     {
         return $this->hasMany(Product::class);
     }
+
+    protected $appends = ['logo'];
+
+    public function getLogoAttribute()
+    {
+        if (!$this->image) {
+            return null;
+        }
+        $newPath = public_path('storage/uploads/brands/' . $this->image);
+        $oldPath = public_path('storage/logos/' . $this->image);
+        $publicRelative = file_exists($newPath)
+            ? 'storage/uploads/brands/' . $this->image
+            : 'storage/logos/' . $this->image;
+        return asset($publicRelative);
+    }
 }

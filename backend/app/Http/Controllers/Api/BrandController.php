@@ -14,7 +14,14 @@ class BrandController extends Controller
     public function index()
     {
         $brands = Brand::withCount('products')->latest()->get()->map(function($brand){
-            $brand->logo = $brand->image ? asset('storage/logos/' . $brand->image) : 'https://placehold.co/128x128/f0f0f0/cccccc?text=' . $brand->name[0];
+            // Backward compatibility: if file exists in old logos/ path use it, else use new uploads/brands
+            if ($brand->image) {
+                $newPath = 'storage/uploads/brands/' . $brand->image;
+                $oldPath = 'storage/logos/' . $brand->image;
+                $brand->logo = asset(file_exists(public_path($newPath)) ? $newPath : $oldPath);
+            } else {
+                $brand->logo = 'https://placehold.co/128x128/f0f0f0/cccccc?text=' . ($brand->name[0] ?? 'B');
+            }
             return $brand;
         });
         return response()->json(['data' => $brands]);
@@ -36,7 +43,8 @@ class BrandController extends Controller
 
         if ($request->hasFile('logo')) {
             $logoName = time() . '.' . $request->logo->extension();
-            $request->logo->storeAs('public/logos', $logoName);
+            // استخدم قرص public صراحةً حتى لو كانت قيمة FILESYSTEM_DISK ليست public
+            $request->logo->storeAs('uploads/brands', $logoName, 'public');
             $data['image'] = $logoName;
         }
 
@@ -46,8 +54,14 @@ class BrandController extends Controller
 
     public function show(Brand $brand)
     {
-        // Add logo URL if exists
-        $brand->logo = $brand->image ? asset('storage/logos/' . $brand->image) : null;
+        // Add logo URL (prefers new path, falls back to old)
+        if ($brand->image) {
+            $newPath = 'storage/uploads/brands/' . $brand->image;
+            $oldPath = 'storage/logos/' . $brand->image;
+            $brand->logo = asset(file_exists(public_path($newPath)) ? $newPath : $oldPath);
+        } else {
+            $brand->logo = null;
+        }
 
         return response()->json(['data' => $brand]);
     }
@@ -67,10 +81,12 @@ class BrandController extends Controller
 
         if ($request->hasFile('logo')) {
             if ($brand->image) {
+                // Try deleting from both possible locations
+                Storage::disk('public')->delete('uploads/brands/' . $brand->image);
                 Storage::disk('public')->delete('logos/' . $brand->image);
             }
             $logoName = time() . '.' . $request->logo->extension();
-            $request->logo->storeAs('public/logos', $logoName);
+            $request->logo->storeAs('uploads/brands', $logoName, 'public');
             $data['image'] = $logoName;
         }
 
@@ -85,7 +101,8 @@ class BrandController extends Controller
         }
 
         if ($brand->image) {
-            Storage::disk('public')->delete('logos/' . $brand->image);
+            Storage::disk('public')->delete('uploads/brands/' . $brand->image);
+            Storage::disk('public')->delete('logos/' . $brand->image); // old path
         }
         $brand->delete();
         return response()->json(['message' => 'تم حذف الماركة بنجاح.']);
