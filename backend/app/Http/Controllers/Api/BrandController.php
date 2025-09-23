@@ -14,7 +14,7 @@ class BrandController extends Controller
     public function index()
     {
         $brands = Brand::withCount('products')->latest()->get()->map(function($brand){
-            $brand->logo = $brand->logo ? asset('storage/logos/' . $brand->logo) : 'https://placehold.co/128x128/f0f0f0/cccccc?text=' . $brand->name[0];
+            $brand->logo = $brand->image ? asset('storage/logos/' . $brand->image) : 'https://placehold.co/128x128/f0f0f0/cccccc?text=' . $brand->name[0];
             return $brand;
         });
         return response()->json(['data' => $brands]);
@@ -37,7 +37,7 @@ class BrandController extends Controller
         if ($request->hasFile('logo')) {
             $logoName = time() . '.' . $request->logo->extension();
             $request->logo->storeAs('public/logos', $logoName);
-            $data['logo'] = $logoName;
+            $data['image'] = $logoName;
         }
 
         Brand::create($data);
@@ -47,7 +47,7 @@ class BrandController extends Controller
     public function show(Brand $brand)
     {
         // Add logo URL if exists
-        $brand->logo = $brand->logo ? asset('storage/logos/' . $brand->logo) : null;
+        $brand->logo = $brand->image ? asset('storage/logos/' . $brand->image) : null;
 
         return response()->json(['data' => $brand]);
     }
@@ -66,12 +66,12 @@ class BrandController extends Controller
         $data = $validator->validated();
 
         if ($request->hasFile('logo')) {
-            if ($brand->logo) {
-                Storage::disk('public')->delete('logos/' . $brand->logo);
+            if ($brand->image) {
+                Storage::disk('public')->delete('logos/' . $brand->image);
             }
             $logoName = time() . '.' . $request->logo->extension();
             $request->logo->storeAs('public/logos', $logoName);
-            $data['logo'] = $logoName;
+            $data['image'] = $logoName;
         }
 
         $brand->update($data);
@@ -84,8 +84,8 @@ class BrandController extends Controller
             return response()->json(['message' => 'لا يمكن حذف الماركة لأنها مرتبطة بمنتجات.'], 409);
         }
 
-        if ($brand->logo) {
-            Storage::disk('public')->delete('logos/' . $brand->logo);
+        if ($brand->image) {
+            Storage::disk('public')->delete('logos/' . $brand->image);
         }
         $brand->delete();
         return response()->json(['message' => 'تم حذف الماركة بنجاح.']);
