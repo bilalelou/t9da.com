@@ -260,6 +260,15 @@ export default function AddProductPage() {
         setError(null);
         setValidationErrors({});
 
+        console.log('🚀 بدء عملية إضافة المنتج...');
+        console.log('📝 بيانات المنتج:', {
+            name: name,
+            shortDescription,
+            hasMainImage: !!image,
+            galleryImagesCount: galleryImages.length,
+            hasVariants: productVariants.length > 0
+        });
+
         const token = localStorage.getItem('api_token') || 'test_token';
 
         const formData = new FormData();
@@ -279,12 +288,23 @@ export default function AddProductPage() {
         // Add has_variants flag
         formData.append('has_variants', productVariants.length > 0 ? 'true' : 'false');
         
+        // إضافة الصورة الرئيسية مع logging
         if (image) {
             formData.append('image', image);
+            console.log('✅ تم إضافة الصورة الرئيسية:', {
+                name: image.name,
+                size: image.size,
+                type: image.type
+            });
+        } else {
+            console.warn('⚠️ لم يتم اختيار صورة رئيسية');
         }
+        
+        // إضافة صور المعرض
         galleryImages.forEach((file) => {
             formData.append('images[]', file); // إرسال الصور كـ array
         });
+        console.log('📸 عدد صور المعرض:', galleryImages.length);
 
         // Add primary video
         if (primaryVideo.url || primaryVideo.file) {
@@ -309,7 +329,11 @@ export default function AddProductPage() {
         }
 
         try {
+            console.log('📤 إرسال البيانات إلى الخادم...');
             const result = await api.addProduct(formData, token);
+            
+            console.log('✅ استجابة الخادم:', result);
+            console.log('🏷️ معرف المنتج الجديد:', result.data?.id);
             
             // إضافة المتغيرات إذا كانت موجودة
             if (productVariants.length > 0 && result.data?.id) {

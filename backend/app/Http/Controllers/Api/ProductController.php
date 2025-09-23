@@ -61,12 +61,28 @@ class ProductController extends Controller
             $data['slug'] = Str::slug($data['name']);
             $data['SKU'] = strtoupper(substr(preg_replace('/[^a-zA-Z]/', '', $data['name']), 0, 3)) . '-' . uniqid();
 
-            if ($request->hasFile('thumbnail')) {
-                $data['thumbnail'] = $this->storeImage($request->file('thumbnail'));
+            // تسجيل معلومات عن الملفات المرسلة
+            Log::info('Product creation request files:', [
+                'has_image' => $request->hasFile('image'),
+                'has_images' => $request->hasFile('images'),
+                'image_info' => $request->hasFile('image') ? [
+                    'name' => $request->file('image')->getClientOriginalName(),
+                    'size' => $request->file('image')->getSize()
+                ] : null
+            ]);
+
+            // معالجة الصورة الرئيسية
+            if ($request->hasFile('image')) {
+                $data['thumbnail'] = $this->storeImage($request->file('image'));
+                Log::info('تم حفظ الصورة الرئيسية: ' . $data['thumbnail']);
+            } else {
+                Log::warning('لم يتم إرسال صورة رئيسية مع الطلب');
             }
 
+            // معالجة صور المعرض
             if ($request->hasFile('images')) {
                 $data['images'] = json_encode($this->storeGallery($request->file('images')));
+                Log::info('تم حفظ صور المعرض: ' . $data['images']);
             }
 
             $data['stock_status'] = ($data['quantity'] ?? 0) > 0 ? 'instock' : 'outofstock';
@@ -120,9 +136,10 @@ class ProductController extends Controller
         try {
             $data = $validator->validated();
 
-            if ($request->hasFile('thumbnail')) {
+            // معالجة الصورة الرئيسية في التحديث
+            if ($request->hasFile('image')) {
                 if ($product->thumbnail) Storage::disk('public')->delete('uploads/' . $product->thumbnail);
-                $data['thumbnail'] = $this->storeImage($request->file('thumbnail'));
+                $data['thumbnail'] = $this->storeImage($request->file('image'));
             }
 
             $currentGallery = json_decode($product->images, true) ?? [];
@@ -168,7 +185,7 @@ class ProductController extends Controller
                 'quantity' => 'sometimes|required|integer|min:0',
                 'category_id' => 'sometimes|required|exists:categories,id',
                 'brand_id' => 'nullable|exists:brands,id', // العلامة التجارية اختيارية
-                'thumbnail' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120', // 5MB
+                'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120', // 5MB للصورة الرئيسية
                 'new_images' => 'nullable|array',
                 'new_images.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:5120', // 5MB
                 'existing_images' => 'nullable|json',
@@ -184,7 +201,7 @@ class ProductController extends Controller
                 'quantity' => 'required|integer|min:0',
                 'category_id' => 'required|exists:categories,id',
                 'brand_id' => 'nullable|exists:brands,id', // العلامة التجارية اختيارية
-                'thumbnail' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120', // 5MB
+                'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120', // 5MB للصورة الرئيسية
                 'images' => 'nullable|array',
                 'images.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:5120', // 5MB
             ];
