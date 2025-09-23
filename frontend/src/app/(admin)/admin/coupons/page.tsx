@@ -82,6 +82,9 @@ function CouponsPage() {
     const [error, setError] = useState<string | null>(null);
     const [token, setToken] = useState<string | null>(null);
     const [filters, setFilters] = useState({ code: '', sort_by: 'created_at', sort_direction: 'desc' });
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [deletingCouponId, setDeletingCouponId] = useState<number | null>(null);
+    const [deleteLoading, setDeleteLoading] = useState(false);
     const { showToast } = useToast();
 
     const fetchCoupons = useCallback(async (apiToken: string, currentFilters: CouponFilters) => {
@@ -97,7 +100,8 @@ function CouponsPage() {
     }, []);
 
     useEffect(() => {
-        const apiToken = localStorage.getItem('api_token');
+        // Try both possible token keys for compatibility
+        const apiToken = localStorage.getItem('auth_token') || localStorage.getItem('api_token');
         if (!apiToken) { window.location.href = '/login'; return; }
         setToken(apiToken);
     }, []);
@@ -112,16 +116,26 @@ function CouponsPage() {
         }
     }, [token, filters, fetchCoupons]);
 
-    const handleDelete = async (id: number) => {
-        if (token && window.confirm('هل أنت متأكد من حذف هذا الكوبون؟')) {
-            try {
-                const result = await api.deleteCoupon(id, token);
-                showToast(result.message);
-                fetchCoupons(token, filters);
-            } catch (err) {
-                const error = err as Error;
-                showToast(error.message, 'error');
-            }
+    const handleDelete = (id: number) => {
+        setDeletingCouponId(id);
+        setIsDeleteModalOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!deletingCouponId || !token) return;
+        
+        setDeleteLoading(true);
+        try {
+            const result = await api.deleteCoupon(deletingCouponId, token);
+            showToast(result.message);
+            fetchCoupons(token, filters);
+            setIsDeleteModalOpen(false);
+            setDeletingCouponId(null);
+        } catch (err) {
+            const error = err as Error;
+            showToast(error.message, 'error');
+        } finally {
+            setDeleteLoading(false);
         }
     };
 
@@ -202,6 +216,37 @@ function CouponsPage() {
                     </tbody>
                 </table>
             </div>
+            
+            {/* Delete Confirmation Modal */}
+            {isDeleteModalOpen && (
+                <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4" dir="rtl">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 text-center">
+                        <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
+                            <Trash2 className="h-6 w-6 text-red-600" />
+                        </div>
+                        <h3 className="text-lg font-medium text-gray-900 mt-4">هل أنت متأكد؟</h3>
+                        <p className="text-sm text-gray-500 mt-2">لا يمكن التراجع عن هذا الإجراء. سيتم حذف هذا الكوبون نهائياً.</p>
+                        <div className="mt-6 flex justify-center gap-3">
+                            <button 
+                                onClick={() => setIsDeleteModalOpen(false)} 
+                                type="button" 
+                                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
+                            >
+                                إلغاء
+                            </button>
+                            <button 
+                                onClick={confirmDelete} 
+                                disabled={deleteLoading} 
+                                type="button" 
+                                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                            >
+                                {deleteLoading && <LoaderCircle className="animate-spin w-4 h-4" />}
+                                {deleteLoading ? 'جاري الحذف...' : 'نعم، قم بالحذف'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

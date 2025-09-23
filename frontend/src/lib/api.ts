@@ -8,7 +8,8 @@ export class UnauthorizedError extends Error {
 }
 
 const api = async (url: string, options: RequestInit = {}) => {
-  const token = localStorage.getItem('auth_token');
+  // Try both token keys for backward compatibility
+  const token = localStorage.getItem('auth_token') || localStorage.getItem('api_token');
 
   const defaultOptions: RequestInit = {
     headers: {

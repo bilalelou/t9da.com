@@ -55,12 +55,12 @@ class Coupon extends Model
         }
 
         $discount = 0;
-        if ($this->type === 'percentage') {
+        if ($this->type === 'percent') { // يتطابق مع enum في المهاجرة الأصلية
             $discount = ($subtotal * $this->value) / 100;
             if ($this->max_amount && $discount > $this->max_amount) {
                 $discount = $this->max_amount;
             }
-        } else {
+        } else { // 'fixed'
             $discount = $this->value;
         }
 

@@ -30,18 +30,19 @@ export default function AddCouponPage() {
             return;
         }
 
-        const formData = new FormData();
-        formData.append('code', code);
-        formData.append('type', type);
-        formData.append('value', value);
-        formData.append('usage_limit', usageLimit);
-        formData.append('expires_at', expiresAt);
+        const requestData = {
+            code: code.trim(),
+            type,
+            value: parseFloat(value),
+            usage_limit: parseInt(usageLimit),
+            expires_at: expiresAt,
+        };
 
         setLoading(true);
         try {
             const result = await api('/coupons', {
                 method: 'POST',
-                body: formData,
+                body: JSON.stringify(requestData),
             });
             toast({
                 title: "نجاح",
@@ -50,6 +51,9 @@ export default function AddCouponPage() {
             router.push('/admin/coupons');
         } catch (error) {
             if (error instanceof UnauthorizedError) {
+                // Clear both possible token keys and redirect
+                localStorage.removeItem('auth_token');
+                localStorage.removeItem('api_token');
                 router.push('/login');
             }
             // The api wrapper already shows a toast on error
