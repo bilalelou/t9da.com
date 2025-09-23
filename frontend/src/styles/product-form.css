@@ -1,0 +1,75 @@
+/* Product Form Styles - لضمان عدم تداخل حقول النص مع حقول الملفات */
+
+/* تأكيد أن حقول النص والنص المتعدد الأسطر لها الخلفية والحدود الصحيحة */
+input[type="text"]:not([type="file"]),
+textarea {
+  background-color: #f9fafb !important;
+  border: 2px solid #e5e7eb !important;
+  color: #1f2937 !important;
+  font-family: inherit !important;
+  position: relative !important;
+  z-index: 100 !important;
+}
+
+input[type="text"]:not([type="file"]):focus,
+textarea:focus {
+  background-color: #ffffff !important;
+  border-color: #3b82f6 !important;
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+}
+
+/* حقول الملفات لها ستايل مختلف */
+input[type="file"] {
+  background-color: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+}
+
+/* منع تداخل أي حقول مخفية */
+input[type="file"].hidden {
+  position: static !important;
+  width: auto !important;
+  height: auto !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* التأكد من أن الحقول المخفية لا تؤثر على باقي الصفحة */
+.hidden {
+  display: none !important;
+}
+
+/* منع أي عنصر من تغطية الصفحة بالكامل */
+*[class*="absolute"][class*="inset"] {
+  position: relative !important;
+}
+
+/* تأكيد أن المعرفات الخاصة بحقول النص واضحة */
+#product_name,
+#product_short_description,
+#product_description {
+  cursor: text !important;
+  user-select: text !important;
+}
+
+/* منع أي تداخل مع drag and drop للملفات */
+#product_name *,
+#product_short_description *,
+#product_description * {
+  pointer-events: none !important;
+}
+
+#product_name,
+#product_short_description,
+#product_description {
+  pointer-events: auto !important;
+}
+
+/* تأكيد أن placeholder يظهر بشكل صحيح */
+#product_name::placeholder,
+#product_short_description::placeholder,
+#product_description::placeholder {
+  color: #9ca3af !important;
+  opacity: 1 !important;
+}

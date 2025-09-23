@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import ProductVariantsManager from '@/components/admin/ProductVariantsManager';
+import '@/styles/product-form.css';
 
 // Icons
 import { 
@@ -147,6 +148,67 @@ export default function AddProductPage() {
         }).catch(() => {
             setError('فشل في تحميل البيانات المطلوبة.');
         });
+        
+        // التأكد من أن حقول النص تعمل بشكل صحيح
+        const ensureTextInputsWork = () => {
+            const textInputs = [
+                'product_name',
+                'product_short_description', 
+                'product_description'
+            ];
+            
+            textInputs.forEach(inputId => {
+                const input = document.getElementById(inputId);
+                if (input) {
+                    // التأكد من أن الحقل يمكن التركيز عليه
+                    input.style.pointerEvents = 'auto';
+                    input.style.cursor = 'text';
+                    input.style.zIndex = '100';
+                    input.style.position = 'relative';
+                    
+                    if (input.tagName.toLowerCase() === 'input') {
+                        input.setAttribute('type', 'text');
+                    }
+                    
+                    // منع أي تداخل مع drag and drop
+                    input.addEventListener('dragover', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    });
+                    
+                    input.addEventListener('drop', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    });
+                    
+                    // منع فتح نافذة اختيار الملفات عند النقر على حقول النص
+                    input.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        console.log(`تم النقر على حقل النص: ${inputId}`);
+                    });
+                }
+            });
+            
+            // البحث عن أي حقول ملفات قد تتداخل
+            const fileInputs = document.querySelectorAll('input[type="file"]');
+            fileInputs.forEach((fileInput, index) => {
+                const computedStyle = window.getComputedStyle(fileInput);
+                if (computedStyle.position === 'absolute' && 
+                    (computedStyle.top === '0px' || computedStyle.inset === '0px')) {
+                    console.warn(`حقل ملف قد يتداخل مع الصفحة (${index}):`, fileInput);
+                    // تعطيل الحقل مؤقتاً إذا كان يغطي الصفحة
+                    fileInput.style.pointerEvents = 'none';
+                }
+            });
+        };
+        
+        // تشغيل الفحص بعد تحميل الصفحة
+        setTimeout(ensureTextInputsWork, 100);
+        
+        // إضافة مراقب للتأكد من استمرار عمل الحقول
+        const interval = setInterval(ensureTextInputsWork, 1000);
+        
+        return () => clearInterval(interval);
     }, []);
 
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -325,17 +387,22 @@ export default function AddProductPage() {
                                 <div className="space-y-6">
                                     {/* اسم المنتج */}
                                     <div className="relative">
-                                        <label htmlFor="name" className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-3">
+                                        <label htmlFor="product_name" className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-3">
                                             <Package className="w-4 h-4 text-blue-500" />
-                                            اسم المنتج
+                                            اسم المنتج *
                                         </label>
                                         <input 
                                             type="text" 
-                                            id="name" 
+                                            id="product_name"
+                                            name="product_name"
                                             value={name} 
                                             onChange={e => setName(e.target.value)} 
                                             className="w-full px-4 py-4 border-2 border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 text-lg placeholder-gray-400"
                                             placeholder="أدخل اسم المنتج هنا..."
+                                            required
+                                            autoComplete="off"
+                                            data-testid="product-name-input"
+                                            accept=""
                                         />
                                         {validationErrors.name && (
                                             <p className="text-red-500 text-sm mt-2 flex items-center gap-1">
@@ -347,17 +414,21 @@ export default function AddProductPage() {
 
                                     {/* الوصف المختصر */}
                                     <div className="relative">
-                                        <label htmlFor="short_description" className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-3">
+                                        <label htmlFor="product_short_description" className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-3">
                                             <Hash className="w-4 h-4 text-green-500" />
-                                            الوصف المختصر
+                                            الوصف المختصر *
                                         </label>
                                         <textarea 
-                                            id="short_description" 
+                                            id="product_short_description"
+                                            name="product_short_description"
                                             rows={3}
                                             value={shortDescription} 
                                             onChange={e => setShortDescription(e.target.value)} 
                                             className="w-full px-4 py-4 border-2 border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 text-lg placeholder-gray-400 resize-none"
                                             placeholder="وصف مختصر وجذاب للمنتج..."
+                                            required
+                                            autoComplete="off"
+                                            data-testid="product-short-description-textarea"
                                         />
                                         {validationErrors.short_description && (
                                             <p className="text-red-500 text-sm mt-2 flex items-center gap-1">
@@ -369,17 +440,21 @@ export default function AddProductPage() {
 
                                     {/* الوصف المفصل */}
                                     <div className="relative">
-                                        <label htmlFor="description" className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-3">
+                                        <label htmlFor="product_description" className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-3">
                                             <AlignLeft className="w-4 h-4 text-purple-500" />
-                                            الوصف المفصل
+                                            الوصف المفصل *
                                         </label>
                                         <textarea 
-                                            id="description" 
+                                            id="product_description"
+                                            name="product_description"
                                             rows={6}
                                             value={description} 
                                             onChange={e => setDescription(e.target.value)} 
                                             className="w-full px-4 py-4 border-2 border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-200 text-lg placeholder-gray-400 resize-none"
                                             placeholder="اكتب وصفاً تفصيلياً للمنتج، المواصفات، الاستخدامات..."
+                                            required
+                                            autoComplete="off"
+                                            data-testid="product-description-textarea"
                                         />
                                         {validationErrors.description && (
                                             <p className="text-red-500 text-sm mt-2 flex items-center gap-1">
@@ -561,25 +636,36 @@ export default function AddProductPage() {
                                         <Star className="w-4 h-4 text-yellow-500" />
                                         الصورة الرئيسية
                                     </label>
-                                    <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center hover:border-pink-300 transition-colors">
+                                    <div className="border-2 border-dashed border-gray-200 rounded-xl overflow-hidden hover:border-pink-300 transition-colors">
                                         {imagePreview ? (
-                                            <div className="relative group">
-                                                <img src={imagePreview} alt="معاينة" className="w-full h-32 object-cover rounded-lg" />
-                                                <button 
-                                                    type="button" 
-                                                    onClick={() => { setImage(null); setImagePreview(null); }} 
-                                                    className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                >
-                                                    <X className="w-4 h-4" />
-                                                </button>
+                                            <div className="p-6">
+                                                <div className="relative group">
+                                                    <img src={imagePreview} alt="معاينة" className="w-full h-32 object-cover rounded-lg" />
+                                                    <button 
+                                                        type="button" 
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setImage(null); 
+                                                            setImagePreview(null);
+                                                        }} 
+                                                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-20"
+                                                    >
+                                                        <X className="w-4 h-4" />
+                                                    </button>
+                                                </div>
                                             </div>
                                         ) : (
-                                            <div>
+                                            <label className="block p-6 text-center cursor-pointer">
                                                 <UploadCloud className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                                                <p className="text-gray-500 text-sm">اختر صورة رئيسية</p>
-                                            </div>
+                                                <p className="text-gray-500 text-sm">اضغط هنا لاختيار صورة رئيسية</p>
+                                                <input 
+                                                    type="file" 
+                                                    onChange={handleImageChange} 
+                                                    accept="image/*" 
+                                                    className="hidden"
+                                                />
+                                            </label>
                                         )}
-                                        <input type="file" onChange={handleImageChange} accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" />
                                     </div>
                                 </div>
 
@@ -589,12 +675,18 @@ export default function AddProductPage() {
                                         <Images className="w-4 h-4 text-blue-500" />
                                         معرض الصور
                                     </label>
-                                    <div className="border-2 border-dashed border-gray-200 rounded-xl p-4 text-center hover:border-blue-300 transition-colors">
-                                        <div className="relative">
+                                    <div className="border-2 border-dashed border-gray-200 rounded-xl overflow-hidden hover:border-blue-300 transition-colors">
+                                        <label className="block p-4 text-center cursor-pointer">
                                             <UploadCloud className="w-6 h-6 text-gray-400 mx-auto mb-2" />
-                                            <p className="text-gray-500 text-sm">أضف صور إضافية</p>
-                                            <input type="file" multiple onChange={handleGalleryChange} accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" />
-                                        </div>
+                                            <p className="text-gray-500 text-sm">اضغط هنا لإضافة صور إضافية</p>
+                                            <input 
+                                                type="file" 
+                                                multiple 
+                                                onChange={handleGalleryChange} 
+                                                accept="image/*" 
+                                                className="hidden"
+                                            />
+                                        </label>
                                     </div>
                                     {galleryPreviews.length > 0 && (
                                         <div className="grid grid-cols-2 gap-2 mt-4">
