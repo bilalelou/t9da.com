@@ -48,28 +48,6 @@ Route::get('/products/{product}/videos', [ProductVideoController::class, 'index'
 Route::post('/validate-coupon', [OrderController::class, 'validateCoupon']);
 Route::post('/shipping-costs', [OrderController::class, 'getShippingCosts']);
 
-// [مؤقت] للاختبار فقط - routes بدون authentication
-Route::get('/test/products/{product}', [ProductController::class, 'show']);
-Route::get('/test/categories', [CategoryController::class, 'index']);
-Route::get('/test/brands', [BrandController::class, 'index']);
-Route::get('/test/colors', function() {
-    try {
-        $colors = \App\Models\Color::active()->get();
-        return response()->json([
-            'success' => true,
-            'data' => $colors,
-            'count' => $colors->count()
-        ]);
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => $e->getMessage(),
-            'line' => $e->getLine(),
-            'file' => $e->getFile()
-        ], 500);
-    }
-});
-
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [LoginController::class, 'logout']);
     Route::get('/user', fn(Request $request) => $request->user()->load('roles'));
