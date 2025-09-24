@@ -20,12 +20,14 @@ class RolesAndUsersSeeder extends Seeder
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
         // تنظيف البيانات القديمة
+        \Illuminate\Support\Facades\Schema::disableForeignKeyConstraints();
         \Illuminate\Support\Facades\DB::table('model_has_roles')->truncate();
         \Illuminate\Support\Facades\DB::table('role_has_permissions')->truncate();
         \Illuminate\Support\Facades\DB::table('model_has_permissions')->truncate();
         \Illuminate\Support\Facades\DB::table('users')->truncate();
         \Illuminate\Support\Facades\DB::table('roles')->truncate();
         \Illuminate\Support\Facades\DB::table('permissions')->truncate();
+        \Illuminate\Support\Facades\Schema::enableForeignKeyConstraints();
 
         // 1. إنشاء الأدوار لكلا الحارسين (web و sanctum)
         $adminRoleWeb = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);

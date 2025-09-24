@@ -19,8 +19,10 @@ class OrderSeeder extends Seeder
         $this->command->info('📦 إنشاء الطلبات التجريبية...');
 
         // نظف البيانات الموجودة
+        \Illuminate\Support\Facades\Schema::disableForeignKeyConstraints();
         DB::table('order_items')->truncate();
         DB::table('orders')->truncate();
+        \Illuminate\Support\Facades\Schema::enableForeignKeyConstraints();
 
         // جلب العملاء والمنتجات
         $customers = User::role('customer')->get();
@@ -31,7 +33,7 @@ class OrderSeeder extends Seeder
             return;
         }
 
-        $orderStatuses = ['ordered', 'delivered', 'canceled'];
+        $orderStatuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
         $paymentMethods = ['cod', 'card'];
         $cities = ['الدار البيضاء', 'الرباط', 'مراكش', 'فاس', 'أكادير', 'طنجة', 'وجدة', 'تطوان'];
         $states = ['الدار البيضاء-سطات', 'الرباط-سلا-القنيطرة', 'مراكش-آسفي', 'فاس-مكناس', 'سوس-ماسة', 'طنجة-تطوان-الحسيمة', 'الشرق', 'بني ملال-خنيفرة'];
@@ -151,7 +153,7 @@ class OrderSeeder extends Seeder
                 'shipping_postal_code' => rand(10000, 99999),
                 'shipping_method' => 'standard',
                 'currency' => 'MAD',
-                'status' => 'ordered',
+                'status' => 'pending',
                 'payment_method' => $paymentMethods[array_rand($paymentMethods)],
                 'payment_status' => 'pending',
                 'notes' => 'طلب حديث - اليوم',
