@@ -201,7 +201,9 @@ const FilterSidebar: React.FC<{
         categories: filters.categories || [],
         brands: filters.brands || [],
         color: filters.color || '',
-        size: filters.size || ''
+        size: filters.size || '',
+        min_price: filters.min_price || '',
+        max_price: filters.max_price || ''
     });
 
     const handleCategoryChange = (categoryName: string) => {
@@ -235,9 +237,14 @@ const FilterSidebar: React.FC<{
     };
 
     const clearAllFilters = () => {
-        const clearedFilters = { categories: [], brands: [], color: '', size: '' };
+        const clearedFilters = { categories: [], brands: [], color: '', size: '', min_price: '', max_price: '' };
         setLocalFilters(clearedFilters);
         applyFilters(clearedFilters);
+    };
+
+    const handlePriceChange = (minPrice: string, maxPrice: string) => {
+        setLocalFilters(prev => ({ ...prev, min_price: minPrice, max_price: maxPrice }));
+        applyFilters({ min_price: minPrice, max_price: maxPrice });
     };
 
     const content = (
@@ -328,6 +335,65 @@ const FilterSidebar: React.FC<{
                     ))}
                 </div>
             </AccordionItem>
+            
+            <AccordionItem title="نطاق السعر">
+                <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-3">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">السعر الأدنى</label>
+                            <input
+                                type="number"
+                                placeholder="0"
+                                value={localFilters.min_price}
+                                onChange={(e) => setLocalFilters(prev => ({ ...prev, min_price: e.target.value }))}
+                                onBlur={(e) => handlePriceChange(e.target.value, localFilters.max_price)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">السعر الأقصى</label>
+                            <input
+                                type="number"
+                                placeholder="1000"
+                                value={localFilters.max_price}
+                                onChange={(e) => setLocalFilters(prev => ({ ...prev, max_price: e.target.value }))}
+                                onBlur={(e) => handlePriceChange(localFilters.min_price, e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+                            />
+                        </div>
+                    </div>
+                    
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => handlePriceChange('0', '100')}
+                            className="flex-1 py-2 px-3 text-xs border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                        >
+                            أقل من 100 درهم
+                        </button>
+                        <button
+                            onClick={() => handlePriceChange('100', '500')}
+                            className="flex-1 py-2 px-3 text-xs border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                        >
+                            100 - 500 درهم
+                        </button>
+                    </div>
+                    
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => handlePriceChange('500', '1000')}
+                            className="flex-1 py-2 px-3 text-xs border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                        >
+                            500 - 1000 درهم
+                        </button>
+                        <button
+                            onClick={() => handlePriceChange('1000', '')}
+                            className="flex-1 py-2 px-3 text-xs border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                        >
+                            أكثر من 1000 درهم
+                        </button>
+                    </div>
+                </div>
+            </AccordionItem>
         </div>
     );
     
@@ -393,6 +459,8 @@ export default function ShopPage() {
         per_page: 9,
         color: '',
         size: '',
+        min_price: '',
+        max_price: '',
         categories: [] as string[],
         brands: [] as string[]
     });
@@ -433,6 +501,8 @@ export default function ShopPage() {
         sort?: string;
         color?: string;
         size?: string;
+        min_price?: string;
+        max_price?: string;
     }) => {
         setFilters(prev => ({ ...prev, page: 1, ...newFilters }));
     };
