@@ -99,7 +99,24 @@ const api = {
             if (response.status === 401) window.location.href = '/login';
             throw new Error('فشل في جلب تفاصيل الطلب.');
         }
-        return await response.json();
+        const data = await response.json();
+        // تحويل orderItems إلى items للتوافق مع الواجهة
+        const order = data.data || data;
+        return {
+            ...order,
+            items: order.order_items?.map((item: any) => ({
+                id: item.id,
+                product_name: item.product?.name || 'منتج غير معروف',
+                product_image: item.product?.thumbnail || '',
+                quantity: item.quantity,
+                price: item.price,
+                total: item.quantity * item.price,
+                variant: {
+                    color: item.color,
+                    size: item.size
+                }
+            })) || []
+        };
     },
 };
 
@@ -207,7 +224,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ orderId, isOpen, 
                             <div>
                                 <h3 className="font-semibold text-gray-900 mb-4">المنتجات المطلوبة</h3>
                                 <div className="space-y-3">
-                                    {orderDetails.items.map((item) => (
+                                    {orderDetails.items && orderDetails.items.length > 0 ? orderDetails.items.map((item) => (
                                         <div key={item.id} className="flex items-center gap-4 p-4 border rounded-lg">
                                             <img 
                                                 src={item.product_image || '/placeholder-product.jpg'} 
@@ -235,7 +252,11 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ orderId, isOpen, 
                                                 </div>
                                             </div>
                                         </div>
-                                    ))}
+                                    )) : (
+                                        <div className="text-center py-8 text-gray-500">
+                                            لا توجد منتجات في هذا الطلب
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
