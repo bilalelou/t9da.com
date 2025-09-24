@@ -288,8 +288,7 @@ const Footer = () => {
                         <ul className="space-y-2">
                             <li><Link href="/privacy" className="text-gray-400 hover:text-white transition-colors">سياسة الخصوصية</Link></li>
                             <li><Link href="/terms" className="text-gray-400 hover:text-white transition-colors">الشروط والأحكام</Link></li>
-                            <li><Link href="/returns" className="text-gray-400 hover:text-white transition-colors">سياسة الإرجاع</Link></li>
-                            <li><Link href="/support" className="text-gray-400 hover:text-white transition-colors">الدعم الفني</Link></li>
+                            <li><Link href="/contact" className="text-gray-400 hover:text-white transition-colors">اتصل بنا</Link></li>
                         </ul>
                     </div>
                 </div>
