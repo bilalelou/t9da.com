@@ -32,7 +32,6 @@ const Navbar = () => {
                         height={48}
                         className="object-contain"
                     />
-                    <span className="font-bold text-2xl text-[#1e81b0]">T9DA</span>
                 </Link>
 
                 {/* روابط التنقل للشاشات الكبيرة */}

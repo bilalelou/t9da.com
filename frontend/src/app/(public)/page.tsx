@@ -186,13 +186,13 @@ const ProductCard = React.memo(({ product }: { product: Product }) => {
 
     return (
         <a href={`/shop/${product.slug}`} className="cursor-pointer group relative bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-2 transition-all duration-300 flex flex-col h-full">
-            <div className="overflow-hidden h-72 p-4 bg-gray-50 relative">
-                <img src={product.thumbnail} alt={product.name} className="w-full h-full object-contain group-hover:scale-105 transition-transform" onError={(e) => { e.currentTarget.src = 'https://placehold.co/400x400/f0f0f0/cccccc?text=No+Image'; }} />
+            <div className="overflow-hidden h-72 bg-gray-50 relative">
+                <img src={product.thumbnail} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" onError={(e) => { e.currentTarget.src = 'https://placehold.co/400x400/f0f0f0/cccccc?text=No+Image'; }} />
                 
                 {/* زر المفضلة */}
                 <button
                     onClick={handleWishlistClick}
-                    className={`absolute top-3 left-3 w-9 h-9 rounded-full flex items-center justify-center shadow-md transition-all duration-300 ${
+                    className={`absolute top-4 left-4 w-9 h-9 rounded-full flex items-center justify-center shadow-md transition-all duration-300 ${
                         isWishlisted 
                             ? 'bg-red-500 text-white hover:bg-red-600' 
                             : 'bg-white text-gray-600 hover:bg-red-50 hover:text-red-500'
