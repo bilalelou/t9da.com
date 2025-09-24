@@ -36,6 +36,76 @@ Route::post('/contact', [ContactController::class, 'store']);
 // Public routes
 Route::get('/public/colors', [ColorController::class, 'index']);
 Route::get('/public/sizes', [SizeController::class, 'index']);
+
+// Diagnostic routes
+Route::get('/test/colors', function() {
+    try {
+        $colors = \App\Models\Color::active()->get();
+        return response()->json([
+            'success' => true,
+            'message' => 'Colors API is working',
+            'data' => $colors,
+            'count' => $colors->count(),
+            'timestamp' => now()
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error in colors API',
+            'error' => $e->getMessage(),
+            'line' => $e->getLine(),
+            'file' => basename($e->getFile())
+        ], 500);
+    }
+});
+
+Route::get('/test/sizes', function() {
+    try {
+        $sizes = \App\Models\Size::active()->get();
+        return response()->json([
+            'success' => true,
+            'message' => 'Sizes API is working',
+            'data' => $sizes,
+            'count' => $sizes->count(),
+            'timestamp' => now()
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error in sizes API',
+            'error' => $e->getMessage(),
+            'line' => $e->getLine(),
+            'file' => basename($e->getFile())
+        ], 500);
+    }
+});
+
+// Comprehensive system check
+Route::get('/test/system', function() {
+    return response()->json([
+        'success' => true,
+        'message' => 'System is working!',
+        'data' => [
+            'laravel_version' => app()->version(),
+            'php_version' => phpversion(),
+            'environment' => app()->environment(),
+            'database' => [
+                'connection' => config('database.default'),
+                'users_count' => \App\Models\User::count(),
+                'products_count' => \App\Models\Product::count(),
+                'colors_count' => \App\Models\Color::count(),
+                'sizes_count' => \App\Models\Size::count(),
+            ],
+            'routes' => [
+                'colors' => url('/api/public/colors'),
+                'sizes' => url('/api/public/sizes'),
+                'returns' => url('/returns'),
+                'support' => url('/support'),
+            ]
+        ],
+        'timestamp' => now()
+    ]);
+});
 Route::get('/public/products/{product}/variants', [ProductVariantController::class, 'getProductVariants']);
 
 // Product Reviews Public Routes
