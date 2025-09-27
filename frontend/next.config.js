@@ -1,8 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    forceSwcTransforms: true,
-  },
   typescript: {
     // تجاهل أخطاء TypeScript أثناء البناء مؤقتاً
     ignoreBuildErrors: true,
@@ -11,6 +8,9 @@ const nextConfig = {
     // تجاهل أخطاء ESLint أثناء البناء مؤقتاً
     ignoreDuringBuilds: true,
   },
+  // تحسين الأداء
+  optimizeFonts: true,
+  compress: true,
   images: {
     remotePatterns: [
       {
