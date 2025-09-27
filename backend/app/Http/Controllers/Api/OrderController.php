@@ -242,12 +242,12 @@ class OrderController extends Controller
             // جلب معرفات المنتجات من السلة
             $productIds = collect($request->items)->pluck('id');
             $products = Product::whereIn('id', $productIds)->get();
-            
+
             // فحص إذا كانت جميع المنتجات لها شحن مجاني
             $allProductsHaveFreeShipping = $products->every(function ($product) {
                 return $product->has_free_shipping;
             });
-            
+
             // إذا كانت جميع المنتجات لها شحن مجاني
             if ($allProductsHaveFreeShipping && $products->isNotEmpty()) {
                 return response()->json([
@@ -285,7 +285,7 @@ class OrderController extends Controller
             // حساب الشحن المختلط (بعض المنتجات لها شحن مجاني وبعضها لا)
             $freeShippingProducts = $products->filter(fn($p) => $p->has_free_shipping);
             $paidShippingProducts = $products->filter(fn($p) => !$p->has_free_shipping);
-            
+
             $shippingMessage = '';
             if ($freeShippingProducts->isNotEmpty() && $paidShippingProducts->isNotEmpty()) {
                 $shippingMessage = sprintf(

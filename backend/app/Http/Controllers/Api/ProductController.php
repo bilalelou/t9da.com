@@ -425,8 +425,8 @@ class ProductController extends Controller
                 'free_shipping_note' => $request->free_shipping_note,
             ]);
 
-            $message = $product->has_free_shipping ? 
-                'تم تفعيل الشحن المجاني للمنتج' : 
+            $message = $product->has_free_shipping ?
+                'تم تفعيل الشحن المجاني للمنتج' :
                 'تم إلغاء الشحن المجاني للمنتج';
 
             return response()->json([
