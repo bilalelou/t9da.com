@@ -7,7 +7,8 @@ import AuthGuard from './AuthGuard'; // استيراد المكون الجديد
 // Icons
 import { 
     LogOut, Menu, X, ShieldCheck, Tag, Ticket, BellDot, CheckCircle,
-    LayoutGrid, Package, ShoppingCart, Users, Folder, BarChart4, Settings
+    LayoutGrid, Package, ShoppingCart, Users, Folder, BarChart4, Settings,
+    Images, Store
 } from 'lucide-react';
 import NotificationDropdown from '@/components/admin/NotificationDropdown';
 
@@ -44,6 +45,8 @@ const navigationItems = [
     { id: 'categories', name: 'التصنيفات', href: '/admin/categories', icon: <Folder size={20}/> },
     { id: 'brands', name: 'الماركات', href: '/admin/brands', icon: <Tag size={20}/> },
     { id: 'coupons', name: 'الكوبونات', href: '/admin/coupons', icon: <Ticket size={20}/> },
+    { id: 'sliders', name: 'الشرائح', href: '/admin/sliders', icon: <Images size={20}/> },
+    { id: 'shopping', name: 'إعدادات التسوق', href: '/admin/shopping', icon: <Store size={20}/> },
     { id: 'analytics', name: 'التحليلات', href: '/admin/analytics', icon: <BarChart4 size={20}/> },
     { id: 'notifications', name: 'الإشعارات', href: '/admin/notifications', icon: <BellDot size={20}/> },
     { id: 'settings', name: 'الإعدادات', href: '/admin/settings', icon: <Settings size={20}/> }

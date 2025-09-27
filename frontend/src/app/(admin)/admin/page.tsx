@@ -382,6 +382,37 @@ export default function AdminDashboard() {
               <p className="text-sm text-gray-600">عرض وإدارة العملاء</p>
             </Link>
             <Link
+              href="/admin/sliders"
+              className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow group"
+            >
+              <div className="w-12 h-12 bg-pink-100 rounded-xl flex items-center justify-center mb-4 group-hover:bg-pink-200 transition-colors">
+                <svg className="w-6 h-6 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">إدارة الشرائح</h3>
+              <p className="text-sm text-gray-600">إدارة شرائح الصفحة الرئيسية</p>
+            </Link>
+            <Link
+              href="/admin/shopping"
+              className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow group"
+            >
+              <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center mb-4 group-hover:bg-indigo-200 transition-colors">
+                <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">إعدادات التسوق</h3>
+              <p className="text-sm text-gray-600">إدارة إعدادات المتجر والدفع</p>
+            </Link>
+          </div>
+        </div>
+        
+        {/* صفحات إضافية */}
+        <div className="mt-8">
+          <h2 className="text-xl font-bold text-gray-900 mb-6">إعدادات المتجر</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Link
               href="/admin/reports"
               className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow group"
             >
