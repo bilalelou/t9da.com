@@ -61,6 +61,8 @@ interface Product {
     variants?: ProductVariant[];
     available_colors?: Color[];
     available_sizes?: Size[];
+    has_free_shipping?: boolean;
+    free_shipping_note?: string;
 }
 
 // --- Toast & Favorites Contexts ---
@@ -408,6 +410,22 @@ const ProductDetailPage = ({ product, relatedProducts }: { product: Product; rel
                                 <span className="text-red-600 text-sm">غير متوفر حالياً</span>
                             )}
                         </div>
+
+                        {/* Free Shipping Status */}
+                        {product.has_free_shipping && (
+                            <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                                <div className="flex items-center gap-2 text-green-700">
+                                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                        <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/>
+                                        <path d="M3 4a1 1 0 00-1 1v1a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.5h1.5a2.5 2.5 0 005 0V8a1 1 0 00-1-1h-4.5z"/>
+                                    </svg>
+                                    <span className="font-semibold">شحن مجاني</span>
+                                </div>
+                                {product.free_shipping_note && (
+                                    <p className="mt-2 text-sm text-green-600">{product.free_shipping_note}</p>
+                                )}
+                            </div>
+                        )}
 
                          {/* Color Options */}
                          {hasColors && (

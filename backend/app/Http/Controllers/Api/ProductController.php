@@ -189,6 +189,8 @@ class ProductController extends Controller
                 'new_images' => 'nullable|array',
                 'new_images.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:5120', // 5MB
                 'existing_images' => 'nullable|json',
+                'has_free_shipping' => 'boolean',
+                'free_shipping_note' => 'nullable|string|max:500',
             ];
         } else {
             // قواعد التحقق الخاصة بإنشاء منتج جديد (أكثر صرامة)
@@ -204,6 +206,8 @@ class ProductController extends Controller
                 'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120', // 5MB للصورة الرئيسية
                 'images' => 'nullable|array',
                 'images.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:5120', // 5MB
+                'has_free_shipping' => 'boolean',
+                'free_shipping_note' => 'nullable|string|max:500',
             ];
         }
 
@@ -366,6 +370,81 @@ class ProductController extends Controller
                 'is_featured' => $isFeatured,
                 'is_active' => true,
             ]);
+        }
+    }
+
+    /**
+     * جلب المنتجات التي لها شحن مجاني
+     */
+    public function freeShippingProducts(Request $request)
+    {
+        try {
+            $perPage = $request->get('per_page', 12);
+            $products = Product::freeShipping()
+                ->with(['category', 'brand'])
+                ->paginate($perPage);
+
+            return response()->json([
+                'success' => true,
+                'data' => $products->items(),
+                'pagination' => [
+                    'total' => $products->total(),
+                    'per_page' => $products->perPage(),
+                    'current_page' => $products->currentPage(),
+                    'last_page' => $products->lastPage(),
+                ],
+                'message' => 'المنتجات مع الشحن المجاني'
+            ]);
+        } catch (Exception $e) {
+            Log::error('خطأ في جلب منتجات الشحن المجاني: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'حدث خطأ في الخادم.'], 500);
+        }
+    }
+
+    /**
+     * تفعيل/إلغاء تفعيل الشحن المجاني للمنتج
+     */
+    public function toggleFreeShipping(Request $request, Product $product)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'has_free_shipping' => 'required|boolean',
+                'free_shipping_note' => 'nullable|string|max:500',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'بيانات غير صحيحة',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            $product->update([
+                'has_free_shipping' => $request->has_free_shipping,
+                'free_shipping_note' => $request->free_shipping_note,
+            ]);
+
+            $message = $product->has_free_shipping ? 
+                'تم تفعيل الشحن المجاني للمنتج' : 
+                'تم إلغاء الشحن المجاني للمنتج';
+
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'data' => [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'has_free_shipping' => $product->has_free_shipping,
+                    'free_shipping_note' => $product->free_shipping_note,
+                ]
+            ]);
+        } catch (Exception $e) {
+            Log::error('خطأ في تغيير حالة الشحن المجاني: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'حدث خطأ في الخادم.'
+            ], 500);
         }
     }
 }

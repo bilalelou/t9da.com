@@ -52,6 +52,9 @@ Route::post('/shipping-costs', [OrderController::class, 'getShippingCosts']);
 // Public Cities Routes (للعرض العام)
 Route::get('/cities/active', [CityController::class, 'active']);
 
+// Public Free Shipping Routes
+Route::get('/products/free-shipping/public', [ProductController::class, 'freeShippingProducts']);
+
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [LoginController::class, 'logout']);
     Route::get('/user', fn(Request $request) => $request->user()->load('roles'));
@@ -121,5 +124,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // Cities Routes (Admin only)
     Route::apiResource('cities', CityController::class);
     Route::post('/cities/{city}/toggle-status', [CityController::class, 'toggleStatus']);
+
+    // Free Shipping Routes
+    Route::get('/products/free-shipping', [ProductController::class, 'freeShippingProducts']);
+    Route::post('/products/{product}/toggle-free-shipping', [ProductController::class, 'toggleFreeShipping']);
 });
 

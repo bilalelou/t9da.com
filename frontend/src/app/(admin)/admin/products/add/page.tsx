@@ -104,6 +104,10 @@ export default function AddProductPage() {
     const [categoryId, setCategoryId] = useState('');
     const [brandId, setBrandId] = useState(''); // جديد - العلامة التجارية (اختياري)
     
+    // Free shipping fields
+    const [hasFreeShipping, setHasFreeShipping] = useState(false);
+    const [freeShippingNote, setFreeShippingNote] = useState('');
+    
     // Product variants
     const [productVariants, setProductVariants] = useState<ProductVariant[]>([]);
     
@@ -283,6 +287,12 @@ export default function AddProductPage() {
         // إضافة العلامة التجارية إذا تم اختيارها
         if (brandId) {
             formData.append('brand_id', brandId);
+        }
+
+        // إضافة بيانات الشحن المجاني
+        formData.append('has_free_shipping', hasFreeShipping ? 'true' : 'false');
+        if (hasFreeShipping && freeShippingNote) {
+            formData.append('free_shipping_note', freeShippingNote);
         }
 
         // Add has_variants flag
@@ -575,6 +585,59 @@ export default function AddProductPage() {
                                             </p>
                                         )}
                                     </div>
+                                </div>
+                            </div>
+
+                            {/* إعدادات الشحن */}
+                            <div className="bg-white rounded-2xl shadow-lg p-8 border border-gray-100">
+                                <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
+                                    <div className="p-2 bg-blue-100 rounded-lg">
+                                        <Package className="w-6 h-6 text-blue-600" />
+                                    </div>
+                                    <h2 className="text-2xl font-bold text-gray-800">إعدادات الشحن</h2>
+                                </div>
+                                
+                                <div className="space-y-6">
+                                    {/* الشحن المجاني */}
+                                    <div className="flex items-start gap-4 p-4 bg-green-50 rounded-xl border border-green-200">
+                                        <input
+                                            type="checkbox"
+                                            id="has_free_shipping"
+                                            checked={hasFreeShipping}
+                                            onChange={(e) => setHasFreeShipping(e.target.checked)}
+                                            className="w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500 mt-1"
+                                        />
+                                        <div className="flex-1">
+                                            <label htmlFor="has_free_shipping" className="flex items-center gap-2 text-lg font-medium text-gray-800 cursor-pointer">
+                                                <Package className="w-5 h-5 text-green-600" />
+                                                تفعيل الشحن المجاني لهذا المنتج
+                                            </label>
+                                            <p className="text-gray-600 mt-1">
+                                                عند تفعيل هذا الخيار، لن يتم تطبيق رسوم الشحن على هذا المنتج
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* ملاحظة الشحن المجاني */}
+                                    {hasFreeShipping && (
+                                        <div className="relative">
+                                            <label htmlFor="free_shipping_note" className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-3">
+                                                <FileText className="w-4 h-4 text-green-500" />
+                                                ملاحظة الشحن المجاني (اختياري)
+                                            </label>
+                                            <textarea
+                                                id="free_shipping_note"
+                                                value={freeShippingNote}
+                                                onChange={(e) => setFreeShippingNote(e.target.value)}
+                                                className="w-full px-4 py-4 border-2 border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 text-lg placeholder-gray-400"
+                                                placeholder="مثال: شحن مجاني لجميع أنحاء الجزائر"
+                                                rows={3}
+                                            />
+                                            <p className="text-gray-500 text-sm mt-2">
+                                                هذه الملاحظة ستظهر للعملاء مع المنتج
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 

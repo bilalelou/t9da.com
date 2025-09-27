@@ -350,6 +350,17 @@ export default function CartPage() {
                                                     ✅ متوفر في المخزون
                                                 </div>
                                             )}
+                                            
+                                            {/* مؤشر الشحن المجاني */}
+                                            {item.has_free_shipping && (
+                                                <div className="mt-2 flex items-center gap-1 text-green-600 text-sm font-medium">
+                                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/>
+                                                        <path d="M3 4a1 1 0 00-1 1v1a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.5h1.5a2.5 2.5 0 005 0V8a1 1 0 00-1-1h-4.5z"/>
+                                                    </svg>
+                                                    شحن مجاني لهذا المنتج
+                                                </div>
+                                            )}
 
                                             <p className="text-gray-500 text-sm mt-1">
                                                 {formatCurrency(item.price)} للقطعة

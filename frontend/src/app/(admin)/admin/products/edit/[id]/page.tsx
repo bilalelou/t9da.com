@@ -55,6 +55,8 @@ interface Product {
   images?: string[];
   videos?: ProductVideo[];
   variants?: ProductVariant[];
+  has_free_shipping?: boolean;
+  free_shipping_note?: string;
 }
 
 interface Category {
@@ -219,6 +221,8 @@ function EditProductPageInner() {
     brand_id: '',
     featured: false,
     status: 'active',
+    has_free_shipping: false,
+    free_shipping_note: '',
   });
 
   const [newThumbnail, setNewThumbnail] = useState<File | null>(null);
@@ -281,6 +285,8 @@ function EditProductPageInner() {
           brand_id: p.brand_id != null ? String(p.brand_id) : '',
           featured: !!p.featured,
           status: p.status || 'active',
+          has_free_shipping: !!p.has_free_shipping,
+          free_shipping_note: p.free_shipping_note || '',
         });
         if (p.thumbnail) {
           setThumbnailPreview(p.thumbnail);
@@ -782,6 +788,57 @@ function EditProductPageInner() {
                   </div>
                 </label>
               </div>
+            </div>
+          </div>
+
+          {/* Free Shipping Settings */}
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-white/20 shadow-xl p-8">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-md">
+                <Package className="w-5 h-5 text-white" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-800">إعدادات الشحن</h2>
+            </div>
+
+            <div className="space-y-6">
+              <div className="flex items-start gap-4 p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200">
+                <input
+                  type="checkbox"
+                  name="has_free_shipping"
+                  checked={formData.has_free_shipping}
+                  onChange={handleInputChange}
+                  className="w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500 mt-1"
+                />
+                <div className="flex-1">
+                  <label className="flex items-center gap-2 text-lg font-semibold text-gray-800 cursor-pointer">
+                    <Package className="w-5 h-5 text-green-600" />
+                    تفعيل الشحن المجاني لهذا المنتج
+                  </label>
+                  <p className="text-gray-600 mt-2">
+                    عند تفعيل هذا الخيار، لن يتم تطبيق رسوم الشحن على هذا المنتج
+                  </p>
+                </div>
+              </div>
+
+              {formData.has_free_shipping && (
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                    <FileText className="w-4 h-4 text-green-600" />
+                    ملاحظة الشحن المجاني (اختياري)
+                  </label>
+                  <textarea
+                    name="free_shipping_note"
+                    value={formData.free_shipping_note}
+                    onChange={handleInputChange}
+                    rows={3}
+                    className="w-full px-4 py-3 bg-gradient-to-r from-white to-gray-50 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-500/20 transition-all duration-200 text-gray-800 placeholder-gray-400 resize-none"
+                    placeholder="مثال: شحن مجاني لجميع أنحاء الجزائر"
+                  />
+                  <p className="text-gray-500 text-sm flex items-center gap-1">
+                    <span>هذه الملاحظة ستظهر للعملاء مع المنتج</span>
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 

@@ -17,7 +17,8 @@ import {
     CheckCircle,
     XCircle,
     PackageSearch,
-    Video
+    Video,
+    Truck
 } from 'lucide-react';
 
 // --- Interfaces ---
@@ -34,6 +35,8 @@ interface Product {
     status: 'published' | 'draft' | 'out_of_stock';
     rating: number; // التقييم
     reviews: number; // عدد المراجعات
+    has_free_shipping?: boolean; // الشحن المجاني
+    free_shipping_note?: string; // ملاحظة الشحن المجاني
 }
 
 // --- API Helper ---
@@ -131,8 +134,15 @@ const ProductCard = ({ product, onSelect, isSelected }) => {
                     <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${status.color}`}>{status.text}</span>
                 </div>
                 <div>
-                    <p className="text-gray-500">التقييم</p>
-                    <div className="flex items-center gap-1">{renderStars(product.rating)}</div>
+                    <p className="text-gray-500">الشحن</p>
+                    {product.has_free_shipping ? (
+                        <span className="inline-flex items-center gap-1 text-green-600 font-medium">
+                            <Package size={14} />
+                            مجاني
+                        </span>
+                    ) : (
+                        <span className="text-gray-600 text-xs">مدفوع</span>
+                    )}
                 </div>
             </div>
             <div className="flex justify-end gap-2 pt-3 border-t border-gray-100">
@@ -167,6 +177,7 @@ const ProductsPage = ({ products }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('all');
     const [selectedStatus, setSelectedStatus] = useState('all');
+    const [shippingFilter, setShippingFilter] = useState('all'); // all, free_shipping, paid_shipping
     const [selectedProducts, setSelectedProducts] = useState<number[]>([]);
 
     const categories = useMemo(() => ['all', ...Array.from(new Set(products.map(p => p.category)))], [products]);
@@ -176,15 +187,19 @@ const ProductsPage = ({ products }) => {
             const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
             const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
             const matchesStatus = selectedStatus === 'all' || product.status === selectedStatus;
-            return matchesSearch && matchesCategory && matchesStatus;
+            const matchesShipping = shippingFilter === 'all' || 
+                                  (shippingFilter === 'free_shipping' && product.has_free_shipping) ||
+                                  (shippingFilter === 'paid_shipping' && !product.has_free_shipping);
+            return matchesSearch && matchesCategory && matchesStatus && matchesShipping;
         });
-    }, [products, searchTerm, selectedCategory, selectedStatus]);
+    }, [products, searchTerm, selectedCategory, selectedStatus, shippingFilter]);
 
     const productStats = useMemo(() => ({
         total: products.length,
         active: products.filter(p => p.status === 'published').length,
         outOfStock: products.filter(p => p.stock === 0).length,
         lowStock: products.filter(p => p.stock > 0 && p.stock <= 10).length,
+        freeShipping: products.filter(p => p.has_free_shipping).length,
         totalValue: products.reduce((acc, p) => acc + (p.price * p.stock), 0)
     }), [products]);
 
@@ -217,13 +232,13 @@ const ProductsPage = ({ products }) => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
                  <StatCard title="إجمالي المنتجات" value={productStats.total} icon={<Package size={24} />} />
                  <StatCard title="المنتجات النشطة" value={productStats.active} icon={<CheckCircle size={24} />} />
+                 <StatCard title="شحن مجاني" value={productStats.freeShipping} icon={<Truck size={24} />} />
                  <StatCard title="نفد من المخزون" value={productStats.outOfStock} icon={<XCircle size={24} />} />
-                 <StatCard title="مخزون منخفض" value={productStats.lowStock} icon={<Warehouse size={24} />} />
                  <StatCard title="قيمة المخزون" value={formatCurrency(productStats.totalValue)} icon={<Tag size={24} />} />
             </div>
 
             <div className="bg-white rounded-2xl shadow-md p-4 border border-gray-100">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                     <div className="relative md:col-span-2">
                         <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3"><Search className="h-5 w-5 text-gray-400" /></div>
                         <input type="text" placeholder="ابحث عن منتج..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pr-10 pl-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
@@ -237,6 +252,11 @@ const ProductsPage = ({ products }) => {
                         <option value="draft">مسودة</option>
                         <option value="out_of_stock">نفد من المخزون</option>
                     </select>
+                    <select value={shippingFilter} onChange={(e) => setShippingFilter(e.target.value)} className="w-full py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                        <option value="all">جميع أنواع الشحن</option>
+                        <option value="free_shipping">شحن مجاني</option>
+                        <option value="paid_shipping">شحن مدفوع</option>
+                    </select>
                 </div>
             </div>
 
@@ -249,6 +269,7 @@ const ProductsPage = ({ products }) => {
                                 <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">المنتج</th>
                                 <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">السعر</th>
                                 <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">المخزون</th>
+                                <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">الشحن</th>
                                 <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">التقييم</th>
                                 <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">الحالة</th>
                                 <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">الإجراءات</th>
@@ -261,6 +282,16 @@ const ProductsPage = ({ products }) => {
                                     <td className="px-6 py-4"><div className="flex items-center gap-3"><img src={product.thumbnail} alt={product.name} className="w-12 h-12 rounded-lg object-cover border" onError={(e) => { e.currentTarget.src = 'https://placehold.co/100x100/f0f0f0/cccccc?text=No+Image'; }} /><div><p className="font-semibold text-gray-900 max-w-xs truncate">{product.name}</p><p className="text-sm text-gray-500">{product.category}</p></div></div></td>
                                     <td className="px-6 py-4"><div className="font-semibold text-gray-800">{formatCurrency(product.price)}</div>{product.originalPrice && <div className="text-xs text-gray-400 line-through">{formatCurrency(product.originalPrice)}</div>}</td>
                                     <td className="px-6 py-4 text-center text-sm font-medium">{product.stock < 10 ? <span className="text-red-600">{product.stock}</span> : product.stock}</td>
+                                    <td className="px-6 py-4 text-center">
+                                        {product.has_free_shipping ? (
+                                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
+                                                <Package size={12} />
+                                                مجاني
+                                            </span>
+                                        ) : (
+                                            <span className="text-gray-500 text-xs">مدفوع</span>
+                                        )}
+                                    </td>
                                     <td className="px-6 py-4"><div className="flex items-center justify-center gap-1">{renderStars(product.rating)}<span className="text-xs text-gray-500">({product.reviews})</span></div></td>
                                     <td className="px-6 py-4 text-center"><span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${getStatusInfo(product.status).color}`}>{getStatusInfo(product.status).text}</span></td>
                                     <td className="px-6 py-4">

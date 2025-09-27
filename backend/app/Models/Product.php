@@ -31,6 +31,8 @@ class Product extends Model
         'images',
         'category_id',
         'brand_id',
+        'has_free_shipping',
+        'free_shipping_note',
     ];
 
     protected $casts = [
@@ -39,6 +41,7 @@ class Product extends Model
         'featured' => 'boolean',
         'has_variants' => 'boolean',
         'quantity' => 'integer',
+        'has_free_shipping' => 'boolean',
     ];
 
     /**
@@ -149,5 +152,37 @@ class Product extends Model
             $breakdown[$i] = $this->verifiedReviews()->where('rating', $i)->count();
         }
         return $breakdown;
+    }
+
+    /**
+     * Scope للمنتجات التي لها شحن مجاني
+     */
+    public function scopeFreeShipping($query)
+    {
+        return $query->where('has_free_shipping', true);
+    }
+
+    /**
+     * Scope للمنتجات التي ليس لها شحن مجاني
+     */
+    public function scopePaidShipping($query)
+    {
+        return $query->where('has_free_shipping', false);
+    }
+
+    /**
+     * Check if product has free shipping
+     */
+    public function hasFreeShipping()
+    {
+        return $this->has_free_shipping;
+    }
+
+    /**
+     * Get shipping cost for this product
+     */
+    public function getShippingCost($cityPrice = 0)
+    {
+        return $this->has_free_shipping ? 0 : $cityPrice;
     }
 }

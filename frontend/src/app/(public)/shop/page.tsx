@@ -16,6 +16,8 @@ interface Product {
     stock: number;
     inStock: boolean;
     short_description?: string;
+    has_free_shipping?: boolean;
+    free_shipping_note?: string;
 }
 interface Category {
     id: number;
@@ -70,7 +72,9 @@ const transformProduct = (apiProduct: any): Product => {
         thumbnail: apiProduct.thumbnail,
         stock: apiProduct.stock || 0,
         inStock: (apiProduct.stock || 0) > 0,
-        short_description: apiProduct.short_description
+        short_description: apiProduct.short_description,
+        has_free_shipping: apiProduct.has_free_shipping || false,
+        free_shipping_note: apiProduct.free_shipping_note || ''
     };
 };
 
@@ -104,6 +108,17 @@ const ProductCard = React.memo(({ product }: { product: Product }) => {
             <a href={`/shop/${product.slug}`} className="block">
                 <div className="relative overflow-hidden h-80">
                     <img src={product.thumbnail} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onError={(e) => { (e.target as HTMLImageElement).src = 'https://placehold.co/400x400/f0f0f0/cccccc?text=No+Image'; }} />
+                    
+                    {/* مؤشر الشحن المجاني */}
+                    {product.has_free_shipping && (
+                        <div className="absolute top-3 right-3 bg-green-500 text-white px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1 shadow-md">
+                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/>
+                                <path d="M3 4a1 1 0 00-1 1v1a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.5h1.5a2.5 2.5 0 005 0V8a1 1 0 00-1-1h-4.5z"/>
+                            </svg>
+                            شحن مجاني
+                        </div>
+                    )}
                     
                     {/* أزرار الإجراءات */}
                     <div className="absolute top-3 left-3 flex flex-col gap-2">

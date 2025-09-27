@@ -13,6 +13,8 @@ interface Product {
     thumbnail: string;
     stock: number;
     inStock: boolean;
+    has_free_shipping?: boolean;
+    free_shipping_note?: string;
 }
 interface CartItem extends Product {
     quantity: number;

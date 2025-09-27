@@ -8,6 +8,7 @@ use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\Coupon;
 use App\Models\ShippingFee;
+use App\Models\City;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -224,6 +225,9 @@ class OrderController extends Controller
         $validator = Validator::make($request->all(), [
             'city' => 'required|string',
             'total' => 'required|numeric|min:0',
+            'items' => 'required|array',
+            'items.*.id' => 'required|exists:products,id',
+            'items.*.quantity' => 'required|integer|min:1',
         ]);
 
         if ($validator->fails()) {
@@ -235,7 +239,31 @@ class OrderController extends Controller
         }
 
         try {
-            // الشحن المجاني للطلبات أكثر من 500 درهم
+            // جلب معرفات المنتجات من السلة
+            $productIds = collect($request->items)->pluck('id');
+            $products = Product::whereIn('id', $productIds)->get();
+            
+            // فحص إذا كانت جميع المنتجات لها شحن مجاني
+            $allProductsHaveFreeShipping = $products->every(function ($product) {
+                return $product->has_free_shipping;
+            });
+            
+            // إذا كانت جميع المنتجات لها شحن مجاني
+            if ($allProductsHaveFreeShipping && $products->isNotEmpty()) {
+                return response()->json([
+                    'success' => true,
+                    'data' => [
+                        'standard' => 0,
+                        'express' => 0,
+                        'overnight' => 0,
+                        'free_shipping_threshold' => null,
+                        'message' => 'شحن مجاني - جميع المنتجات تتضمن شحن مجاني',
+                        'has_free_shipping_products' => true
+                    ]
+                ]);
+            }
+
+            // الشحن المجاني للطلبات أكثر من 500 درهم (للمنتجات العادية)
             if ($request->total >= 500) {
                 return response()->json([
                     'success' => true,
@@ -244,15 +272,28 @@ class OrderController extends Controller
                         'express' => 30,
                         'overnight' => 50,
                         'free_shipping_threshold' => 500,
-                        'message' => 'شحن مجاني للطلبات أكثر من 500 درهم'
+                        'message' => 'شحن مجاني للطلبات أكثر من 500 درهم',
+                        'has_free_shipping_products' => false
                     ]
                 ]);
             }
 
             // البحث عن تكلفة الشحن حسب المدينة
-            $shippingFee = ShippingFee::where('city', $request->city)->first();
+            $city = City::where('name', $request->city)->first();
+            $standardCost = $city ? $city->price : 50; // 50 درهم افتراضي
 
-            $standardCost = $shippingFee ? $shippingFee->cost : 50; // 50 درهم افتراضي
+            // حساب الشحن المختلط (بعض المنتجات لها شحن مجاني وبعضها لا)
+            $freeShippingProducts = $products->filter(fn($p) => $p->has_free_shipping);
+            $paidShippingProducts = $products->filter(fn($p) => !$p->has_free_shipping);
+            
+            $shippingMessage = '';
+            if ($freeShippingProducts->isNotEmpty() && $paidShippingProducts->isNotEmpty()) {
+                $shippingMessage = sprintf(
+                    'الشحن مجاني لـ %d من أصل %d منتجات',
+                    $freeShippingProducts->count(),
+                    $products->count()
+                );
+            }
 
             return response()->json([
                 'success' => true,
@@ -261,6 +302,10 @@ class OrderController extends Controller
                     'express' => $standardCost + 30,
                     'overnight' => $standardCost + 50,
                     'free_shipping_threshold' => 500,
+                    'message' => $shippingMessage,
+                    'has_free_shipping_products' => $freeShippingProducts->isNotEmpty(),
+                    'free_shipping_count' => $freeShippingProducts->count(),
+                    'paid_shipping_count' => $paidShippingProducts->count(),
                 ]
             ]);
 

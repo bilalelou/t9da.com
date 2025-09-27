@@ -18,7 +18,7 @@ class CityController extends Controller
     {
         try {
             $cities = City::orderByName()->get();
-            
+
             return response()->json([
                 'success' => true,
                 'data' => CityResource::collection($cities),
@@ -182,7 +182,7 @@ class CityController extends Controller
     {
         try {
             $cities = City::active()->orderByName()->get();
-            
+
             return response()->json([
                 'success' => true,
                 'data' => $cities

@@ -23,6 +23,8 @@ interface Product {
     sale_price?: number;
     thumbnail: string;
     short_description: string;
+    has_free_shipping?: boolean;
+    free_shipping_note?: string;
 }
 
 interface Category {
@@ -188,6 +190,14 @@ const ProductCard = React.memo(({ product }: { product: Product }) => {
         <a href={`/shop/${product.slug}`} className="cursor-pointer group relative bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-2 transition-all duration-300 flex flex-col h-full">
             <div className="overflow-hidden h-72 bg-gray-50 relative">
                 <img src={product.thumbnail} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" onError={(e) => { e.currentTarget.src = 'https://placehold.co/400x400/f0f0f0/cccccc?text=No+Image'; }} />
+                
+                {/* مؤشر الشحن المجاني */}
+                {product.has_free_shipping && (
+                    <div className="absolute top-4 right-4 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 shadow-md">
+                        <Truck size={12} />
+                        <span>شحن مجاني</span>
+                    </div>
+                )}
                 
                 {/* زر المفضلة */}
                 <button
