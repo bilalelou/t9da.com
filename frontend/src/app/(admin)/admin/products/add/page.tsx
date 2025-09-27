@@ -630,7 +630,7 @@ export default function AddProductPage() {
                                                 value={freeShippingNote}
                                                 onChange={(e) => setFreeShippingNote(e.target.value)}
                                                 className="w-full px-4 py-4 border-2 border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 text-lg placeholder-gray-400"
-                                                placeholder="مثال: شحن مجاني لجميع أنحاء الجزائر"
+                                                placeholder="مثال: شحن مجاني لجميع أنحاء المغرب"
                                                 rows={3}
                                             />
                                             <p className="text-gray-500 text-sm mt-2">
