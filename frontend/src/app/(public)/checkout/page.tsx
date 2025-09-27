@@ -23,7 +23,13 @@ import {
 import Link from 'next/link';
 
 // تنسيق العملة
-const formatCurrency = (price) => new Intl.NumberFormat('ar-MA', { style: 'currency', currency: 'MAD' }).format(price);
+const formatCurrency = (price: number) => {
+    try {
+        return new Intl.NumberFormat('ar-MA', { style: 'currency', currency: 'MAD' }).format(price);
+    } catch {
+        return `${price} درهم`;
+    }
+};
 
 // بيانات المدن وتكاليف الشحن
 const shippingCosts: Record<string, number> = {
@@ -311,9 +317,9 @@ export default function CheckoutPage() {
                 throw new Error(result.message || `خطأ ${response.status}: ${response.statusText}`);
             }
         } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'خطأ غير معروف';
             console.error('❌ خطأ في إرسال الطلب:', error);
-            console.error('❌ تفاصيل الخطأ:', error.message);
-            showToast(`حدث خطأ: ${error.message || 'خطأ غير معروف'}`, 'error');
+            showToast(`حدث خطأ: ${errorMessage}`, 'error');
         } finally {
             setIsLoading(false);
         }

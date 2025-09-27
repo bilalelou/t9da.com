@@ -18,7 +18,7 @@ class UserDashboardController extends Controller
     {
         try {
             $user = Auth::user();
-            
+
             // إضافة logs للتحقق
             Log::info('UserDashboard: المستخدم المصادق عليه', [
                 'user_id' => $user->id,
@@ -26,16 +26,19 @@ class UserDashboardController extends Controller
                 'user_name' => $user->name
             ]);
 
-            // جلب إحصائيات المستخدم
+            // جلب إحصائيات المستخدم باستخدام الـ Query Builder مباشرة
             $stats = [
-                'total_orders' => $user->orders()->count(),
-                'total_spent' => $user->orders()->where('status', 'delivered')->sum('total'),
+                'total_orders' => Order::where('user_id', $user->id)->count(),
+                'total_spent' => Order::where('user_id', $user->id)->where('status', 'delivered')->sum('total_price'),
                 'loyalty_points' => $user->loyalty_points ?? 0,
             ];
 
             // جلب كل الطلبات مع نظام الصفحات
-            $orders = $user->orders()->withCount('items')->latest()->paginate(10); // 10 طلبات في كل صفحة
-            
+            $orders = Order::where('user_id', $user->id)
+                ->withCount('items')
+                ->latest()
+                ->paginate(10);
+
             Log::info('UserDashboard: عدد الطلبات الخاصة بالمستخدم', [
                 'total_orders' => $orders->total(),
                 'current_page_orders' => $orders->count(),
