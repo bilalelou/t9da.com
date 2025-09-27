@@ -61,6 +61,13 @@ class ProductController extends Controller
             $data['slug'] = Str::slug($data['name']);
             $data['SKU'] = strtoupper(substr(preg_replace('/[^a-zA-Z]/', '', $data['name']), 0, 3)) . '-' . uniqid();
 
+            // تحويل has_free_shipping إلى boolean
+            if (isset($data['has_free_shipping'])) {
+                $data['has_free_shipping'] = in_array($data['has_free_shipping'], ['true', '1', true, 1], true);
+            } else {
+                $data['has_free_shipping'] = false;
+            }
+
             // تسجيل معلومات عن الملفات المرسلة
             Log::info('Product creation request files:', [
                 'has_image' => $request->hasFile('image'),
@@ -136,6 +143,11 @@ class ProductController extends Controller
         try {
             $data = $validator->validated();
 
+            // تحويل has_free_shipping إلى boolean
+            if (isset($data['has_free_shipping'])) {
+                $data['has_free_shipping'] = in_array($data['has_free_shipping'], ['true', '1', true, 1], true);
+            }
+
             // معالجة الصورة الرئيسية في التحديث
             if ($request->hasFile('image')) {
                 if ($product->thumbnail) Storage::disk('public')->delete('uploads/' . $product->thumbnail);
@@ -189,7 +201,7 @@ class ProductController extends Controller
                 'new_images' => 'nullable|array',
                 'new_images.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:5120', // 5MB
                 'existing_images' => 'nullable|json',
-                'has_free_shipping' => 'boolean',
+                'has_free_shipping' => 'nullable|in:true,false,1,0',
                 'free_shipping_note' => 'nullable|string|max:500',
             ];
         } else {
@@ -206,7 +218,7 @@ class ProductController extends Controller
                 'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120', // 5MB للصورة الرئيسية
                 'images' => 'nullable|array',
                 'images.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:5120', // 5MB
-                'has_free_shipping' => 'boolean',
+                'has_free_shipping' => 'nullable|in:true,false,1,0',
                 'free_shipping_note' => 'nullable|string|max:500',
             ];
         }
