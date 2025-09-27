@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\ColorController;
 use App\Http\Controllers\Api\SizeController;
 use App\Http\Controllers\Api\ProductVariantController;
 use App\Http\Controllers\ProductReviewController;
+use App\Http\Controllers\Api\CityController;
 
 use App\Http\Controllers\Api\UserController;
 
@@ -47,6 +48,9 @@ Route::get('/products/{product}/videos', [ProductVideoController::class, 'index'
 // Public Checkout Routes (لا تحتاج authentication)
 Route::post('/validate-coupon', [OrderController::class, 'validateCoupon']);
 Route::post('/shipping-costs', [OrderController::class, 'getShippingCosts']);
+
+// Public Cities Routes (للعرض العام)
+Route::get('/cities/active', [CityController::class, 'active']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [LoginController::class, 'logout']);
@@ -113,5 +117,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('reviews/{review}', [ProductReviewController::class, 'destroy']);
     });
     Route::post('/reviews/{review}/helpful', [ProductReviewController::class, 'markHelpful']);
+
+    // Cities Routes (Admin only)
+    Route::apiResource('cities', CityController::class);
+    Route::post('/cities/{city}/toggle-status', [CityController::class, 'toggleStatus']);
 });
 
