@@ -90,6 +90,8 @@ export default function CheckoutPage() {
     // حالات الصفحة
     const [currentStep, setCurrentStep] = useState(1);
     const [isLoading, setIsLoading] = useState(false);
+    const [isLoadingUser, setIsLoadingUser] = useState(true);
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
 
     // بيانات الشحن
@@ -116,6 +118,62 @@ export default function CheckoutPage() {
             router.push('/cart');
         }
     }, [cartItems, router]);
+
+    // جلب بيانات المستخدم المسجل دخوله
+    useEffect(() => {
+        const fetchUserData = async () => {
+            try {
+                const token = localStorage.getItem('api_token');
+                console.log('🔐 Token found:', !!token);
+                console.log('🔐 Token preview:', token ? `${token.substring(0, 20)}...` : 'No token');
+                
+                if (token) {
+                    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+                    console.log('🌐 Making request to:', `${API_BASE_URL}/user`);
+                    
+                    const response = await fetch(`${API_BASE_URL}/user`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Accept': 'application/json'
+                        }
+                    });
+
+                    console.log('📡 Response status:', response.status);
+                    console.log('📡 Response ok:', response.ok);
+
+                    if (response.ok) {
+                        const userData = await response.json();
+                        console.log('👤 User data received:', userData);
+                        setIsLoggedIn(true);
+                        
+                        // ملء بيانات الشحن تلقائياً من بيانات المستخدم
+                        setShippingAddress(prev => ({
+                            ...prev,
+                            fullName: userData.name || prev.fullName,
+                            email: userData.email || prev.email,
+                            phone: userData.phone || prev.phone,
+                            // إذا كان لديه عنوان محفوظ
+                            address: userData.address || prev.address,
+                            city: userData.city || prev.city,
+                            postalCode: userData.postal_code || prev.postalCode
+                        }));
+                        console.log('✅ شحن البيانات تم بنجاح');
+                    } else {
+                        const errorData = await response.text();
+                        console.error('❌ فشل في جلب بيانات المستخدم:', errorData);
+                    }
+                } else {
+                    console.log('⚠️ لا يوجد توكن مصادقة');
+                }
+            } catch (error) {
+                console.error('❌ خطأ في جلب بيانات المستخدم:', error);
+            } finally {
+                setIsLoadingUser(false);
+            }
+        };
+
+        fetchUserData();
+    }, []);
 
     // حساب التكاليف
     const shipping = useMemo(() => {
@@ -145,9 +203,10 @@ export default function CheckoutPage() {
             }
 
             // التحقق من رقم الهاتف المغربي
-            const phoneRegex = /^(\+212|0)([ \-_/]?)(\d[ \-_/]?){8}$/;
-            if (shippingAddress.phone && !phoneRegex.test(shippingAddress.phone.replace(/\s/g, ''))) {
-                newErrors.phone = 'رقم الهاتف غير صحيح';
+            const cleanPhone = shippingAddress.phone.replace(/[\s\-\.]/g, '');
+            const phoneRegex = /^(\+212|0)[5-7]\d{8}$/;
+            if (shippingAddress.phone && !phoneRegex.test(cleanPhone)) {
+                newErrors.phone = 'رقم الهاتف غير صحيح (مثال: +212623456789 أو 0623456789)';
             }
         }
 
@@ -188,31 +247,89 @@ export default function CheckoutPage() {
         
         setIsLoading(true);
         try {
-            // هنا ستكون استدعاءات API لإنشاء الطلب
+            const token = localStorage.getItem('api_token');
+            if (!token) {
+                showToast('يجب تسجيل الدخول أولاً', 'error');
+                router.push('/login');
+                return;
+            }
+
+            // إعداد بيانات الطلب
             const orderData = {
-                items: cartItems,
-                shipping_address: shippingAddress,
-                payment_method: selectedPaymentMethod,
-                subtotal,
-                shipping_cost: shipping,
-                discount: couponDiscount,
-                total,
-                coupon_code: appliedCoupon?.code
+                items: cartItems.map(item => ({
+                    product_id: item.id,
+                    quantity: item.quantity
+                })),
+                shipping_info: {
+                    fullName: shippingAddress.fullName,
+                    email: shippingAddress.email,
+                    phone: shippingAddress.phone,
+                    address: shippingAddress.address,
+                    city: shippingAddress.city,
+                    state: shippingAddress.city, // نستخدم نفس المدينة كمحافظة
+                    postalCode: shippingAddress.postalCode || '00000',
+                    shippingMethod: 'standard',
+                    paymentMethod: selectedPaymentMethod
+                },
+                order_summary: {
+                    subtotal: subtotal,
+                    shipping: shipping || 0,
+                    tax: 0,
+                    discount: couponDiscount,
+                    total: total
+                }
             };
 
-            // مؤقتاً: محاكاة API call
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            
-            // مسح السلة وإعادة التوجيه
-            clearCart();
-            showToast('تم إرسال طلبك بنجاح! سنتواصل معك قريباً.', 'success');
-            router.push('/orders/success');
+            console.log('📦 إرسال طلب جديد:', orderData);
+
+            // إرسال الطلب إلى API
+            const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+            const response = await fetch(`${API_BASE_URL}/orders`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(orderData)
+            });
+
+            const result = await response.json();
+            console.log('📡 استجابة الخادم:', result);
+
+            if (response.ok && result.success) {
+                // مسح السلة وإعادة التوجيه
+                clearCart();
+                showToast(`تم إرسال طلبك بنجاح! رقم الطلب: ${result.data.order_number}`, 'success');
+                router.push(`/user-dashboard/orders`);
+            } else {
+                console.error('❌ فشل الاستجابة:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    result: result
+                });
+                throw new Error(result.message || `خطأ ${response.status}: ${response.statusText}`);
+            }
         } catch (error) {
-            showToast('حدث خطأ في إرسال الطلب، يرجى المحاولة مرة أخرى', 'error');
+            console.error('❌ خطأ في إرسال الطلب:', error);
+            console.error('❌ تفاصيل الخطأ:', error.message);
+            showToast(`حدث خطأ: ${error.message || 'خطأ غير معروف'}`, 'error');
         } finally {
             setIsLoading(false);
         }
     };
+
+    // إظهار loading أثناء تحميل بيانات المستخدم
+    if (isLoadingUser) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-50" dir="rtl">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                    <p className="mt-4 text-sm text-gray-600">جاري تحميل بياناتك...</p>
+                </div>
+            </div>
+        );
+    }
 
     // إذا كانت السلة فارغة
     if (cartItems.length === 0) {
@@ -341,6 +458,18 @@ const ShippingAddressStep: React.FC<{
 }> = ({ shippingAddress, setShippingAddress, errors, cities, onNext }) => (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h2 className="text-lg font-medium text-gray-900 mb-6">معلومات الشحن</h2>
+        
+        {/* رسالة ترحيبية للمستخدم المسجل دخوله */}
+        {shippingAddress.fullName && (
+            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-center">
+                    <Check className="h-5 w-5 text-green-600 ml-2" />
+                    <p className="text-sm text-green-800">
+                        مرحباً <span className="font-semibold">{shippingAddress.fullName}</span>! تم ملء معلوماتك تلقائياً من حسابك.
+                    </p>
+                </div>
+            </div>
+        )}
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>

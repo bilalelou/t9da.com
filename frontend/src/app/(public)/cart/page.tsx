@@ -216,7 +216,7 @@ export default function CartPage() {
         localStorage.setItem('orderData', JSON.stringify(orderData));
         
         setTimeout(() => {
-            router.push('/checkout2');
+            router.push('/checkout');
         }, 1000);
     };
 
@@ -315,7 +315,7 @@ export default function CartPage() {
                                     <div key={item.id} className="flex items-center gap-4 p-4 border border-gray-200 rounded-xl hover:shadow-md transition-shadow">
                                         <Link href={`/shop/${item.slug}`} className="flex-shrink-0">
                                             <Image 
-                                                src={item.image || '/images/placeholder-product.svg'} 
+                                                src={item.thumbnail || '/images/placeholder-product.svg'} 
                                                 alt={item.name} 
                                                 width={96}
                                                 height={96}

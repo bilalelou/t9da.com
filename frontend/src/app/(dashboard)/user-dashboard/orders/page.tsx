@@ -296,10 +296,18 @@ function MyOrdersPage() {
 
     useEffect(() => {
         if (token) {
+            console.log('🔐 Token being used for orders:', token ? `${token.substring(0, 20)}...` : 'No token');
             setLoading(true);
             api.getOrders(token, currentPage)
-                .then(setOrdersData)
-                .catch(err => setError(err.message))
+                .then(data => {
+                    console.log('📦 Orders data received:', data);
+                    console.log('📊 Number of orders:', data.orders?.length || 0);
+                    setOrdersData(data);
+                })
+                .catch(err => {
+                    console.error('❌ Error fetching orders:', err);
+                    setError(err.message);
+                })
                 .finally(() => setLoading(false));
         }
     }, [token, currentPage]);

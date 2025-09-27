@@ -18,6 +18,13 @@ class UserDashboardController extends Controller
     {
         try {
             $user = Auth::user();
+            
+            // إضافة logs للتحقق
+            Log::info('UserDashboard: المستخدم المصادق عليه', [
+                'user_id' => $user->id,
+                'user_email' => $user->email,
+                'user_name' => $user->name
+            ]);
 
             // جلب إحصائيات المستخدم
             $stats = [
@@ -28,6 +35,12 @@ class UserDashboardController extends Controller
 
             // جلب كل الطلبات مع نظام الصفحات
             $orders = $user->orders()->withCount('items')->latest()->paginate(10); // 10 طلبات في كل صفحة
+            
+            Log::info('UserDashboard: عدد الطلبات الخاصة بالمستخدم', [
+                'total_orders' => $orders->total(),
+                'current_page_orders' => $orders->count(),
+                'user_id' => $user->id
+            ]);
 
             return response()->json([
                 'user' => [
