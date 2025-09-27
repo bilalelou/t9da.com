@@ -234,6 +234,8 @@ class PublicDataController extends Controller
             'thumbnail' => $product->thumbnail ? asset('storage/uploads/' . $product->thumbnail) : 'https://placehold.co/400x400?text=No+Image',
             'stock' => (int)($product->quantity ?? 0),
             'stock_status' => $product->stock_status ?? 'instock',
+            'has_free_shipping' => (bool)$product->has_free_shipping,
+            'free_shipping_note' => $product->free_shipping_note,
         ];
     }
     /**
@@ -266,6 +268,8 @@ class PublicDataController extends Controller
             'has_variants' => (bool)$product->has_variants,
             'average_rating' => round($product->average_rating, 1),
             'total_reviews' => $product->total_reviews,
+            'has_free_shipping' => (bool)$product->has_free_shipping,
+            'free_shipping_note' => $product->free_shipping_note,
         ];
 
         if ($withDetails) {

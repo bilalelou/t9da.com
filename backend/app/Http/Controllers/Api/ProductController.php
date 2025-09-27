@@ -256,6 +256,8 @@ class ProductController extends Controller
             'originalPrice' => $product->sale_price ? $product->regular_price : null,
             'stock' => $product->quantity ?? 0, 'status' => $status,
             'sold' => 0, 'rating' => 0, 'reviews' => 0, // Placeholder data
+            'has_free_shipping' => (bool)$product->has_free_shipping,
+            'free_shipping_note' => $product->free_shipping_note,
         ];
     }
 
@@ -274,6 +276,8 @@ class ProductController extends Controller
             'has_variants' => (bool)$product->has_variants,
             'thumbnail' => $product->thumbnail ? asset('storage/uploads/' . $product->thumbnail) : null,
             'images' => array_map(fn($img) => asset('storage/uploads/' . $img), $gallery),
+            'has_free_shipping' => (bool)$product->has_free_shipping,
+            'free_shipping_note' => $product->free_shipping_note,
         ];
 
         // إضافة الـ variants إذا كان المنتج يحتوي عليها
