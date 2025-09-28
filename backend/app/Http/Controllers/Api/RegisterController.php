@@ -19,12 +19,12 @@ class RegisterController extends Controller
      */
     public function store(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:'.User::class],
-            'phone' => ['required', 'string', 'max:20'], // يمكنك إضافة قواعد تحقق أكثر دقة هنا
-            'password' => ['required', 'confirmed', Rules\Password::defaults()],
-        ]);
+$validator = Validator::make($request->all(), [
+    'name' => ['required', 'string', 'max:255'],
+    'phone' => ['required', 'string', 'max:20', 'unique:users,mobile'],
+    'password' => ['required', 'confirmed', Rules\Password::defaults()],
+    // 'email' => ['nullable', 'string', 'email', 'max:255', 'unique:'.User::class], // اجعل البريد الإلكتروني اختياري
+]);
 
         if ($validator->fails()) {
             return response()->json([
@@ -34,12 +34,12 @@ class RegisterController extends Controller
             ], 422); // 422 Unprocessable Entity
         }
 
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'mobile' => $request->phone, // [ملاحظة] تأكد من أن اسم العمود 'mobile' صحيح
-            'password' => Hash::make($request->password),
-        ]);
+$user = User::create([
+    'name' => $request->name,
+    'email' => $request->email ?? null,
+    'mobile' => $request->phone,
+    'password' => Hash::make($request->password),
+]);
 
         // تعيين دور "customer" للمستخدم الجديد تلقائياً
         $user->assignRole('customer');
@@ -55,4 +55,3 @@ class RegisterController extends Controller
         ], 201); // 201 Created
     }
 }
-
