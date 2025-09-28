@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\UserDashboardController;
 use App\Http\Controllers\Api\CouponController;
 use App\Http\Controllers\Admin\ProductVideoController;
 use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\SliderController;
 use App\Http\Controllers\Api\ColorController;
 use App\Http\Controllers\Api\SizeController;
 use App\Http\Controllers\Api\ProductVariantController;
@@ -33,6 +34,9 @@ Route::get('/shop', [PublicDataController::class, 'shop']);
 Route::get('/products/{slug}', [PublicDataController::class, 'show']);
 Route::post('/products-by-ids', [PublicDataController::class, 'productsByIds']);
 Route::post('/contact', [ContactController::class, 'store']);
+
+// Public Sliders Route
+Route::get('/sliders/active', [SliderController::class, 'active']);
 
 // Public routes
 Route::get('/public/colors', [ColorController::class, 'index']);
@@ -85,6 +89,11 @@ Route::middleware('auth:sanctum')->group(function () {
     });
     Route::apiResource('categories', CategoryController::class);
     Route::apiResource('brands', BrandController::class);
+
+    // Sliders Routes
+    Route::apiResource('sliders', SliderController::class);
+    Route::post('sliders/{slider}/toggle-active', [SliderController::class, 'toggleActive']);
+    Route::post('sliders/update-order', [SliderController::class, 'updateOrder']);
 
     // Colors & Sizes & Product Variants Routes
     Route::apiResource('colors', ColorController::class);

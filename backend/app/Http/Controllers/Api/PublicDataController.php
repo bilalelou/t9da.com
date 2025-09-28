@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Brand;
 use App\Models\Product;
 use App\Models\Category;
+use App\Models\Slider;
 use Illuminate\Http\Request;
 
 use Exception;
@@ -19,11 +20,17 @@ class PublicDataController extends Controller
     public function home()
     {
         try {
-            // 1. الشرائح (Slides) - بيانات وهمية حالياً
-            $slides = [
-                ['id' => 1, 'title' => 'اكتشف أحدث التشكيلات', 'subtitle' => 'تصاميم عصرية تلبي كل الأذواق', 'image_url' => 'https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=2070&auto=format&fit=crop', 'link' => '/products'],
-                ['id' => 2, 'title' => 'عروض خاصة لفترة محدودة', 'subtitle' => 'خصومات تصل إلى 50%', 'image_url' => 'https://images.unsplash.com/photo-1445205170230-053b83016050?q=80&w=2071&auto=format&fit=crop', 'link' => '/offers'],
-            ];
+            // 1. الشرائح (Slides) - من قاعدة البيانات
+            $slides = Slider::active()->ordered()->get()->map(function($slider) {
+                return [
+                    'id' => $slider->id,
+                    'title' => $slider->title,
+                    'subtitle' => $slider->description,
+                    'image_url' => $slider->image_url,
+                    'link' => $slider->button_link ?? '/shop',
+                    'button_text' => $slider->button_text
+                ];
+            });
 
             // 2. المنتجات المميزة (أحدث 4 منتجات)
             $featuredProducts = Product::latest()->take(4)->get()->map(fn($p) => $this->formatProduct($p));
