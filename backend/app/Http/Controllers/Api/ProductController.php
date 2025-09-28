@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 use Exception;
 
 class ProductController extends Controller
@@ -462,6 +463,135 @@ class ProductController extends Controller
                 'message' => 'حدث خطأ في الخادم.'
             ], 500);
         }
+    }
+
+    /**
+     * إضافة عدة منتجات دفعة واحدة
+     */
+    public function storeBulk(Request $request)
+    {
+        // Debug: log incoming data
+        Log::info('Bulk products data received:', $request->all());
+
+        $validator = Validator::make($request->all(), [
+            'products' => 'required|array|min:1|max:50', // حد أقصى 50 منتج في المرة الواحدة
+            'products.*.name' => 'required|string|max:255',
+            'products.*.short_description' => 'nullable|string|max:500',
+            'products.*.description' => 'nullable|string',
+            'products.*.regular_price' => 'required|numeric|min:0',
+            'products.*.sale_price' => 'nullable|numeric|min:0',
+            'products.*.quantity' => 'required|integer|min:0',
+            'products.*.category_id' => 'required|exists:categories,id',
+            'products.*.brand_id' => 'nullable|exists:brands,id',
+            'products.*.has_free_shipping' => [
+                'nullable',
+                function ($attribute, $value, $fail) {
+                    if ($value !== null && !is_bool($value) && !in_array($value, [0, 1, '0', '1', 'true', 'false', true, false])) {
+                        $fail('The ' . $attribute . ' field must be a boolean value.');
+                    }
+                }
+            ],
+            'products.*.free_shipping_note' => 'nullable|string|max:500',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'خطأ في التحقق: ' . $validator->errors()->first(),
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $createdProducts = [];
+            $errors = [];
+
+            DB::beginTransaction();
+
+            foreach ($request->products as $index => $productData) {
+                try {
+                    // تحضير البيانات
+                    $data = [
+                        'name' => $productData['name'],
+                        'slug' => Str::slug($productData['name']),
+                        'short_description' => !empty($productData['short_description']) ? $productData['short_description'] : null,
+                        'description' => !empty($productData['description']) ? $productData['description'] : null,
+                        'regular_price' => $productData['regular_price'],
+                        'sale_price' => !empty($productData['sale_price']) ? $productData['sale_price'] : null,
+                        'quantity' => $productData['quantity'],
+                        'category_id' => $productData['category_id'],
+                        'brand_id' => !empty($productData['brand_id']) ? $productData['brand_id'] : null,
+                        'SKU' => $this->generateSKU($productData['name']),
+                        'stock_status' => $productData['quantity'] > 0 ? 'instock' : 'outofstock',
+                        'has_free_shipping' => (bool)($productData['has_free_shipping'] ?? false),
+                        'free_shipping_note' => !empty($productData['free_shipping_note']) ? $productData['free_shipping_note'] : null,
+                    ];
+
+                    // إنشاء المنتج
+                    $product = Product::create($data);
+                    $createdProducts[] = [
+                        'index' => $index + 1,
+                        'id' => $product->id,
+                        'name' => $product->name,
+                        'sku' => $product->SKU,
+                    ];
+
+                } catch (Exception $e) {
+                    $errors[] = [
+                        'index' => $index + 1,
+                        'name' => $productData['name'] ?? 'غير محدد',
+                        'error' => $e->getMessage()
+                    ];
+                }
+            }
+
+            // إذا كان هناك أخطاء كثيرة، ألغي العملية
+            if (count($errors) > count($request->products) / 2) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'فشل في إضافة معظم المنتجات. تم إلغاء العملية.',
+                    'errors' => $errors
+                ], 422);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => sprintf('تم إضافة %d منتج بنجاح من أصل %d',
+                    count($createdProducts), count($request->products)),
+                'data' => [
+                    'created_products' => $createdProducts,
+                    'errors' => $errors,
+                    'summary' => [
+                        'total_attempted' => count($request->products),
+                        'successful' => count($createdProducts),
+                        'failed' => count($errors)
+                    ]
+                ]
+            ], 201);
+
+        } catch (Exception $e) {
+            DB::rollBack();
+            Log::error('خطأ في إضافة المنتجات المجمعة: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'حدث خطأ في الخادم أثناء إضافة المنتجات.'
+            ], 500);
+        }
+    }
+
+    /**
+     * توليد SKU فريد للمنتج
+     */
+    private function generateSKU(string $productName): string
+    {
+        $prefix = strtoupper(substr(preg_replace('/[^a-zA-Z]/', '', $productName), 0, 3));
+        if (empty($prefix)) {
+            $prefix = 'PRD';
+        }
+        return $prefix . '-' . uniqid();
     }
 }
 

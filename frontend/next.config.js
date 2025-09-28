@@ -9,7 +9,6 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   // تحسين الأداء
-  optimizeFonts: true,
   compress: true,
   images: {
     remotePatterns: [

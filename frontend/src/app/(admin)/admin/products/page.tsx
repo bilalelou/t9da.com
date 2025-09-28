@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
+import BulkProductModal from '@/components/admin/BulkProductModal';
 
 // Icons from lucide-react for consistency
 import { 
@@ -18,7 +19,8 @@ import {
     XCircle,
     PackageSearch,
     Video,
-    Truck
+    Truck,
+    PackagePlus
 } from 'lucide-react';
 
 // --- Interfaces ---
@@ -179,6 +181,7 @@ const ProductsPage = ({ products }) => {
     const [selectedStatus, setSelectedStatus] = useState('all');
     const [shippingFilter, setShippingFilter] = useState('all'); // all, free_shipping, paid_shipping
     const [selectedProducts, setSelectedProducts] = useState<number[]>([]);
+    const [showBulkModal, setShowBulkModal] = useState(false);
 
     const categories = useMemo(() => ['all', ...Array.from(new Set(products.map(p => p.category)))], [products]);
 
@@ -218,13 +221,21 @@ const ProductsPage = ({ products }) => {
                     <h1 className="text-3xl font-bold text-gray-900">إدارة المنتجات</h1>
                     <p className="text-md text-gray-600 mt-1">إدارة وتنظيم منتجات المتجر.</p>
                 </div>
-                <div>
+                <div className="flex flex-col sm:flex-row gap-2">
                     <button 
                         onClick={() => window.location.href = '/admin/products/add'}
                         className="w-full sm:w-auto flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-colors"
                     >
                         <PlusCircle size={20} />
                         <span>إضافة منتج</span>
+                    </button>
+                    
+                    <button 
+                        onClick={() => setShowBulkModal(true)}
+                        className="w-full sm:w-auto flex items-center justify-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg shadow hover:bg-green-700 transition-colors"
+                    >
+                        <PackagePlus size={20} />
+                        <span>إضافة عدة منتجات</span>
                     </button>
                 </div>
             </div>
@@ -331,6 +342,17 @@ const ProductsPage = ({ products }) => {
                     <div className="flex gap-1"><button className="px-3 py-1 border rounded-md text-sm hover:bg-gray-50">السابق</button><button className="px-3 py-1 border rounded-md text-sm hover:bg-gray-50">التالي</button></div>
                 </div>
             </div>
+            
+            {/* Bulk Product Modal */}
+            <BulkProductModal
+                isOpen={showBulkModal}
+                onClose={() => setShowBulkModal(false)}
+                onSuccess={() => {
+                    setShowBulkModal(false);
+                    // إعادة تحميل الصفحة لعرض المنتجات الجديدة
+                    window.location.reload();
+                }}
+            />
         </div>
     );
 }

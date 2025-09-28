@@ -79,6 +79,9 @@ const CartProvider = ({ children }: { children: React.ReactNode }) => {
 
     // تحميل البيانات من localStorage عند بدء تشغيل التطبيق
     useEffect(() => {
+        // التأكد من أننا في البيئة العميل قبل استخدام localStorage
+        if (typeof window === 'undefined') return;
+        
         try {
             const localData = localStorage.getItem('cart');
             if (localData) {
@@ -95,7 +98,9 @@ const CartProvider = ({ children }: { children: React.ReactNode }) => {
         } catch (error) {
             console.error("Failed to parse cart from localStorage", error);
             // في حالة وجود خطأ، امسح البيانات الفاسدة
-            localStorage.removeItem('cart');
+            if (typeof window !== 'undefined') {
+                localStorage.removeItem('cart');
+            }
             setCartItems([]);
         }
         setIsInitialLoad(false);
@@ -103,7 +108,7 @@ const CartProvider = ({ children }: { children: React.ReactNode }) => {
 
     // حفظ البيانات في localStorage عند أي تغيير في السلة
     useEffect(() => {
-        if (!isInitialLoad) {
+        if (!isInitialLoad && typeof window !== 'undefined') {
             localStorage.setItem('cart', JSON.stringify(cartItems));
         }
     }, [cartItems, isInitialLoad]);
@@ -163,7 +168,9 @@ const CartProvider = ({ children }: { children: React.ReactNode }) => {
     }, [showToast]);
 
     const resetCart = useCallback(() => {
-        localStorage.removeItem('cart');
+        if (typeof window !== 'undefined') {
+            localStorage.removeItem('cart');
+        }
         setCartItems([]);
         showToast("تم إعادة تعيين السلة بنجاح.", 'success');
     }, [showToast]);
@@ -242,6 +249,9 @@ const WishlistProvider = ({ children }: { children: React.ReactNode }) => {
 
     // تحميل البيانات من localStorage عند بدء تشغيل التطبيق
     useEffect(() => {
+        // التأكد من أننا في البيئة العميل قبل استخدام localStorage
+        if (typeof window === 'undefined') return;
+        
         try {
             const localData = localStorage.getItem('wishlist');
             if (localData) {
@@ -257,7 +267,9 @@ const WishlistProvider = ({ children }: { children: React.ReactNode }) => {
             }
         } catch (error) {
             console.error("Failed to parse wishlist from localStorage", error);
-            localStorage.removeItem('wishlist');
+            if (typeof window !== 'undefined') {
+                localStorage.removeItem('wishlist');
+            }
             setWishlistItems([]);
         }
         setIsInitialLoad(false);
@@ -265,7 +277,7 @@ const WishlistProvider = ({ children }: { children: React.ReactNode }) => {
 
     // حفظ البيانات في localStorage عند أي تغيير في المفضلة
     useEffect(() => {
-        if (!isInitialLoad) {
+        if (!isInitialLoad && typeof window !== 'undefined') {
             localStorage.setItem('wishlist', JSON.stringify(wishlistItems));
         }
     }, [wishlistItems, isInitialLoad]);

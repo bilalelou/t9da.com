@@ -71,6 +71,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('users', UserController::class);
     Route::post('/users/{user}/toggle-active', [UserController::class, 'toggleActive']);
     Route::apiResource('products', ProductController::class);
+    Route::post('/products/bulk-store', [ProductController::class, 'storeBulk']);
 
     // Product Videos Routes
     Route::prefix('products/{product}')->group(function () {
