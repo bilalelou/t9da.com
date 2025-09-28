@@ -307,9 +307,18 @@ class ProductController extends Controller
         if ($product->stock_status === 'outofstock' || $product->quantity <= 0) {
             $status = 'out_of_stock';
         }
+        // تعديل المسار حسب نوع الصورة
+        $thumbnailUrl = 'https://placehold.co/100x100?text=No+Image';
+        if ($product->thumbnail) {
+            if (Str::startsWith($product->thumbnail, 'product_images/')) {
+                $thumbnailUrl = asset($product->thumbnail);
+            } else {
+                $thumbnailUrl = asset('storage/uploads/' . $product->thumbnail);
+            }
+        }
         return [
             'id' => $product->id, 'name' => $product->name,
-            'thumbnail' => $product->thumbnail ? asset('storage/uploads/' . $product->thumbnail) : 'https://placehold.co/100x100?text=No+Image',
+            'thumbnail' => $thumbnailUrl,
             'category' => $product->category->name ?? 'غير مصنف',
             'price' => $product->sale_price ?? $product->regular_price,
             'originalPrice' => $product->sale_price ? $product->regular_price : null,

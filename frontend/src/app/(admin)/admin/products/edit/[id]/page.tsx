@@ -427,8 +427,8 @@ function EditProductPageInner() {
         console.error('  - Error message:', e instanceof Error ? e.message : 'Unknown error');
         console.error('  - Error stack:', e instanceof Error ? e.stack : 'No stack trace');
         
-        // showToast already called
-        showToast('خطأ في تحميل بيانات المنتج', 'error');
+        showToast('منتج غير موجود', 'error');
+        setTimeout(() => router.replace('/admin/products'), 1200);
       } finally {
         if (!cancelled) {
           console.log('🏁 انتهاء تحميل البيانات');
@@ -440,7 +440,7 @@ function EditProductPageInner() {
     return () => {
       cancelled = true;
     };
-  }, [id, showToast]);
+  }, [id, showToast, router]);
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target as HTMLInputElement;
@@ -669,6 +669,11 @@ function EditProductPageInner() {
         </div>
       </div>
     );
+  }
+
+  // إذا لم يوجد المنتج، لا تعرض أي شيء (سيتم إعادة التوجيه تلقائياً)
+  if (!product && !loading) {
+    return null;
   }
 
   return (

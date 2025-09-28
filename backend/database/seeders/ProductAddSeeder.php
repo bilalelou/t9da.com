@@ -17,6 +17,25 @@ class ProductAddSeeder extends Seeder
         DB::table('products')->insert([
 
             [
+                'name' => 'Debug Product 108',
+                'slug' => 'debug-product-108',
+                'short_description' => 'Debug product for error fix',
+                'description' => 'Debug product for error fix',
+                'regular_price' => 10,
+                'sale_price' => null,
+                'SKU' => 'DEBUG-108',
+                'stock_status' => 'instock',
+                'featured' => false,
+                'quantity' => 1,
+                'thumbnail' => null,
+                'images' => null,
+                'category_id' => 1,
+                'brand_id' => null,
+                'status' => 'active',
+                'created_at' => '2025-09-28 18:03:18',
+                'updated_at' => '2025-09-28 18:03:18',
+            ],
+            [
                 'name' => 'Tulipan Negro Coco Pure White Huile de Corps',
                 'slug' => 'tulipan-negro-coco-pure-white-huile-de-corps',
                 'short_description' => 'Tulipan Negro Coco Pure White Huile de Corps',

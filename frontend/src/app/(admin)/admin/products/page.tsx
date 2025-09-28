@@ -197,10 +197,45 @@ const ProductsPage = ({
     const [selectedProducts, setSelectedProducts] = useState<number[]>([]);
     const [showBulkModal, setShowBulkModal] = useState(false);
 
+    // حالة الترتيب
+    const [sortColumn, setSortColumn] = useState<string>('id');
+    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
     const categories = useMemo(() => ['all', ...Array.from(new Set(products.map(p => p.category)))], [products]);
 
-    // عرض المنتجات مباشرة من الـ API (بدون تصفية محلية للصفحة)
-    const displayedProducts = products;
+    // دالة استخراج قيمة العمود للترتيب
+    const getSortValue = (product: Product, column: string) => {
+        switch (column) {
+            case 'id': return product.id;
+            case 'name': return product.name.toLowerCase();
+            case 'price': return product.price;
+            case 'stock': return product.stock;
+            default: return '';
+        }
+    };
+
+    // تصفية وترتيب المنتجات محلياً
+    const displayedProducts = useMemo(() => {
+        let filtered = products;
+        if (searchTerm.trim()) {
+            const term = searchTerm.trim().toLowerCase();
+            filtered = filtered.filter(p =>
+                p.name.toLowerCase().includes(term) ||
+                p.category.toLowerCase().includes(term) ||
+                p.id.toString().includes(term) ||
+                p.stock.toString().includes(term)
+            );
+        }
+        // ترتيب حسب العمود المختار
+        filtered = [...filtered].sort((a, b) => {
+            const aValue = getSortValue(a, sortColumn);
+            const bValue = getSortValue(b, sortColumn);
+            if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+            if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+            return 0;
+        });
+        return filtered;
+    }, [products, searchTerm, sortColumn, sortDirection]);
 
     const productStats = useMemo(() => ({
         total: totalProducts,
@@ -282,16 +317,52 @@ const ProductsPage = ({
 <thead className="bg-gray-50">
     <tr>
         <th className="px-6 py-3 text-right"><input type="checkbox" onChange={toggleSelectAll} checked={selectedProducts.length === displayedProducts.length && displayedProducts.length > 0} className="rounded" /></th>
-        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">ID</th>
-        <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">المنتج</th>
-                                <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">السعر</th>
-                                <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">المخزون</th>
-                                <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">الشحن</th>
-                                <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">التقييم</th>
-                                <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">الحالة</th>
-                                <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">الإجراءات</th>
-                            </tr>
-                        </thead>
+        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer"
+            onClick={() => {
+                setSortColumn('id');
+                setSortDirection(sortColumn === 'id' && sortDirection === 'asc' ? 'desc' : 'asc');
+            }}>
+            ID
+            <span>
+                {sortColumn === 'id' ? (sortDirection === 'asc' ? ' ▲' : ' ▼') : ''}
+            </span>
+        </th>
+        <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer"
+            onClick={() => {
+                setSortColumn('name');
+                setSortDirection(sortColumn === 'name' && sortDirection === 'asc' ? 'desc' : 'asc');
+            }}>
+            المنتج
+            <span>
+                {sortColumn === 'name' ? (sortDirection === 'asc' ? ' ▲' : ' ▼') : ''}
+            </span>
+        </th>
+        <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer"
+            onClick={() => {
+                setSortColumn('price');
+                setSortDirection(sortColumn === 'price' && sortDirection === 'asc' ? 'desc' : 'asc');
+            }}>
+            السعر
+            <span>
+                {sortColumn === 'price' ? (sortDirection === 'asc' ? ' ▲' : ' ▼') : ''}
+            </span>
+        </th>
+        <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer"
+            onClick={() => {
+                setSortColumn('stock');
+                setSortDirection(sortColumn === 'stock' && sortDirection === 'asc' ? 'desc' : 'asc');
+            }}>
+            المخزون
+            <span>
+                {sortColumn === 'stock' ? (sortDirection === 'asc' ? ' ▲' : ' ▼') : ''}
+            </span>
+        </th>
+        <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">الشحن</th>
+        <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">التقييم</th>
+        <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">الحالة</th>
+        <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">الإجراءات</th>
+    </tr>
+</thead>
                         <tbody className="bg-white divide-y divide-gray-200">
 {displayedProducts.map((product) => (
     <tr key={product.id} className="hover:bg-gray-50">
@@ -384,30 +455,35 @@ const ProductsPage = ({
 // --- Data Fetching Wrapper ---
 export default function ProductsPageLoader() {
     const [products, setProducts] = useState<Product[]>([]);
-    const [totalProducts, setTotalProducts] = useState<number>(0);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
-    const [lastPage, setLastPage] = useState(1);
 
     const perPage = 10;
 
     useEffect(() => {
-        const fetchProducts = async () => {
+        const fetchAllProducts = async () => {
             setLoading(true);
             try {
-                const response = await api.getProducts(currentPage, perPage);
-                setProducts(response.data || []);
-                setTotalProducts(response.pagination?.total || 0);
-                setLastPage(response.pagination?.last_page || 1);
+                let allProducts: Product[] = [];
+                let page = 1;
+                let lastPage = 1;
+                do {
+                    const response = await api.getProducts(page, 100); // جلب دفعات كبيرة لتقليل عدد الطلبات
+                    const data = response.data || [];
+                    allProducts = [...allProducts, ...data];
+                    lastPage = response.pagination?.last_page || 1;
+                    page++;
+                } while (page <= lastPage);
+                setProducts(allProducts);
             } catch (err) {
                 setError(err instanceof Error ? err.message : 'An unknown error occurred');
             } finally {
                 setLoading(false);
             }
         };
-        fetchProducts();
-    }, [currentPage]);
+        fetchAllProducts();
+    }, []);
 
     if (loading) {
         return <div className="flex items-center justify-center h-96"><LoaderCircle className="animate-spin text-blue-600" size={48} /></div>;
@@ -417,9 +493,14 @@ export default function ProductsPageLoader() {
         return <div className="text-center text-red-600 bg-red-50 p-4 rounded-lg">خطأ: {error}</div>;
     }
 
+    // حساب عدد الصفحات بناءً على جميع المنتجات
+    const totalProducts = products.length;
+    const lastPage = Math.max(1, Math.ceil(totalProducts / perPage));
+    const paginatedProducts = products.slice((currentPage - 1) * perPage, currentPage * perPage);
+
     return (
         <ProductsPage
-            products={products}
+            products={paginatedProducts}
             totalProducts={totalProducts}
             currentPage={currentPage}
             lastPage={lastPage}
