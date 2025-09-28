@@ -18,7 +18,7 @@ interface Category {
 // --- API Helper ---
 const api = {
     getCategories: async (token: string) => {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/categories`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/public/categories`, {
             headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
         });
         if (!response.ok) throw new Error('فشل في جلب التصنيفات.');

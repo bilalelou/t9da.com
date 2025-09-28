@@ -44,7 +44,7 @@ const api = {
             if (filters?.featured) params.append('featured', 'true');
             if (filters?.rating) params.append('min_rating', filters.rating.toString());
 
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/test/search?${params}`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/search?${params}`, {
                 method: 'GET',
                 headers: {
                     'Accept': 'application/json',

@@ -20,7 +20,7 @@ interface Brand {
 // --- API Helper ---
 const api = {
     getBrands: async (token: string) => {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/brands`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/public/brands`, {
             headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
         });
         if (!response.ok) throw new Error('فشل في جلب الماركات.');

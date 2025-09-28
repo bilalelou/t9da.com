@@ -91,39 +91,141 @@ interface VideoData {
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace(/\/?$/, '') || 'http://127.0.0.1:8000/api';
 
-const getToken = () => (typeof window !== 'undefined' ? localStorage.getItem('api_token') || undefined : undefined);
+const getToken = () => {
+  if (typeof window === 'undefined') {
+    console.log('🔑 getToken: window غير متاح (Server-side)');
+    return undefined;
+  }
+  
+  const token = localStorage.getItem('api_token');
+  console.log('🔑 getToken: Token موجود:', token ? 'نعم' : 'لا');
+  console.log('🔑 getToken: Token value:', token ? `${token.substring(0, 20)}...` : 'غير موجود');
+  console.log('🔑 getToken: localStorage keys:', Object.keys(localStorage));
+  console.log('🔑 getToken: localStorage api_token:', localStorage.getItem('api_token'));
+  
+  // تحقق من صحة الـ token
+  if (token) {
+    try {
+      const tokenParts = token.split('.');
+      console.log('🔑 getToken: Token parts count:', tokenParts.length);
+      if (tokenParts.length === 3) {
+        console.log('🔑 getToken: Token format صحيح (JWT)');
+      } else {
+        console.log('🔑 getToken: Token format غير صحيح');
+      }
+    } catch (e) {
+      console.log('🔑 getToken: خطأ في تحليل Token:', e);
+    }
+  }
+  
+  return token || undefined;
+};
+
+// Debug API configuration
+console.log('🌐 إعدادات API:');
+console.log('  - NEXT_PUBLIC_API_URL:', process.env.NEXT_PUBLIC_API_URL);
+console.log('  - API_BASE:', API_BASE);
 
 const api = {
   getProduct: async (id: string): Promise<Product> => {
-    const res = await fetch(`${API_BASE}/test/products/${id}`, { headers: { Accept: 'application/json' } });
-    if (!res.ok) throw new Error('خطأ في تحميل المنتج');
+    const token = getToken();
+    const url = `${API_BASE}/public/products/${id}`;
+    
+    console.log('🔍 جلب المنتج - معلومات الطلب:');
+    console.log('  - Product ID:', id);
+    console.log('  - URL:', url);
+    console.log('  - Token موجود:', token ? 'نعم' : 'لا');
+    console.log('  - Token:', token ? `${token.substring(0, 20)}...` : 'غير موجود');
+    console.log('  - استخدام Public Endpoint: نعم');
+    
+    const res = await fetch(url, { 
+      headers: { 
+        Accept: 'application/json',
+        // لا نحتاج token للـ public endpoint
+      } 
+    });
+    
+    console.log('📡 استجابة API:');
+    console.log('  - Status:', res.status);
+    console.log('  - Status Text:', res.statusText);
+    console.log('  - Headers:', Object.fromEntries(res.headers.entries()));
+    
+    if (!res.ok) {
+      let errorMessage = 'خطأ في تحميل المنتج';
+      try {
+        const errorData = await res.json();
+        console.log('❌ تفاصيل الخطأ:', errorData);
+        errorMessage = errorData.message || errorMessage;
+      } catch (e) {
+        console.log('❌ لا يمكن قراءة تفاصيل الخطأ:', e);
+      }
+      throw new Error(`${errorMessage} (Status: ${res.status})`);
+    }
+    
     const data = await res.json();
+    console.log('✅ بيانات المنتج المستلمة:', data);
+    
     const product = (data && data.data) ? data.data : data;
+    console.log('📦 المنتج المعالج:', product);
     
     // البيانات تأتي مع variants مباشرة من API
     return product;
   },
   getCategories: async (): Promise<Category[]> => {
-    const res = await fetch(`${API_BASE}/test/categories`, { headers: { Accept: 'application/json' } });
-    if (!res.ok) throw new Error('خطأ في تحميل الفئات');
+    const url = `${API_BASE}/public/categories`;
+    console.log('📂 جلب الفئات - URL:', url);
+    
+    const res = await fetch(url, { headers: { Accept: 'application/json' } });
+    console.log('📂 استجابة الفئات - Status:', res.status);
+    
+    if (!res.ok) {
+      console.error('❌ خطأ في جلب الفئات:', res.status, res.statusText);
+      throw new Error('خطأ في تحميل الفئات');
+    }
+    
     const data = await res.json();
+    console.log('📂 بيانات الفئات:', data);
     return Array.isArray(data?.data) ? data.data : data;
   },
   getBrands: async (): Promise<Brand[]> => {
-    const res = await fetch(`${API_BASE}/test/brands`, { headers: { Accept: 'application/json' } });
-    if (!res.ok) throw new Error('خطأ في تحميل الماركات');
+    const url = `${API_BASE}/public/brands`;
+    console.log('🏷️ جلب الماركات - URL:', url);
+    
+    const res = await fetch(url, { headers: { Accept: 'application/json' } });
+    console.log('🏷️ استجابة الماركات - Status:', res.status);
+    
+    if (!res.ok) {
+      console.error('❌ خطأ في جلب الماركات:', res.status, res.statusText);
+      throw new Error('خطأ في تحميل الماركات');
+    }
+    
     const data = await res.json();
+    console.log('🏷️ بيانات الماركات:', data);
     return Array.isArray(data?.data) ? data.data : data;
   },
   getProductVariants: async (productId: string, token?: string): Promise<ProductVariant[]> => {
-    const res = await fetch(`${API_BASE}/product-variants?product_id=${productId}`, {
+    const url = `${API_BASE}/product-variants?product_id=${productId}`;
+    console.log('🔄 جلب متغيرات المنتج:');
+    console.log('  - Product ID:', productId);
+    console.log('  - URL:', url);
+    console.log('  - Token موجود:', token ? 'نعم' : 'لا');
+    
+    const res = await fetch(url, {
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         Accept: 'application/json',
       },
     });
-    if (!res.ok) throw new Error('خطأ في تحميل متغيرات المنتج');
+    
+    console.log('🔄 استجابة متغيرات المنتج - Status:', res.status);
+    
+    if (!res.ok) {
+      console.error('❌ خطأ في جلب متغيرات المنتج:', res.status, res.statusText);
+      throw new Error('خطأ في تحميل متغيرات المنتج');
+    }
+    
     const data = await res.json();
+    console.log('🔄 بيانات متغيرات المنتج:', data);
     return Array.isArray(data?.data) ? data.data : [];
   },
   updateProduct: async (id: string, productData: FormData, token?: string) => {
@@ -250,14 +352,38 @@ function EditProductPageInner() {
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
+      console.log('🚀 بدء تحميل بيانات المنتج...');
+      console.log('  - Product ID:', id);
+      console.log('  - API Base:', API_BASE);
+      console.log('  - Window location:', typeof window !== 'undefined' ? window.location.href : 'غير متاح');
+      console.log('  - Current URL:', typeof window !== 'undefined' ? window.location.pathname : 'غير متاح');
+      
+      // تحقق من الـ token قبل البدء
+      const token = getToken();
+      console.log('🔑 Token قبل البدء:', token ? 'موجود' : 'غير موجود');
+      
       if (!id) {
+        console.log('❌ لا يوجد Product ID');
         setLoading(false);
         return;
       }
+      
       try {
         setLoading(true);
+        console.log('📥 جلب البيانات...');
+        
         const [p, cats, brs] = await Promise.all([api.getProduct(id), api.getCategories(), api.getBrands()]);
-        if (cancelled) return;
+        
+        if (cancelled) {
+          console.log('⚠️ تم إلغاء العملية');
+          return;
+        }
+        
+        console.log('✅ تم جلب البيانات بنجاح:');
+        console.log('  - Product:', p);
+        console.log('  - Categories:', cats);
+        console.log('  - Brands:', brs);
+        
         setProduct(p);
         setCategories(cats);
         setBrands(brs);
@@ -265,12 +391,16 @@ function EditProductPageInner() {
         
         // Load product variants if the product has variants
         if (p.has_variants) {
+          console.log('🔄 جلب متغيرات المنتج...');
           try {
             const variants = await api.getProductVariants(id, getToken());
+            console.log('✅ متغيرات المنتج:', variants);
             setProductVariants(variants);
           } catch (error) {
-            console.error('Error loading variants:', error);
+            console.error('❌ خطأ في جلب متغيرات المنتج:', error);
           }
+        } else {
+          console.log('ℹ️ المنتج لا يحتوي على متغيرات');
         }
         
         setFormData({
@@ -292,10 +422,18 @@ function EditProductPageInner() {
           setThumbnailPreview(p.thumbnail);
         }
       } catch (e) {
-        console.error(e);
+        console.error('❌ خطأ في تحميل بيانات المنتج:', e);
+        console.error('  - Error type:', typeof e);
+        console.error('  - Error message:', e instanceof Error ? e.message : 'Unknown error');
+        console.error('  - Error stack:', e instanceof Error ? e.stack : 'No stack trace');
+        
         // showToast already called
+        showToast('خطأ في تحميل بيانات المنتج', 'error');
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          console.log('🏁 انتهاء تحميل البيانات');
+          setLoading(false);
+        }
       }
     };
     load();
@@ -501,7 +639,8 @@ function EditProductPageInner() {
         if (v !== undefined && v !== null) fd.append(k, String(v));
       });
       if (newThumbnail) fd.append('thumbnail', newThumbnail);
-      newImages.forEach((img, i) => fd.append(`new_images[${i}]`, img));
+      // إرسال الصور الجديدة كـ array
+      newImages.forEach((img) => fd.append('new_images[]', img));
 
       // Keep existing images
       if (product?.images) {

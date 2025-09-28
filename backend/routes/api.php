@@ -31,6 +31,8 @@ Route::post('/login', [LoginController::class, 'login']);
 Route::post('/register', [RegisterController::class, 'store']);
 Route::get('/home', [PublicDataController::class, 'home']);
 Route::get('/shop', [PublicDataController::class, 'shop']);
+Route::get('/search', [PublicDataController::class, 'search']);
+Route::get('/offers', [PublicDataController::class, 'offers']);
 Route::get('/products/{slug}', [PublicDataController::class, 'show']);
 Route::post('/products-by-ids', [PublicDataController::class, 'productsByIds']);
 Route::post('/contact', [ContactController::class, 'store']);
@@ -41,6 +43,9 @@ Route::get('/sliders/active', [SliderController::class, 'active']);
 // Public routes
 Route::get('/public/colors', [ColorController::class, 'index']);
 Route::get('/public/sizes', [SizeController::class, 'index']);
+Route::get('/public/categories', [CategoryController::class, 'index']);
+Route::get('/public/brands', [BrandController::class, 'index']);
+Route::get('/public/products/{product}', [ProductController::class, 'showPublic']);
 Route::get('/public/products/{product}/variants', [ProductVariantController::class, 'getProductVariants']);
 
 // Product Reviews Public Routes

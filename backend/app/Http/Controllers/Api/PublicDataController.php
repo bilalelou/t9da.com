@@ -210,6 +210,155 @@ class PublicDataController extends Controller
         }
     }
 
+    public function search(Request $request)
+    {
+        try {
+            $query = $request->input('query');
+            $category = $request->input('category');
+            $brand = $request->input('brand');
+            $minPrice = $request->input('min_price');
+            $maxPrice = $request->input('max_price');
+            $inStock = $request->input('in_stock');
+            $featured = $request->input('featured');
+            $minRating = $request->input('min_rating');
+
+            // بناء استعلام البحث
+            $searchQuery = Product::query()->with('category', 'brand');
+
+            // البحث في اسم المنتج
+            if ($query) {
+                $searchQuery->where('name', 'LIKE', "%{$query}%");
+            }
+
+            // فلترة حسب التصنيف
+            if ($category) {
+                $searchQuery->whereHas('category', function ($q) use ($category) {
+                    $q->where('slug', $category);
+                });
+            }
+
+            // فلترة حسب الماركة
+            if ($brand) {
+                $searchQuery->whereHas('brand', function ($q) use ($brand) {
+                    $q->where('slug', $brand);
+                });
+            }
+
+            // فلترة حسب السعر
+            if ($minPrice) {
+                $searchQuery->where('regular_price', '>=', $minPrice);
+            }
+            if ($maxPrice) {
+                $searchQuery->where('regular_price', '<=', $maxPrice);
+            }
+
+            // فلترة حسب المخزون
+            if ($inStock) {
+                $searchQuery->where('quantity', '>', 0);
+            }
+
+            // فلترة حسب المنتجات المميزة
+            if ($featured) {
+                $searchQuery->where('featured', true);
+            }
+
+            // فلترة حسب التقييم
+            if ($minRating) {
+                $searchQuery->where('average_rating', '>=', $minRating);
+            }
+
+            // تنفيذ البحث
+            $products = $searchQuery->paginate(12);
+            $formattedProducts = $products->getCollection()->transform(fn($p) => $this->formatProduct($p));
+
+            return response()->json([
+                'products' => $formattedProducts,
+                'pagination' => [
+                    'total' => $products->total(),
+                    'per_page' => $products->perPage(),
+                    'current_page' => $products->currentPage(),
+                    'last_page' => $products->lastPage(),
+                ]
+            ]);
+
+        } catch (Exception $e) {
+            Log::error('خطأ في البحث: ' . $e->getMessage());
+            return response()->json(['message' => 'حدث خطأ في الخادم.'], 500);
+        }
+    }
+
+    public function offers(Request $request)
+    {
+        try {
+            // جلب المنتجات التي لها سعر مخفض (offers)
+            $offersQuery = Product::query()
+                ->whereNotNull('sale_price')
+                ->where('sale_price', '>', 0)
+                ->with('category', 'brand');
+
+            // فلترة حسب التصنيف
+            if ($request->has('category') && !empty($request->input('category'))) {
+                $offersQuery->whereHas('category', function ($q) use ($request) {
+                    $q->where('slug', $request->input('category'));
+                });
+            }
+
+            // فلترة حسب الماركة
+            if ($request->has('brand') && !empty($request->input('brand'))) {
+                $offersQuery->whereHas('brand', function ($q) use ($request) {
+                    $q->where('slug', $request->input('brand'));
+                });
+            }
+
+            // فلترة حسب السعر
+            if ($request->has('min_price')) {
+                $offersQuery->where('sale_price', '>=', $request->input('min_price'));
+            }
+            if ($request->has('max_price')) {
+                $offersQuery->where('sale_price', '<=', $request->input('max_price'));
+            }
+
+            // فلترة حسب المخزون
+            if ($request->has('in_stock') && $request->input('in_stock')) {
+                $offersQuery->where('quantity', '>', 0);
+            }
+
+            // الترتيب
+            switch ($request->input('sort')) {
+                case 'price-asc':
+                    $offersQuery->orderBy('sale_price', 'asc');
+                    break;
+                case 'price-desc':
+                    $offersQuery->orderBy('sale_price', 'desc');
+                    break;
+                case 'discount-desc':
+                    $offersQuery->orderByRaw('((regular_price - sale_price) / regular_price) DESC');
+                    break;
+                default:
+                    $offersQuery->latest(); // الترتيب الافتراضي (الأحدث)
+                    break;
+            }
+
+            // تنفيذ الاستعلام مع نظام الصفحات
+            $offers = $offersQuery->paginate(12);
+            $formattedOffers = $offers->getCollection()->transform(fn($p) => $this->formatProduct($p));
+
+            return response()->json([
+                'offers' => $formattedOffers,
+                'pagination' => [
+                    'total' => $offers->total(),
+                    'per_page' => $offers->perPage(),
+                    'current_page' => $offers->currentPage(),
+                    'last_page' => $offers->lastPage(),
+                ]
+            ]);
+
+        } catch (Exception $e) {
+            Log::error('خطأ في جلب العروض: ' . $e->getMessage());
+            return response()->json(['message' => 'حدث خطأ في الخادم.'], 500);
+        }
+    }
+
     public function productsByIds(Request $request)
     {
         $validated = $request->validate([

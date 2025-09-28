@@ -56,7 +56,7 @@ interface ProductVariant {
 const api = {
     getCategories: async (token: string) => {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api';
-        const response = await fetch(`${apiUrl}/test/categories`, {
+        const response = await fetch(`${apiUrl}/public/categories`, {
             headers: { 'Accept': 'application/json' },
         });
         if (!response.ok) throw new Error('فشل في جلب التصنيفات.');
@@ -65,7 +65,7 @@ const api = {
     },
     getBrands: async (token: string) => {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api';
-        const response = await fetch(`${apiUrl}/test/brands`, {
+        const response = await fetch(`${apiUrl}/public/brands`, {
             headers: { 'Accept': 'application/json' },
         });
         if (!response.ok) throw new Error('فشل في جلب العلامات التجارية.');

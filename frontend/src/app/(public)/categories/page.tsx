@@ -18,7 +18,7 @@ interface Category {
 const api = {
     getCategories: async (): Promise<Category[]> => {
         try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/test/categories`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/public/categories`, {
                 method: 'GET',
                 headers: {
                     'Accept': 'application/json',

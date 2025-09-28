@@ -18,11 +18,13 @@ class ProductController extends Controller
     /**
      * عرض قائمة المنتجات.
      */
-    public function index()
+    public function index(Request $request)
     {
         try {
-            $products = Product::with('category')->latest()->paginate(15);
-            $formattedProducts = $products->getCollection()->transform(fn($product) => $this->formatProduct($product));
+            $perPage = $request->get('per_page', 10);
+            $products = Product::with('category')->latest()->paginate($perPage);
+
+            $formattedProducts = $products->getCollection()->map(fn($product) => $this->formatProduct($product));
 
             return response()->json([
                 'success' => true,
@@ -112,14 +114,67 @@ class ProductController extends Controller
     }
 
     /**
+     * عرض بيانات منتج واحد للعامة (بدون authentication).
+     */
+    public function showPublic(Product $product)
+    {
+        try {
+            Log::info("🔍 طلب عرض المنتج العام ID: {$product->id}");
+            Log::info("🔐 معلومات المصادقة:");
+            Log::info("  - User authenticated: " . (auth()->check() ? 'نعم' : 'لا'));
+            Log::info("  - User ID: " . (auth()->id() ?? 'غير موجود'));
+            Log::info("  - Token: " . (request()->bearerToken() ? 'موجود' : 'غير موجود'));
+            Log::info("  - Request URL: " . request()->fullUrl());
+            Log::info("  - Request Method: " . request()->method());
+            Log::info("  - Request Headers: " . json_encode(request()->headers->all()));
+
+            Log::info("📦 بيانات المنتج: " . json_encode([
+                'id' => $product->id,
+                'name' => $product->name,
+                'slug' => $product->slug,
+                'has_variants' => $product->has_variants
+            ]));
+
+            $formattedProduct = $this->formatProductForEdit($product);
+            Log::info("✅ تم تنسيق بيانات المنتج بنجاح");
+
+            return response()->json(['success' => true, 'data' => $formattedProduct]);
+        } catch (Exception $e) {
+            Log::error("❌ خطأ في عرض المنتج العام ID {$product->id}: " . $e->getMessage());
+            Log::error("❌ Stack trace: " . $e->getTraceAsString());
+            return response()->json(['success' => false, 'message' => 'لم يتم العثور على المنتج.'], 404);
+        }
+    }
+
+    /**
      * عرض بيانات منتج واحد للتعديل.
      */
     public function show(Product $product)
     {
         try {
-            return response()->json(['success' => true, 'data' => $this->formatProductForEdit($product)]);
+            Log::info("🔍 طلب عرض المنتج ID: {$product->id}");
+            Log::info("🔐 معلومات المصادقة:");
+            Log::info("  - User authenticated: " . (auth()->check() ? 'نعم' : 'لا'));
+            Log::info("  - User ID: " . (auth()->id() ?? 'غير موجود'));
+            Log::info("  - Token: " . (request()->bearerToken() ? 'موجود' : 'غير موجود'));
+            Log::info("  - Request URL: " . request()->fullUrl());
+            Log::info("  - Request Method: " . request()->method());
+            Log::info("  - Request Headers: " . json_encode(request()->headers->all()));
+
+            Log::info("📦 بيانات المنتج: " . json_encode([
+                'id' => $product->id,
+                'name' => $product->name,
+                'slug' => $product->slug,
+                'has_variants' => $product->has_variants
+            ]));
+
+            $formattedProduct = $this->formatProductForEdit($product);
+            Log::info("✅ تم تنسيق بيانات المنتج بنجاح");
+
+            return response()->json(['success' => true, 'data' => $formattedProduct]);
         } catch (Exception $e) {
-            Log::error("خطأ في عرض المنتج ID {$product->id}: " . $e->getMessage());
+            Log::error("❌ خطأ في عرض المنتج ID {$product->id}: " . $e->getMessage());
+            Log::error("❌ Stack trace: " . $e->getTraceAsString());
             return response()->json(['success' => false, 'message' => 'لم يتم العثور على المنتج.'], 404);
         }
     }
@@ -150,9 +205,12 @@ class ProductController extends Controller
             }
 
             // معالجة الصورة الرئيسية في التحديث
-            if ($request->hasFile('image')) {
-                if ($product->thumbnail) Storage::disk('public')->delete('uploads/' . $product->thumbnail);
-                $data['thumbnail'] = $this->storeImage($request->file('image'));
+            if ($request->hasFile('thumbnail')) {
+                // حذف الصورة القديمة إذا وجدت
+                if ($product->thumbnail) {
+                    Storage::disk('public')->delete('uploads/' . $product->thumbnail);
+                }
+                $data['thumbnail'] = $this->storeImage($request->file('thumbnail'));
             }
 
             $currentGallery = json_decode($product->images, true) ?? [];
@@ -198,7 +256,7 @@ class ProductController extends Controller
                 'quantity' => 'sometimes|required|integer|min:0',
                 'category_id' => 'sometimes|required|exists:categories,id',
                 'brand_id' => 'nullable|exists:brands,id', // العلامة التجارية اختيارية
-                'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120', // 5MB للصورة الرئيسية
+                'thumbnail' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120', // 5MB للصورة الرئيسية
                 'new_images' => 'nullable|array',
                 'new_images.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:5120', // 5MB
                 'existing_images' => 'nullable|json',
@@ -264,7 +322,11 @@ class ProductController extends Controller
 
     private function formatProductForEdit(Product $product)
     {
+        Log::info("🔄 بدء تنسيق بيانات المنتج للتعديل - ID: {$product->id}");
+
         $gallery = json_decode($product->images, true) ?? [];
+        Log::info("🖼️ معرض الصور: " . json_encode($gallery));
+
         $data = [
             'id' => $product->id, 'name' => $product->name,
             'short_description' => $product->short_description,
@@ -281,9 +343,13 @@ class ProductController extends Controller
             'free_shipping_note' => $product->free_shipping_note,
         ];
 
+        Log::info("📋 البيانات الأساسية: " . json_encode($data));
+
         // إضافة الـ variants إذا كان المنتج يحتوي عليها
         if ($product->has_variants) {
+            Log::info("🔄 جلب متغيرات المنتج...");
             $variants = $product->variants()->with(['color', 'size'])->get();
+            Log::info("📦 عدد المتغيرات: " . $variants->count());
             $data['variants'] = $variants->map(function($variant) {
                 return [
                     'id' => $variant->id,
@@ -315,7 +381,9 @@ class ProductController extends Controller
         }
 
         // إضافة الفيديوهات
+        Log::info("🎥 جلب فيديوهات المنتج...");
         $videos = $product->videos()->orderBy('sort_order')->get();
+        Log::info("🎬 عدد الفيديوهات: " . $videos->count());
         $data['videos'] = $videos->map(function($video) {
             return [
                 'id' => $video->id,
@@ -327,6 +395,7 @@ class ProductController extends Controller
             ];
         });
 
+        Log::info("✅ تم تنسيق بيانات المنتج بنجاح - البيانات النهائية: " . json_encode($data));
         return $data;
     }
 
@@ -594,4 +663,3 @@ class ProductController extends Controller
         return $prefix . '-' . uniqid();
     }
 }
-

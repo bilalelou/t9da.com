@@ -25,7 +25,7 @@ interface Offer {
 const api = {
     getOffers: async (): Promise<Offer[]> => {
         try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/test/offers`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/offers`, {
                 method: 'GET',
                 headers: {
                     'Accept': 'application/json',

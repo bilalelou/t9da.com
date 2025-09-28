@@ -43,19 +43,22 @@ interface Product {
 
 // --- API Helper ---
 const api = {
-    getProducts: async () => {
+    getProducts: async (page = 1, perPage = 10) => {
         const token = localStorage.getItem('api_token');
         if (!token) {
             window.location.href = '/login';
             return [];
         }
 
-        // [ملاحظة] تأكد من أن الـ API يرجع كل البيانات المطلوبة في الواجهة الجديدة
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products`, {            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Accept': 'application/json',
-            },
-        });
+        const response = await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/products?page=${page}&per_page=${perPage}`,
+            {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/json',
+                },
+            }
+        );
 
         const data = await response.json();
 
@@ -67,7 +70,7 @@ const api = {
             throw new Error(data.message || 'فشل في جلب بيانات المنتجات.');
         }
 
-        return data.data || data;
+        return data;
     }
 };
 
@@ -114,7 +117,7 @@ const ProductCard = ({ product, onSelect, isSelected }) => {
             <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
                     <input type="checkbox" checked={isSelected} onChange={() => onSelect(product.id)} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mt-1" />
-                    <img src={product.thumbnail} alt={product.name} className="w-14 h-14 rounded-lg object-cover border" onError={(e) => { e.currentTarget.src = 'https://placehold.co/100x100/f0f0f0/cccccc?text=No+Image'; }}/>
+                    <img src={product.thumbnail.startsWith('/') ? product.thumbnail : '/' + product.thumbnail} alt={product.name} className="w-14 h-14 rounded-lg object-cover border" onError={(e) => { e.currentTarget.src = 'https://placehold.co/100x100/f0f0f0/cccccc?text=No+Image'; }}/>
                     <div>
                         <p className="font-bold text-gray-900 line-clamp-2">{product.name}</p>
                         <p className="text-sm text-gray-500">{product.category}</p>
@@ -173,9 +176,20 @@ const ProductCard = ({ product, onSelect, isSelected }) => {
     );
 };
 
-
 // --- Main Products Page Component ---
-const ProductsPage = ({ products }) => {
+const ProductsPage = ({
+    products,
+    totalProducts,
+    currentPage,
+    lastPage,
+    onPageChange,
+}: {
+    products: Product[];
+    totalProducts: number;
+    currentPage: number;
+    lastPage: number;
+    onPageChange: (page: number) => void;
+}) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('all');
     const [selectedStatus, setSelectedStatus] = useState('all');
@@ -185,33 +199,24 @@ const ProductsPage = ({ products }) => {
 
     const categories = useMemo(() => ['all', ...Array.from(new Set(products.map(p => p.category)))], [products]);
 
-    const filteredProducts = useMemo(() => {
-        return products.filter(product => {
-            const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
-            const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
-            const matchesStatus = selectedStatus === 'all' || product.status === selectedStatus;
-            const matchesShipping = shippingFilter === 'all' || 
-                                  (shippingFilter === 'free_shipping' && product.has_free_shipping) ||
-                                  (shippingFilter === 'paid_shipping' && !product.has_free_shipping);
-            return matchesSearch && matchesCategory && matchesStatus && matchesShipping;
-        });
-    }, [products, searchTerm, selectedCategory, selectedStatus, shippingFilter]);
+    // عرض المنتجات مباشرة من الـ API (بدون تصفية محلية للصفحة)
+    const displayedProducts = products;
 
     const productStats = useMemo(() => ({
-        total: products.length,
+        total: totalProducts,
         active: products.filter(p => p.status === 'published').length,
         outOfStock: products.filter(p => p.stock === 0).length,
         lowStock: products.filter(p => p.stock > 0 && p.stock <= 10).length,
         freeShipping: products.filter(p => p.has_free_shipping).length,
         totalValue: products.reduce((acc, p) => acc + (p.price * p.stock), 0)
-    }), [products]);
+    }), [products, totalProducts]);
 
     const toggleProductSelection = (productId: number) => {
         setSelectedProducts(prev => prev.includes(productId) ? prev.filter(id => id !== productId) : [...prev, productId]);
     };
 
     const toggleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setSelectedProducts(e.target.checked ? filteredProducts.map(p => p.id) : []);
+        setSelectedProducts(e.target.checked ? displayedProducts.map((p: Product) => p.id) : []);
     };
     
     return (
@@ -274,10 +279,11 @@ const ProductsPage = ({ products }) => {
             <div className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
                 <div className="overflow-x-auto hidden sm:block">
                     <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                            <tr>
-                                <th className="px-6 py-3 text-right"><input type="checkbox" onChange={toggleSelectAll} checked={selectedProducts.length === filteredProducts.length && filteredProducts.length > 0} className="rounded" /></th>
-                                <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">المنتج</th>
+<thead className="bg-gray-50">
+    <tr>
+        <th className="px-6 py-3 text-right"><input type="checkbox" onChange={toggleSelectAll} checked={selectedProducts.length === displayedProducts.length && displayedProducts.length > 0} className="rounded" /></th>
+        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">ID</th>
+        <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">المنتج</th>
                                 <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">السعر</th>
                                 <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">المخزون</th>
                                 <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">الشحن</th>
@@ -287,10 +293,11 @@ const ProductsPage = ({ products }) => {
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                            {filteredProducts.map((product) => (
-                                <tr key={product.id} className="hover:bg-gray-50">
-                                    <td className="px-6 py-4"><input type="checkbox" checked={selectedProducts.includes(product.id)} onChange={() => toggleProductSelection(product.id)} className="rounded" /></td>
-                                    <td className="px-6 py-4"><div className="flex items-center gap-3"><img src={product.thumbnail} alt={product.name} className="w-12 h-12 rounded-lg object-cover border" onError={(e) => { e.currentTarget.src = 'https://placehold.co/100x100/f0f0f0/cccccc?text=No+Image'; }} /><div><p className="font-semibold text-gray-900 max-w-xs truncate">{product.name}</p><p className="text-sm text-gray-500">{product.category}</p></div></div></td>
+{displayedProducts.map((product) => (
+    <tr key={product.id} className="hover:bg-gray-50">
+        <td className="px-6 py-4"><input type="checkbox" checked={selectedProducts.includes(product.id)} onChange={() => toggleProductSelection(product.id)} className="rounded" /></td>
+        <td className="px-4 py-4 text-center font-mono text-xs text-gray-700">{product.id}</td>
+        <td className="px-6 py-4"><div className="flex items-center gap-3"><img src={product.thumbnail.startsWith('/') ? product.thumbnail : '/' + product.thumbnail} alt={product.name} className="w-12 h-12 rounded-lg object-cover border" onError={(e) => { e.currentTarget.src = 'https://placehold.co/100x100/f0f0f0/cccccc?text=No+Image'; }} /><div><p className="font-semibold text-gray-900 max-w-xs truncate">{product.name}</p><p className="text-sm text-gray-500">{product.category}</p></div></div></td>
                                     <td className="px-6 py-4"><div className="font-semibold text-gray-800">{formatCurrency(product.price)}</div>{product.originalPrice && <div className="text-xs text-gray-400 line-through">{formatCurrency(product.originalPrice)}</div>}</td>
                                     <td className="px-6 py-4 text-center text-sm font-medium">{product.stock < 10 ? <span className="text-red-600">{product.stock}</span> : product.stock}</td>
                                     <td className="px-6 py-4 text-center">
@@ -335,11 +342,28 @@ const ProductsPage = ({ products }) => {
                     </table>
                 </div>
                 <div className="sm:hidden p-4 space-y-4 bg-gray-50">
-                     {filteredProducts.map((product) => (<ProductCard key={product.id} product={product} onSelect={toggleProductSelection} isSelected={selectedProducts.includes(product.id)} />))}
+                     {displayedProducts.map((product) => (<ProductCard key={product.id} product={product} onSelect={toggleProductSelection} isSelected={selectedProducts.includes(product.id)} />))}
                 </div>
                 <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
-                    <p className="text-sm text-gray-700">عرض <span className="font-medium">1</span> إلى <span className="font-medium">{filteredProducts.length}</span> من <span className="font-medium">{products.length}</span> نتيجة</p>
-                    <div className="flex gap-1"><button className="px-3 py-1 border rounded-md text-sm hover:bg-gray-50">السابق</button><button className="px-3 py-1 border rounded-md text-sm hover:bg-gray-50">التالي</button></div>
+                    <p className="text-sm text-gray-700">
+                        صفحة <span className="font-medium">{currentPage}</span> من <span className="font-medium">{lastPage}</span> | عرض <span className="font-medium">{products.length}</span> من <span className="font-medium">{totalProducts}</span> منتج
+                    </p>
+                    <div className="flex gap-1">
+                        <button
+                            className="px-3 py-1 border rounded-md text-sm hover:bg-gray-50"
+                            disabled={currentPage === 1}
+                            onClick={() => onPageChange(currentPage - 1)}
+                        >
+                            السابق
+                        </button>
+                        <button
+                            className="px-3 py-1 border rounded-md text-sm hover:bg-gray-50"
+                            disabled={currentPage === lastPage}
+                            onClick={() => onPageChange(currentPage + 1)}
+                        >
+                            التالي
+                        </button>
+                    </div>
                 </div>
             </div>
             
@@ -360,15 +384,22 @@ const ProductsPage = ({ products }) => {
 // --- Data Fetching Wrapper ---
 export default function ProductsPageLoader() {
     const [products, setProducts] = useState<Product[]>([]);
+    const [totalProducts, setTotalProducts] = useState<number>(0);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [lastPage, setLastPage] = useState(1);
+
+    const perPage = 10;
 
     useEffect(() => {
         const fetchProducts = async () => {
+            setLoading(true);
             try {
-                // [تعديل] تم تفعيل جلب البيانات الحقيقية من الخادم
-                const data = await api.getProducts(); 
-                setProducts(data);
+                const response = await api.getProducts(currentPage, perPage);
+                setProducts(response.data || []);
+                setTotalProducts(response.pagination?.total || 0);
+                setLastPage(response.pagination?.last_page || 1);
             } catch (err) {
                 setError(err instanceof Error ? err.message : 'An unknown error occurred');
             } finally {
@@ -376,7 +407,7 @@ export default function ProductsPageLoader() {
             }
         };
         fetchProducts();
-    }, []);
+    }, [currentPage]);
 
     if (loading) {
         return <div className="flex items-center justify-center h-96"><LoaderCircle className="animate-spin text-blue-600" size={48} /></div>;
@@ -386,5 +417,13 @@ export default function ProductsPageLoader() {
         return <div className="text-center text-red-600 bg-red-50 p-4 rounded-lg">خطأ: {error}</div>;
     }
 
-    return <ProductsPage products={products} />;
+    return (
+        <ProductsPage
+            products={products}
+            totalProducts={totalProducts}
+            currentPage={currentPage}
+            lastPage={lastPage}
+            onPageChange={setCurrentPage}
+        />
+    );
 }

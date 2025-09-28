@@ -109,7 +109,7 @@ const BulkProductModal: React.FC<BulkProductModalProps> = ({ isOpen, onClose, on
       console.log('جلب التصنيفات - Token:', token ? 'موجود' : 'غير موجود');
       console.log('URL:', `${apiUrl}/categories`);
       
-      const response = await fetch(`${apiUrl}/categories`, {
+      const response = await fetch(`${apiUrl}/public/categories`, {
         headers: { 
           'Accept': 'application/json',
           ...(token && { 'Authorization': `Bearer ${token}` }),
@@ -139,7 +139,7 @@ const BulkProductModal: React.FC<BulkProductModalProps> = ({ isOpen, onClose, on
       console.log('جلب العلامات التجارية - Token:', token ? 'موجود' : 'غير موجود');
       console.log('URL:', `${apiUrl}/brands`);
       
-      const response = await fetch(`${apiUrl}/brands`, {
+      const response = await fetch(`${apiUrl}/public/brands`, {
         headers: { 
           'Accept': 'application/json',
           ...(token && { 'Authorization': `Bearer ${token}` }),

@@ -8,23 +8,41 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
+use Exception;
 
 class BrandController extends Controller
 {
     public function index()
     {
-        $brands = Brand::withCount('products')->latest()->get()->map(function($brand){
-            // Backward compatibility: if file exists in old logos/ path use it, else use new uploads/brands
-            if ($brand->image) {
-                $newPath = 'storage/uploads/brands/' . $brand->image;
-                $oldPath = 'storage/logos/' . $brand->image;
-                $brand->logo = asset(file_exists(public_path($newPath)) ? $newPath : $oldPath);
-            } else {
-                $brand->logo = 'https://placehold.co/128x128/f0f0f0/cccccc?text=' . ($brand->name[0] ?? 'B');
-            }
-            return $brand;
-        });
-        return response()->json(['data' => $brands]);
+        try {
+            Log::info("🏷️ طلب جلب الماركات");
+            Log::info("🔐 معلومات المصادقة:");
+            Log::info("  - User authenticated: " . (auth()->check() ? 'نعم' : 'لا'));
+            Log::info("  - User ID: " . (auth()->id() ?? 'غير موجود'));
+            Log::info("  - Token: " . (request()->bearerToken() ? 'موجود' : 'غير موجود'));
+
+            $brands = Brand::withCount('products')->latest()->get()->map(function($brand){
+                // Backward compatibility: if file exists in old logos/ path use it, else use new uploads/brands
+                if ($brand->image) {
+                    $newPath = 'storage/uploads/brands/' . $brand->image;
+                    $oldPath = 'storage/logos/' . $brand->image;
+                    $brand->logo = asset(file_exists(public_path($newPath)) ? $newPath : $oldPath);
+                } else {
+                    $brand->logo = 'https://placehold.co/128x128/f0f0f0/cccccc?text=' . ($brand->name[0] ?? 'B');
+                }
+                return $brand;
+            });
+
+            Log::info("🏷️ عدد الماركات: " . $brands->count());
+            Log::info("🏷️ الماركات: " . json_encode($brands));
+
+            return response()->json(['data' => $brands]);
+        } catch (Exception $e) {
+            Log::error('❌ خطأ في جلب الماركات: ' . $e->getMessage());
+            Log::error('❌ Stack trace: ' . $e->getTraceAsString());
+            return response()->json(['success' => false, 'message' => 'حدث خطأ في الخادم.'], 500);
+        }
     }
 
     public function store(Request $request)

@@ -19,15 +19,26 @@ class CategoryController extends Controller
     public function index()
     {
         try {
+            Log::info("📂 طلب جلب التصنيفات");
+            Log::info("🔐 معلومات المصادقة:");
+            Log::info("  - User authenticated: " . (auth()->check() ? 'نعم' : 'لا'));
+            Log::info("  - User ID: " . (auth()->id() ?? 'غير موجود'));
+            Log::info("  - Token: " . (request()->bearerToken() ? 'موجود' : 'غير موجود'));
+
             // جلب التصنيفات مع حساب عدد المنتجات المرتبطة بكل تصنيف
             $categories = Category::withCount('products')->latest()->get()->map(function($category) {
                 // إضافة مسار الصورة الكامل
                 $category->image = $category->image ? asset('storage/uploads/categories/' . $category->image) : null;
                 return $category;
             });
+
+            Log::info("📂 عدد التصنيفات: " . $categories->count());
+            Log::info("📂 التصنيفات: " . json_encode($categories));
+
             return response()->json(['success' => true, 'data' => $categories]);
         } catch (Exception $e) {
-            Log::error('خطأ في جلب التصنيفات: ' . $e->getMessage());
+            Log::error('❌ خطأ في جلب التصنيفات: ' . $e->getMessage());
+            Log::error('❌ Stack trace: ' . $e->getTraceAsString());
             return response()->json(['success' => false, 'message' => 'حدث خطأ في الخادم.'], 500);
         }
     }
