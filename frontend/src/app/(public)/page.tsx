@@ -1,62 +1,228 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, createContext, useContext, useMemo } from 'react';
-import Head from 'next/head';
-import { useCart, useWishlist } from '@/contexts/Providers';
+import { Heart, CheckCircle, ChevronLeft, ChevronRight, ShoppingCart, ShieldCheck, Truck, PhoneCall, Mail, Quote, Zap, Star, Tag, Clock } from 'lucide-react';
 
-// Icons
-import { Heart, CheckCircle, ChevronLeft, ChevronRight, ShoppingCart, ShieldCheck, Truck, PhoneCall, Mail, Quote } from 'lucide-react';
+// --- ( MOCK PROVIDERS ) ---
+// These are mock providers to make the component self-contained and runnable.
+// In a real app, you would import these from your actual context files.
 
-// --- Interfaces ---
-interface Slide {
-    id: number;
-    title: string;
-    subtitle: string;
-    image_url: string;
-    link: string;
-}
+const mockCartContext = createContext({
+    addToCart: (product, quantity) => console.log('Added to cart:', product, quantity),
+});
+const useCart = () => useContext(mockCartContext);
 
-interface Product {
-    id: number;
-    name: string;
-    slug: string;
-    regular_price: number;
-    sale_price?: number;
-    thumbnail: string;
-    short_description: string;
-    has_free_shipping?: boolean;
-    free_shipping_note?: string;
-}
+const mockWishlistContext = createContext({
+    addToWishlist: (product) => console.log('Added to wishlist:', product),
+    removeFromWishlist: (productId) => console.log('Removed from wishlist:', productId),
+    isInWishlist: (productId) => false,
+});
+const useWishlist = () => useContext(mockWishlistContext);
 
-interface Category {
-    id: number;
-    name: string;
-    slug: string;
-    image: string;
-}
+const MockProviders = ({ children }) => {
+    const [wishlist, setWishlist] = useState(new Set());
+    const addToWishlist = (product) => setWishlist(prev => new Set(prev).add(product.id));
+    const removeFromWishlist = (productId) => {
+        setWishlist(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(productId);
+            return newSet;
+        });
+    };
+    const isInWishlist = (productId) => wishlist.has(productId);
 
-// [جديد] واجهة لآراء العملاء
-interface Testimonial {
-    id: number;
-    name: string;
-    title: string;
-    quote: string;
-    avatar: string;
-}
+    return (
+        <mockCartContext.Provider value={{ addToCart: (product, quantity) => alert(`تمت إضافة ${product.name} للسلة`) }}>
+            <mockWishlistContext.Provider value={{ addToWishlist, removeFromWishlist, isInWishlist }}>
+                {children}
+            </mockWishlistContext.Provider>
+        </mockCartContext.Provider>
+    );
+};
 
-// --- Toast & Favorites (No changes) ---
+
+// --- ( TYPE DEFINITIONS ) ---
+interface Slide { id: number; title: string; subtitle: string; image_url: string; link: string; }
+interface Product { id: number; name: string; slug: string; regular_price: number; sale_price?: number; thumbnail: string; short_description: string; has_free_shipping?: boolean; rating?: number; review_count?: number; }
+interface Category { id: number; name: string; slug: string; image: string; }
+interface Testimonial { id: number; name: string; title: string; quote: string; avatar: string; }
+interface Service { id: number; icon: React.ReactNode; title: string; description: string; }
+interface Brand { id: number; name: string; logo: string; }
+interface FlashSale { products: Product[]; endDate: string; }
+interface PromoBannerData { id: number; title: string; subtitle: string; image_url: string; link: string; button_text: string; }
+interface HomePageData { slides: Slide[]; featuredProducts: Product[]; categories: Category[]; testimonials: Testimonial[]; todayOffers: Product[]; services: Service[]; brands: Brand[]; flashSale: FlashSale; newArrivals: Product[]; promoBanner: PromoBannerData; }
+
+
+// --- ( UTILS & CONFIG ) ---
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+
+const formatCurrency = (price: number): string => {
+    if (typeof price !== 'number' || isNaN(price)) return '';
+    return new Intl.NumberFormat('ar-MA', { style: 'currency', currency: 'MAD' }).format(price);
+};
+
+// --- ( API LAYER ) ---
+const api = {
+    /**
+     * Fetches active sliders from the backend API.
+     */
+    getActiveSliders: async (): Promise<Slide[]> => {
+        const response = await fetch(`${API_BASE_URL}/sliders/active`);
+        if (!response.ok) {
+            throw new Error('فشل جلب بيانات السلايدر من الخادم');
+        }
+        const result = await response.json();
+        if (!result.success || !Array.isArray(result.data)) {
+            throw new Error('صيغة البيانات المستلمة للسلايدر غير صحيحة');
+        }
+        // Map backend fields (description, button_link) to frontend interface (subtitle, link)
+        return result.data.map((slider: any) => ({
+            id: slider.id,
+            title: slider.title,
+            subtitle: slider.description,
+            image_url: slider.image_url,
+            link: slider.button_link,
+        }));
+    },
+    
+    /**
+     * Fetches all necessary data for the home page.
+     * It now fetches sliders from the live API and uses mock data for other sections.
+     */
+    getHomePageData: async (): Promise<HomePageData> => {
+        console.log(`Fetching data from API...`);
+
+        // 1. Fetch sliders from the real API with a fallback to mock data
+        let sliders: Slide[];
+        try {
+            sliders = await api.getActiveSliders();
+        } catch (error) {
+            console.error("لم يتمكن من جلب السلايدر من الواجهة الخلفية، سيتم استخدام البيانات الوهمية:", error);
+            sliders = [
+                { id: 998, title: 'بيانات احتياطية للسلايدر', subtitle: 'حدث خطأ أثناء الاتصال بالخادم', image_url: 'https://images.unsplash.com/photo-1555529669-e69e7aa0ba9e?q=80&w=2070&auto=format&fit=crop', link: '#' },
+                { id: 999, title: 'تأكد من تشغيل خادم Laravel', subtitle: 'وتفعيل مسار /api/sliders/active', image_url: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=2070&auto=format&fit=crop', link: '#' },
+            ];
+        }
+
+        // 2. Simulate fetching other data (remains mocked)
+        await new Promise(res => setTimeout(res, 500));
+        const flashSaleEndDate = new Date();
+        flashSaleEndDate.setHours(flashSaleEndDate.getHours() + 5);
+
+        // 3. Return combined data
+        return {
+            slides: sliders, // Use fetched or fallback sliders
+            featuredProducts: [
+                { id: 1, name: 'ساعة ذكية أنيقة', slug: 'smart-watch', regular_price: 1500, sale_price: 1199, thumbnail: 'https://placehold.co/400x400/333/fff?text=منتج+1', short_description: 'تتبع نشاطك اليومي وأناقتك بكل سهولة.', has_free_shipping: true, rating: 4.5, review_count: 88 },
+                { id: 2, name: 'حقيبة ظهر عصرية', slug: 'modern-backpack', regular_price: 450, thumbnail: 'https://placehold.co/400x400/555/fff?text=منتج+2', short_description: 'تصميم متين ومساحة واسعة لكل احتياجاتك.', has_free_shipping: false, rating: 4.8, review_count: 120 },
+                { id: 3, name: 'كاميرا احترافية', slug: 'pro-camera', regular_price: 8000, sale_price: 7499, thumbnail: 'https://placehold.co/400x400/777/fff?text=منتج+3', short_description: 'التقط أجمل اللحظات بجودة لا تضاهى.', has_free_shipping: true, rating: 5, review_count: 54 },
+                { id: 4, name: 'حذاء رياضي مريح', slug: 'sport-shoes', regular_price: 890, thumbnail: 'https://placehold.co/400x400/999/fff?text=منتج+4', short_description: 'أداء فائق وراحة تدوم طوال اليوم.', has_free_shipping: false, rating: 4.2, review_count: 213 },
+            ],
+            categories: [
+                { id: 1, name: 'إلكترونيات', slug: 'electronics', image: 'https://images.unsplash.com/photo-1525547719571-a2d4ac8945e2?q=80&w=1964&auto=format&fit=crop' },
+                { id: 2, name: 'أزياء رجالية', slug: 'men-fashion', image: 'https://images.unsplash.com/photo-1617137968427-85924c800a22?q=80&w=1887&auto=format&fit=crop' },
+                { id: 3, name: 'ديكور منزلي', slug: 'home-decor', image: 'https://images.unsplash.com/photo-1534591720223-4a69p542475?q=80&w=1887&auto=format&fit=crop' },
+                { id: 4, name: 'جمال وعناية', slug: 'beauty', image: 'https://images.unsplash.com/photo-1590439471364-192aa70c0b23?q=80&w=1887&auto=format&fit=crop' },
+            ],
+            testimonials: [
+                { id: 1, name: 'سارة خالد', title: 'عميلة سعيدة', quote: 'تجربة تسوق رائعة ومنتجات ذات جودة عالية. خدمة العملاء كانت ممتازة وسريعة في الرد.', avatar: 'https://randomuser.me/api/portraits/women/44.jpg' },
+                { id: 2, name: 'أحمد عبدالله', title: 'مشتري دائم', quote: 'من أفضل المتاجر التي تعاملت معها. الأسعار منافسة والتوصيل دائماً في الموعد.', avatar: 'https://randomuser.me/api/portraits/men/46.jpg' },
+                { id: 3, name: 'فاطمة علي', title: 'مصممة ديكور', quote: 'وجدت كل ما أحتاجه لمشروعي الأخير بجودة لم أتوقعها. التفاصيل في المنتجات مذهلة.', avatar: 'https://randomuser.me/api/portraits/women/47.jpg' }
+            ],
+            todayOffers: [
+                 { id: 101, name: 'هاتف عرض اليوم', slug: 'smartphone-offer', regular_price: 3500, sale_price: 2999, thumbnail: 'https://placehold.co/400x400/8d6e63/fff?text=عرض', short_description: 'هاتف ذكي بمواصفات عالية وسعر خاص.', has_free_shipping: true, rating: 4.6, review_count: 95 },
+                 { id: 102, name: 'سماعات لاسلكية', slug: 'wireless-headphones', regular_price: 800, sale_price: 650, thumbnail: 'https://placehold.co/400x400/8d6e63/fff?text=عرض', short_description: 'جودة صوت ممتازة وحرية بلا أسلاك.', has_free_shipping: false, rating: 4.3, review_count: 150 },
+            ],
+            flashSale: {
+                endDate: flashSaleEndDate.toISOString(),
+                products: [
+                    { id: 201, name: 'لابتوب ألعاب', slug: 'gaming-laptop', regular_price: 12500, sale_price: 9999, thumbnail: 'https://placehold.co/400x400/ff6f00/fff?text=Flash', short_description: 'أداء قوي لتجربة ألعاب لا مثيل لها.', has_free_shipping: true, rating: 4.9, review_count: 75 },
+                    { id: 202, name: 'ماكينة قهوة', slug: 'coffee-machine', regular_price: 1800, sale_price: 1350, thumbnail: 'https://placehold.co/400x400/ff6f00/fff?text=Flash', short_description: 'استمتع بقهوتك المفضلة بلمسة زر.', has_free_shipping: true, rating: 4.7, review_count: 112 },
+                ],
+            },
+            newArrivals: [
+                { id: 301, name: 'نظارات شمسية عصرية', slug: 'modern-sunglasses', regular_price: 650, thumbnail: 'https://placehold.co/400x400/e0e0e0/333?text=جديد', short_description: 'حماية كاملة من أشعة الشمس مع تصميم أنيق.', has_free_shipping: false, rating: 4.7, review_count: 45 },
+                { id: 302, name: 'مجموعة العناية بالبشرة', slug: 'skin-care-set', regular_price: 820, sale_price: 699, thumbnail: 'https://placehold.co/400x400/e0e0e0/333?text=جديد', short_description: 'روتين كامل لبشرة نضرة ومشرقة.', has_free_shipping: true, rating: 4.9, review_count: 92 },
+                { id: 303, name: 'عطر رجالي فاخر', slug: 'luxury-perfume', regular_price: 1200, thumbnail: 'https://placehold.co/400x400/e0e0e0/333?text=جديد', short_description: 'رائحة تدوم طويلاً وتعكس شخصيتك القوية.', has_free_shipping: true, rating: 4.8, review_count: 150 },
+                { id: 304, name: 'خلاط كهربائي متعدد الوظائف', slug: 'blender', regular_price: 950, thumbnail: 'https://placehold.co/400x400/e0e0e0/333?text=جديد', short_description: 'لتحضير العصائر والشوربات بسهولة وسرعة.', has_free_shipping: false, rating: 4.6, review_count: 68 },
+            ],
+            promoBanner: {
+                id: 1,
+                title: 'تخفيضات الإلكترونيات الكبرى',
+                subtitle: 'خصم يصل إلى 40% على الهواتف الذكية واللابتوبات',
+                image_url: 'https://images.unsplash.com/photo-1593642702821-c8da6771f0c6?q=80&w=2069&auto=format&fit=crop',
+                link: '/category/electronics-sale',
+                button_text: 'تسوق العروض'
+            },
+            services: [
+                { id: 1, icon: <Truck size={28} />, title: "توصيل سريع", description: "لكافة المدن المغربية." },
+                { id: 2, icon: <ShieldCheck size={28} />, title: "دفع آمن", description: "نضمن حماية معاملاتك." },
+                { id: 3, icon: <PhoneCall size={28} />, title: "دعم فني", description: "متواجدون لمساعدتك." },
+            ],
+            brands: [
+                { id: 1, name: "Samsung", logo: "https://upload.wikimedia.org/wikipedia/commons/2/24/Samsung_Logo.svg" },
+                { id: 2, name: "Apple", logo: "https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg" },
+                { id: 3, name: "Adidas", logo: "https://upload.wikimedia.org/wikipedia/commons/2/20/Adidas_Logo.svg" },
+                { id: 4, name: "LG", logo: "https://upload.wikimedia.org/wikipedia/commons/6/6f/LG_logo_%282015%29.svg" },
+                { id: 5, name: "Nike", logo: "https://upload.wikimedia.org/wikipedia/commons/a/a6/Logo_NIKE.svg" },
+            ],
+        };
+    }
+};
+
+
+// --- ( CUSTOM HOOKS ) ---
+const useFetchData = <T,>(fetcher: () => Promise<T>) => {
+    const [data, setData] = useState<T | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    useEffect(() => {
+        const loadData = async () => {
+            try { setLoading(true); setError(null); const result = await fetcher(); setData(result); } catch (err) { const errorMessage = err instanceof Error ? err.message : "An unknown error occurred."; setError(errorMessage); console.error("Fetch Error:", errorMessage); } finally { setLoading(false); }
+        };
+        loadData();
+    }, [fetcher]);
+    return { data, loading, error };
+};
+
+const useCountdown = (endDate: string) => {
+    const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+    useEffect(() => {
+        const interval = setInterval(() => {
+            const now = new Date().getTime();
+            const end = new Date(endDate).getTime();
+            const distance = end - now;
+            if (distance < 0) {
+                clearInterval(interval);
+                setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+            } else {
+                setTimeLeft({
+                    days: Math.floor(distance / (1000 * 60 * 60 * 24)),
+                    hours: Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+                    minutes: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)),
+                    seconds: Math.floor((distance % (1000 * 60)) / 1000),
+                });
+            }
+        }, 1000);
+        return () => clearInterval(interval);
+    }, [endDate]);
+    return timeLeft;
+};
+
+// --- ( GLOBAL UI COMPONENTS ) ---
 const ToastContext = createContext<{ showToast: (message: string) => void }>({ showToast: () => {} });
+
 const ToastProvider = ({ children }) => {
     const [toast, setToast] = useState({ message: '', visible: false });
-    const showToast = useCallback((message) => {
+    const showToast = useCallback((message: string) => {
         setToast({ message, visible: true });
-        setTimeout(() => setToast({ message: '', visible: false }), 3000);
+        setTimeout(() => setToast(prev => ({ ...prev, visible: false })), 3000);
     }, []);
     return (
         <ToastContext.Provider value={{ showToast }}>
             {children}
             {toast.visible && (
-                <div className="fixed bottom-10 right-10 bg-gray-900 text-white py-3 px-6 rounded-lg shadow-xl flex items-center gap-3 z-[101]">
+                <div className="fixed bottom-10 right-10 bg-gray-900 text-white py-3 px-6 rounded-lg shadow-xl flex items-center gap-3 z-[101] animate-fade-in-up">
                     <CheckCircle size={22} className="text-green-400" />
                     <span>{toast.message}</span>
                 </div>
@@ -64,190 +230,100 @@ const ToastProvider = ({ children }) => {
         </ToastContext.Provider>
     );
 };
-const useFavoritesContext = createContext<{ favoriteIds: Set<number>; toggleFavorite: (id: number) => void; }>({ favoriteIds: new Set(), toggleFavorite: () => {} });
-const FavoritesProvider = ({ children }) => {
-    const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
-    const toggleFavorite = useCallback((productId: number) => {
-        setFavoriteIds(prev => {
-            const newIds = new Set(prev);
-            if (newIds.has(productId)) newIds.delete(productId);
-            else newIds.add(productId);
-            return newIds;
-        });
-    }, []);
-    const value = useMemo(() => ({ favoriteIds, toggleFavorite }), [favoriteIds, toggleFavorite]);
-    return <useFavoritesContext.Provider value={value}>{children}</useFavoritesContext.Provider>;
+
+const ErrorDisplay = ({ error }: { error?: string | null }) => {
+    if (!error) return null;
+    return (
+        <div className="container mx-auto my-10 p-6 bg-red-100 border-l-8 border-red-500 text-red-900 rounded-lg shadow-md" dir="rtl" role="alert">
+            <h3 className="font-bold mb-3 text-lg">حدث خطأ</h3>
+            <pre className="text-sm whitespace-pre-wrap font-mono">{error}</pre>
+        </div>
+    );
 };
 
-// --- Custom Fetch Hook ---
-const useFetchData = <T,>(fetcher: () => Promise<T>) => {
-    const [data, setData] = useState<T | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const memoizedFetcher = useCallback(fetcher, [fetcher]);
+const ProductCardSkeleton = () => (
+    <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm animate-pulse">
+        <div className="bg-slate-200 h-64 w-full"></div>
+        <div className="p-4">
+            <div className="bg-slate-200 h-5 w-3/4 rounded-md"></div>
+            <div className="bg-slate-200 h-4 w-1/2 mt-4 rounded-md"></div>
+            <div className="flex justify-between items-center mt-4">
+                <div className="bg-slate-200 h-7 w-1/3 rounded-md"></div>
+                <div className="bg-slate-200 h-10 w-10 rounded-full"></div>
+            </div>
+        </div>
+    </div>
+);
 
-    useEffect(() => {
-        const loadData = async () => {
-            try {
-                setLoading(true);
-                setError(null);
-                const result = await memoizedFetcher();
-                setData(result);
-            } catch (err) {
-                setError(err instanceof Error ? err.message : "حدث خطأ غير معروف.");
-            } finally {
-                setLoading(false);
-            }
-        };
-        loadData();
-    }, [memoizedFetcher]);
+// --- ( HOME PAGE COMPONENTS ) ---
 
-    return { data, loading, error };
-};
+const Section = ({ title, subtitle, children, className = '' }: { title: string, subtitle?: string, children: React.ReactNode, className?: string }) => (
+    <section className={`py-16 sm:py-20 ${className}`}>
+        <div className="container mx-auto px-4 sm:px-6 max-w-7xl">
+            <div className="text-center mb-12">
+                <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 mb-2">{title}</h2>
+                {subtitle && <p className="text-base sm:text-lg text-slate-600 max-w-2xl mx-auto">{subtitle}</p>}
+            </div>
+            {children}
+        </div>
+    </section>
+);
 
-// --- API ---
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
-const handleApiError = (error: any, endpoint: string) => {
-    console.error(`API Error at ${endpoint}:`, error);
-    if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-        const fullUrl = `${API_BASE_URL}${endpoint}`;
-        const errorMessage = `فشل الاتصال بالخادم. الرجاء التأكد من:\n1. أن خادم Laravel يعمل (php artisan serve).\n2. أن الرابط ${fullUrl} يعمل مباشرة في المتصفح.\n3. عدم وجود أخطاء CORS في تبويب Console بأدوات المطور (F12).`;
-        throw new Error(errorMessage);
-    }
-    throw error;
-};
-const api = {
-    getHomePageData: async (): Promise<{ slides: Slide[], featuredProducts: Product[], categories: Category[], testimonials: Testimonial[], todayOffers: Product[] }> => {
-        const endpoint = '/home';
-        try {
-            const response = await fetch(`${API_BASE_URL}${endpoint}`);
-            if (!response.ok) throw new Error(`فشل جلب بيانات الصفحة الرئيسية (Status: ${response.status})`);
-            const data = await response.json();
-            // إضافة بيانات وهمية لآراء العملاء
-            data.testimonials = [
-                { id: 1, name: 'سارة خالد', title: 'عميلة سعيدة', quote: 'تجربة تسوق رائعة ومنتجات ذات جودة عالية. خدمة العملاء كانت ممتازة وسريعة في الرد. أنصح به بشدة!', avatar: 'https://randomuser.me/api/portraits/women/44.jpg' },
-                { id: 2, name: 'أحمد عبدالله', title: 'مشتري دائم', quote: 'من أفضل المتاجر التي تعاملت معها. الأسعار منافسة والتوصيل دائماً في الموعد المحدد. شكراً لكم.', avatar: 'https://randomuser.me/api/portraits/men/46.jpg' },
-                { id: 3, name: 'فاطمة علي', title: 'مصممة ديكور', quote: 'وجدت كل ما أحتاجه لمشروعي الأخير بجودة لم أتوقعها. التفاصيل في المنتجات مذهلة.', avatar: 'https://randomuser.me/api/portraits/women/47.jpg' }
-            ];
-            // بيانات وهمية لعروض اليوم إذا لم تتوفر من الـ API
-            if (!data.todayOffers) {
-                data.todayOffers = [
-                    {
-                        id: 101,
-                        name: 'هاتف ذكي عرض اليوم',
-                        slug: 'smartphone-today-offer',
-                        regular_price: 3500,
-                        sale_price: 2999,
-                        thumbnail: 'https://placehold.co/400x400/ffe066/333333?text=عرض+اليوم',
-                        short_description: 'هاتف ذكي بمواصفات عالية وسعر خاص اليوم فقط.',
-                        has_free_shipping: true
-                    },
-                    {
-                        id: 102,
-                        name: 'سماعات لاسلكية عرض اليوم',
-                        slug: 'wireless-headphones-today-offer',
-                        regular_price: 800,
-                        sale_price: 650,
-                        thumbnail: 'https://placehold.co/400x400/ffe066/333333?text=عرض+اليوم',
-                        short_description: 'سماعات لاسلكية بجودة صوت ممتازة.',
-                        has_free_shipping: false
-                    }
-                ];
-            }
-            return data;
-        } catch (error) {
-            handleApiError(error, endpoint);
-            return { slides: [], featuredProducts: [], categories: [], testimonials: [], todayOffers: [] };
-        }
-    },
-};
-
-// --- Components ---
-const formatCurrency = (price: number) => {
-    if (typeof price !== 'number' || isNaN(price)) return '';
-    return new Intl.NumberFormat('ar-MA', { style: 'currency', currency: 'MAD' }).format(price);
-};
+const StarRating = ({ rating, review_count }: { rating: number, review_count: number }) => (
+    <div className="flex items-center gap-1.5">
+        <div className="flex items-center">
+            {[...Array(5)].map((_, i) => <Star key={i} size={16} className={i < Math.round(rating) ? 'text-amber-400 fill-amber-400' : 'text-slate-300'} />)}
+        </div>
+        <span className="text-xs text-slate-500 font-medium">({review_count})</span>
+    </div>
+);
 
 const ProductCard = React.memo(({ product }: { product: Product }) => {
     const { addToCart } = useCart();
     const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
-    
+    const { showToast } = useContext(ToastContext);
+
     const isWishlisted = isInWishlist(product.id);
-    
+    const hasSale = product.sale_price && product.sale_price < product.regular_price;
+
     const handleCartClick = (e: React.MouseEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const productToAdd = {
-            ...product,
-            price: product.sale_price || product.regular_price,
-            inStock: true,
-            stock: 10 // افتراض توفر المنتج
-        };
-        addToCart(productToAdd, 1);
+        e.preventDefault(); e.stopPropagation();
+        addToCart({ ...product, price: product.sale_price || product.regular_price }, 1);
+        showToast(`تمت إضافة "${product.name}" إلى السلة!`);
     };
 
     const handleWishlistClick = (e: React.MouseEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (isWishlisted) {
-            removeFromWishlist(product.id);
-        } else {
-            const wishlistItem = {
-                ...product,
-                price: product.sale_price || product.regular_price,
-                originalPrice: product.sale_price ? product.regular_price : undefined,
-                inStock: true,
-                stock: 10, // افتراض توفر المنتج
-                addedAt: Date.now(),
-                category: 'منتج',
-                brand: 'ماركة'
-            };
-            addToWishlist(wishlistItem);
-        }
+        e.preventDefault(); e.stopPropagation();
+        if (isWishlisted) { removeFromWishlist(product.id); showToast(`تمت إزالة "${product.name}" من المفضلة.`); } 
+        else { addToWishlist(product); showToast(`تمت إضافة "${product.name}" إلى المفضلة!`); }
     };
 
     return (
-        <a href={`/shop/${product.slug}`} className="cursor-pointer group relative bg-white border border-gray-200 rounded-3xl overflow-hidden shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col h-full">
-            <div className="overflow-hidden h-72 bg-gray-100 relative rounded-t-3xl">
-                <img src={product.thumbnail} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform rounded-t-3xl" onError={(e) => { e.currentTarget.src = 'https://placehold.co/400x400/f0f0f0/cccccc?text=No+Image'; }} />
-                
-                {product.has_free_shipping && (
-                    <div className="absolute top-3 right-3 bg-green-600 text-white px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 shadow-lg">
-                        <Truck size={12} />
-                        <span>شحن مجاني</span>
-                    </div>
-                )}
-                
-                <button
-                    onClick={handleWishlistClick}
-                    className={`absolute top-3 left-3 w-8 h-8 rounded-full flex items-center justify-center shadow-md transition-colors duration-300 ${
-                        isWishlisted 
-                            ? 'bg-red-600 text-white hover:bg-red-700' 
-                            : 'bg-white text-gray-600 hover:bg-red-100 hover:text-red-600'
-                    }`}
-                    title={isWishlisted ? "إزالة من المفضلة" : "إضافة للمفضلة"}
-                >
-                    <Heart size={16} className={isWishlisted ? 'fill-current' : ''} />
+        <a href={`/shop/${product.slug}`} className="cursor-pointer group relative bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 flex flex-col h-full">
+            <div className="overflow-hidden h-64 bg-slate-100 relative">
+                <img src={product.thumbnail} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onError={(e) => { e.currentTarget.src = 'https://placehold.co/400x400/f1f5f9/94a3b8?text=Error'; }} />
+                <div className="absolute top-3 right-3 flex flex-col gap-2">
+                    {hasSale && <div className="bg-red-500 text-white px-2.5 py-1 rounded-full text-xs font-bold shadow-md">تخفيض</div>}
+                    {product.has_free_shipping && <div className="bg-green-500 text-white px-2.5 py-1 rounded-full text-xs font-bold shadow-md">شحن مجاني</div>}
+                </div>
+                <button onClick={handleWishlistClick} className={`absolute top-3 left-3 w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-sm transition-all duration-300 ${isWishlisted ? 'bg-red-500 text-white' : 'bg-white/70 text-slate-700 hover:bg-white hover:text-red-500'}`} title={isWishlisted ? "إزالة من المفضلة" : "إضافة للمفضلة"} >
+                    <Heart size={18} className={isWishlisted ? 'fill-current' : ''} />
                 </button>
             </div>
-            <div className="p-5 flex flex-col flex-grow">
-                <h3 className="text-lg font-semibold text-gray-900 truncate" title={product.name}>{product.name}</h3>
-                <p className="mt-2 text-sm text-gray-600 line-clamp-2">{product.short_description}</p>
-                <div className="pt-4 mt-auto flex items-center justify-between">
-                    {product.sale_price ? (
-                        <div>
-                            <span className="text-xl font-extrabold text-red-600">{formatCurrency(product.sale_price)}</span>
-                            <span className="text-sm text-gray-400 line-through ml-2">{formatCurrency(product.regular_price)}</span>
-                        </div>
-                    ) : (
-                        <span className="text-xl font-extrabold text-gray-900">{formatCurrency(product.regular_price)}</span>
-                    )}
-                    <button
-                        onClick={handleCartClick}
-                        className="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center transform group-hover:bg-blue-700 transition-colors hover:scale-110 shadow"
-                        title="إضافة للسلة"
-                        aria-label={`إضافة ${product.name} إلى السلة`}
-                    >
+            <div className="p-4 flex flex-col flex-grow">
+                <h3 className="text-base font-bold text-slate-800 truncate" title={product.name}>{product.name}</h3>
+                {product.rating && product.review_count && <div className="mt-2"><StarRating rating={product.rating} review_count={product.review_count} /></div>}
+                <div className="pt-3 mt-auto flex items-end justify-between">
+                    <div>
+                        {hasSale ? (
+                            <>
+                                <span className="text-xl font-extrabold text-red-600">{formatCurrency(product.sale_price!)}</span>
+                                <span className="text-sm text-slate-400 line-through ml-2">{formatCurrency(product.regular_price)}</span>
+                            </>
+                        ) : (<span className="text-xl font-extrabold text-slate-900">{formatCurrency(product.regular_price)}</span>)
+                        }
+                    </div>
+                    <button onClick={handleCartClick} className="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center transform group-hover:bg-blue-700 transition-all duration-300 hover:scale-110 shadow-lg" title="إضافة للسلة" aria-label={`إضافة ${product.name} إلى السلة`}>
                         <ShoppingCart size={20}/>
                     </button>
                 </div>
@@ -257,349 +333,225 @@ const ProductCard = React.memo(({ product }: { product: Product }) => {
 });
 ProductCard.displayName = 'ProductCard';
 
-const HeroSlider = ({ slides = [] }: { slides?: Slide[] }) => {
-    const [currentSlide, setCurrentSlide] = useState(0);
 
-    const next = useCallback(() => {
-        if (slides) setCurrentSlide((curr) => (curr === slides.length - 1 ? 0 : curr + 1));
-    }, [slides]);
-    
-    const prev = () => {
-        if (slides) setCurrentSlide((curr) => (curr === 0 ? slides.length - 1 : curr - 1));
-    };
+const HeroSlider = ({ slides }: { slides: Slide[] }) => {
+    const [currentSlide, setCurrentSlide] = useState(0);
+    const next = useCallback(() => setCurrentSlide(curr => (curr === slides.length - 1 ? 0 : curr + 1)), [slides.length]);
+    const prev = () => setCurrentSlide(curr => (curr === 0 ? slides.length - 1 : curr - 1));
 
     useEffect(() => {
-        if (slides && slides.length > 1) {
-            const slideInterval = setInterval(next, 6000);
-            return () => clearInterval(slideInterval);
-        }
-    }, [slides, next]);
-
-    if (!slides || slides.length === 0) {
-        return <div className="relative h-screen w-full bg-gray-200 animate-pulse"></div>;
-    }
+        if (slides.length > 1) { const slideInterval = setInterval(next, 5000); return () => clearInterval(slideInterval); }
+    }, [slides.length, next]);
+    
+    if (!slides || slides.length === 0) { return <div className="relative h-[80vh] w-full bg-slate-200 animate-pulse"></div>; }
     
     return (
-        <section className="relative h-[90vh] w-full overflow-hidden rounded-b-3xl shadow-lg" dir="ltr">
-            <div className="flex transition-transform ease-out duration-800 h-full" style={{ transform: `translateX(-${currentSlide * 100}%)` }}>
-                {slides.map((slide) => (
-                    <div key={slide.id} className="w-full h-full flex-shrink-0 relative rounded-b-3xl overflow-hidden">
-                        <img src={slide.image_url} alt={slide.title} className="w-full h-full object-cover brightness-90 transition-transform duration-700 group-hover:scale-105" />
-                        <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center text-center text-white p-6">
-                            <div className="bg-black/50 backdrop-blur-sm p-8 rounded-3xl max-w-3xl animate-fade-in-up">
+        <section className="relative h-[80vh] w-full overflow-hidden" dir="ltr">
+            <div className="flex transition-transform ease-in-out duration-700 h-full" style={{ transform: `translateX(-${currentSlide * 100}%)` }}>
+                {slides.map(slide => (
+                    <div key={slide.id} className="w-full h-full flex-shrink-0 relative">
+                        <img src={slide.image_url} alt={slide.title} className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-black/50"></div>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white p-6" dir="rtl">
+                            <div className="bg-black/40 backdrop-blur-md p-8 rounded-2xl max-w-3xl animate-fade-in-up">
                                 <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight drop-shadow-lg">{slide.title}</h1>
-                                <p className="mt-4 text-lg md:text-xl text-gray-200 drop-shadow">{slide.subtitle}</p>
-                                <a href={slide.link} className="mt-8 inline-block bg-blue-600 text-white font-bold py-3 px-14 rounded-xl hover:bg-blue-700 transition-transform hover:scale-110 shadow-lg shadow-blue-300/50">
-                                    تسوق الآن
-                                </a>
+                                <p className="mt-4 text-lg md:text-xl text-slate-200 drop-shadow">{slide.subtitle}</p>
+                                <a href={slide.link} className="mt-8 inline-block bg-blue-600 text-white font-bold py-3 px-12 rounded-lg hover:bg-blue-700 transition-all duration-300 transform hover:scale-105 shadow-lg">تسوق الآن</a>
                             </div>
                         </div>
                     </div>
                 ))}
             </div>
-
             {slides.length > 1 && (
                 <>
-                    <button 
-                      onClick={prev} 
-                      aria-label="Previous slide" 
-                      className="absolute top-1/2 left-5 transform -translate-y-1/2 bg-white/80 hover:bg-white p-4 rounded-full z-10 transition-colors shadow-md"
-                    >
-                        <ChevronLeft size={32} />
-                    </button>
-                    <button 
-                      onClick={next} 
-                      aria-label="Next slide" 
-                      className="absolute top-1/2 right-5 transform -translate-y-1/2 bg-white/80 hover:bg-white p-4 rounded-full z-10 transition-colors shadow-md"
-                    >
-                        <ChevronRight size={32} />
-                    </button>
+                    <button onClick={prev} aria-label="Previous slide" className="absolute top-1/2 left-5 transform -translate-y-1/2 bg-white/80 hover:bg-white p-3 rounded-full z-10 transition-colors shadow-md"><ChevronLeft size={28} /></button>
+                    <button onClick={next} aria-label="Next slide" className="absolute top-1/2 right-5 transform -translate-y-1/2 bg-white/80 hover:bg-white p-3 rounded-full z-10 transition-colors shadow-md"><ChevronRight size={28} /></button>
                 </>
             )}
         </section>
     );
 };
 
-const ErrorDisplay = ({ error }: { error?: string | null }) => {
-    if (!error) return null;
+const ServicesBar = ({ services }: { services: Service[] }) => (
+    <div className="bg-slate-50 border-b border-slate-200">
+        <div className="container mx-auto px-6 max-w-7xl grid grid-cols-1 md:grid-cols-3 gap-8 py-8">
+            {services.map(service => (
+                <div key={service.id} className="flex items-center gap-4 p-4">
+                    <div className="text-blue-600 bg-blue-100 p-3 rounded-full">{service.icon}</div>
+                    <div>
+                        <h3 className="font-bold text-base text-slate-900">{service.title}</h3>
+                        <p className="text-slate-600 text-sm">{service.description}</p>
+                    </div>
+                </div>
+            ))}
+        </div>
+    </div>
+);
+
+
+const CategoryGrid = ({ categories }: { categories: Category[] }) => (
+    <Section title="تسوق حسب الفئات" className="bg-white">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
+            {categories.map(category => (
+                <a href={`/category/${category.slug}`} key={category.id} className="group flex flex-col items-center text-center transition-transform hover:-translate-y-1">
+                    <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-full overflow-hidden shadow-lg border-4 border-white group-hover:border-blue-500 transition-all duration-300">
+                        <img src={category.image} alt={category.name} className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500" />
+                    </div>
+                    <h3 className="mt-4 text-sm sm:text-base font-bold text-slate-800">{category.name}</h3>
+                </a>
+            ))}
+        </div>
+    </Section>
+);
+
+const PromoBanner = ({ banner }: { banner: PromoBannerData }) => (
+    <section className="py-16 sm:py-20 bg-slate-50">
+        <div className="container mx-auto px-4 sm:px-6 max-w-7xl">
+            <a href={banner.link} className="group relative block rounded-2xl overflow-hidden shadow-xl">
+                <img src={banner.image_url} alt={banner.title} className="w-full h-80 object-cover transform group-hover:scale-105 transition-transform duration-500" />
+                <div className="absolute inset-0 bg-gradient-to-r from-black/70 to-black/20"></div>
+                <div className="absolute inset-0 flex flex-col justify-center p-8 md:p-12 text-white">
+                    <h2 className="text-3xl md:text-4xl font-extrabold max-w-md">{banner.title}</h2>
+                    <p className="mt-2 text-lg text-slate-200 max-w-md">{banner.subtitle}</p>
+                    <div className="mt-8">
+                        <span className="inline-block bg-white text-blue-600 font-bold py-3 px-8 rounded-lg group-hover:bg-slate-200 transition-colors">
+                            {banner.button_text}
+                        </span>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </section>
+);
+
+
+const CountdownTimer = ({ endDate }: { endDate: string }) => {
+    const { days, hours, minutes, seconds } = useCountdown(endDate);
+    const format = (num: number) => num.toString().padStart(2, '0');
+    
     return (
-        <div className="container mx-auto my-10 p-6 bg-red-100 border-l-8 border-red-500 text-red-900 rounded-lg shadow-md" dir="rtl" role="alert" aria-live="assertive">
-            <h3 className="font-bold mb-3 text-lg">حدث خطأ في الاتصال</h3>
-            <pre className="text-sm whitespace-pre-wrap font-mono">{error}</pre>
+        <div className="flex items-center gap-2 sm:gap-4" dir="ltr">
+            {[ {label: 'أيام', value: days}, {label: 'ساعات', value: hours}, {label: 'دقائق', value: minutes}, {label: 'ثواني', value: seconds} ].map(time => (
+                <div key={time.label} className="flex flex-col items-center">
+                    <div className="text-2xl sm:text-3xl font-bold bg-white text-red-500 w-16 h-16 rounded-lg flex items-center justify-center shadow-inner">{format(time.value)}</div>
+                    <span className="text-xs sm:text-sm text-white/80 mt-2">{time.label}</span>
+                </div>
+            ))}
         </div>
     );
 };
 
-// --- HomePage Content ---
+const FlashSaleSection = ({ flashSale }: { flashSale: FlashSale }) => (
+    <section className="py-16 sm:py-20 bg-gradient-to-r from-red-600 to-orange-500">
+        <div className="container mx-auto px-4 sm:px-6 max-w-7xl">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-8 mb-12">
+                <div className="text-white text-center md:text-right">
+                    <h2 className="text-3xl sm:text-4xl font-extrabold flex items-center gap-3 justify-center md:justify-start">
+                        <Zap size={36} className="text-yellow-300" />
+                        عروض الفلاش
+                    </h2>
+                    <p className="mt-2 text-lg text-white/90">تنتهي خلال:</p>
+                </div>
+                <CountdownTimer endDate={flashSale.endDate} />
+            </div>
+             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-8">
+                {flashSale.products.map(product => <ProductCard key={product.id} product={product} />)}
+            </div>
+        </div>
+    </section>
+);
+
+
+// --- ( MAIN HOME PAGE CONTENT ) ---
 function HomePageContent() {
-    const { data, loading, error } = useFetchData(api.getHomePageData);
-    
-    // بيانات وهمية للأقسام المميزة
-    const featuredSections = [
-        { id: 1, name: "إلكترونيات", image: "https://placehold.co/400x200/007bff/fff?text=إلكترونيات", link: "/category/electronics" },
-        { id: 2, name: "أزياء", image: "https://placehold.co/400x200/ff4081/fff?text=أزياء", link: "/category/fashion" },
-        { id: 3, name: "سوبرماركت", image: "https://placehold.co/400x200/4caf50/fff?text=سوبرماركت", link: "/category/supermarket" },
-        { id: 4, name: "منزل وحديقة", image: "https://placehold.co/400x200/ff9800/fff?text=منزل+وحديقة", link: "/category/home-garden" }
-    ];
-    // بيانات وهمية للماركات
-    const brands = [
-        { id: 1, name: "Samsung", logo: "https://upload.wikimedia.org/wikipedia/commons/2/24/Samsung_Logo.svg" },
-        { id: 2, name: "Apple", logo: "https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg" },
-        { id: 3, name: "Adidas", logo: "https://upload.wikimedia.org/wikipedia/commons/2/20/Adidas_Logo.svg" },
-        { id: 4, name: "LG", logo: "https://upload.wikimedia.org/wikipedia/commons/6/6f/LG_logo_%282015%29.svg" }
-    ];
-    // بيانات وهمية لعروض الفلاش
-    const flashOffers = [
-        {
-            id: 201,
-            name: "ساعة ذكية فلاش",
-            slug: "smart-watch-flash",
-            regular_price: 1200,
-            sale_price: 899,
-            thumbnail: "https://placehold.co/400x400/ffeb3b/333333?text=فلاش+ديال+اليوم",
-            short_description: "ساعة ذكية بتخفيض كبير لفترة محدودة.",
-            has_free_shipping: true
-        }
-    ];
-    // بيانات وهمية للمنتجات المقترحة
-    const suggestedProducts = [
-        {
-            id: 301,
-            name: "حقيبة ظهر عصرية",
-            slug: "modern-backpack",
-            regular_price: 350,
-            thumbnail: "https://placehold.co/400x400/607d8b/fff?text=منتج+مقترح",
-            short_description: "حقيبة ظهر مناسبة للمدرسة والسفر.",
-            has_free_shipping: false
-        },
-        {
-            id: 302,
-            name: "سماعات بلوتوث",
-            slug: "bluetooth-headphones",
-            regular_price: 450,
-            thumbnail: "https://placehold.co/400x400/ff4081/fff?text=منتج+مقترح",
-            short_description: "سماعات بلوتوث بجودة صوت عالية.",
-            has_free_shipping: true
-        }
-    ];
-    // بيانات وهمية لشريط الخدمات
-    const services = [
-        { id: 1, icon: <ShieldCheck size={28} className="text-blue-600" />, title: "الدفع عند الاستلام", desc: "ادفع عند استلام طلبك بسهولة وأمان." },
-        { id: 2, icon: <Truck size={28} className="text-green-600" />, title: "توصيل سريع", desc: "توصيل سريع وموثوق لكافة المدن." },
-        { id: 3, icon: <PhoneCall size={28} className="text-purple-600" />, title: "دعم فني 24/7", desc: "فريق دعم متوفر على مدار الساعة." }
-    ];
+    const fetcher = useCallback(() => api.getHomePageData(), []);
+    const { data, loading, error } = useFetchData<HomePageData>(fetcher);
 
     return (
-        <div dir="rtl" className="bg-gray-50 text-gray-800 min-h-screen">
-            {/* شريط إعلان أعلى الصفحة */}
-            <div className="w-full bg-blue-700 text-white py-3 px-6 text-center font-extrabold text-lg tracking-wide shadow-sm">
-                وفر حتى 50% على منتجات مختارة! اكتشف العروض الآن.
-            </div>
-
-            {/* شريط الخدمات بتصميم هادئ ومتناسق */}
-            <div className="w-full py-10 border-b border-gray-200 flex justify-center gap-10 bg-white shadow-sm">
-                {services.map(service => (
-                    <div key={service.id} className="flex flex-col items-center rounded-xl px-6 py-5 shadow-sm hover:shadow-md transition-shadow duration-300 border border-gray-100 bg-gray-50 max-w-xs text-center">
-                        <div className="mb-2">{service.icon}</div>
-                        <h3 className="font-semibold text-lg text-gray-900 mb-1">{service.title}</h3>
-                        <p className="text-gray-600 text-sm">{service.desc}</p>
-                    </div>
-                ))}
-            </div>
-
-            {/* سلايدر رئيسي بهيئة لطيفة وموحدة */}
-            <HeroSlider slides={data?.slides} />
+        <div dir="rtl" className="bg-slate-50 text-slate-800">
+            <HeroSlider slides={data?.slides || []} />
+            <ServicesBar services={data?.services || []} />
 
             <ErrorDisplay error={error} />
+            
+            {loading ? (
+                <Section title="تسوق حسب الفئات"><div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">{Array.from({length: 4}).map((_, i) => <div key={i} className="flex flex-col items-center"><div className="w-32 h-32 sm:w-40 sm:h-40 rounded-full bg-slate-200 animate-pulse"></div><div className="mt-4 h-5 w-24 bg-slate-200 rounded-md animate-pulse"></div></div>)}</div></Section>
+            ) : (
+                data?.categories && <CategoryGrid categories={data.categories} />
+            )}
+            
+            {loading ? (
+                 <div className="py-16 sm:py-20 bg-gradient-to-r from-red-600 to-orange-500"><div className="container mx-auto px-4 sm:px-6 max-w-7xl"><div className="h-40 bg-white/20 rounded-xl animate-pulse"></div></div></div>
+            ) : (
+                data?.flashSale && <FlashSaleSection flashSale={data.flashSale} />
+            )}
 
-            {/* أقسام مميزة */}
-            <section className="py-20 bg-white">
-                <div className="container mx-auto px-6 max-w-7xl">
-                    <h2 className="text-3xl font-extrabold text-gray-900 mb-8 text-center">الأقسام المميزة</h2>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-                        {featuredSections.map(section => (
-                            <a key={section.id} href={section.link} className="group relative rounded-2xl overflow-hidden shadow-lg border border-gray-200 hover:shadow-xl transition-shadow duration-300">
-                                <img src={section.image} alt={section.name} className="w-full h-40 object-cover transition-transform duration-500 group-hover:scale-105" />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end">
-                                    <h3 className="text-xl font-bold text-white p-4">{section.name}</h3>
+            <Section title="عروض اليوم" subtitle="اغتنم أفضل التخفيضات والصفقات الحصرية لفترة محدودة" className="bg-slate-100">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {loading ? Array.from({ length: 4 }).map((_, i) => <ProductCardSkeleton key={i} />) : data?.todayOffers.map(product => <ProductCard key={product.id} product={product} />)}
+                </div>
+            </Section>
+
+            {loading ? (
+                <div className="py-16 sm:py-20 bg-slate-50"><div className="container mx-auto px-4 sm:px-6 max-w-7xl"><div className="h-80 w-full bg-slate-200 rounded-2xl animate-pulse"></div></div></div>
+            ) : (
+                data?.promoBanner && <PromoBanner banner={data.promoBanner} />
+            )}
+
+            <Section title="الأكثر مبيعاً" subtitle="اكتشف المنتجات التي يعشقها عملاؤنا ويثقون بها" className="bg-white">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {loading ? Array.from({ length: 4 }).map((_, i) => <ProductCardSkeleton key={i} />) : data?.featuredProducts.map(product => <ProductCard key={product.id} product={product} />)}
+                </div>
+            </Section>
+
+             <Section title="وصل حديثاً" subtitle="اكتشف أحدث المنتجات التي أضفناها لمتجرنا" className="bg-slate-100">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {loading ? Array.from({ length: 4 }).map((_, i) => <ProductCardSkeleton key={i} />) : data?.newArrivals.map(product => <ProductCard key={product.id} product={product} />)}
+                </div>
+            </Section>
+            
+            <section className="py-12 bg-slate-50 border-t border-b border-slate-200">
+                 <div className="container mx-auto px-6 max-w-7xl">
+                     <div className="flex justify-center gap-8 overflow-x-auto scrollbar-hide">
+                         {loading ? Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-16 w-32 bg-white rounded-xl animate-pulse" />)
+                         : data?.brands.map(brand => (
+                             <div key={brand.id} className="flex-shrink-0 flex items-center justify-center p-4 bg-white rounded-lg shadow-sm border border-slate-200 min-w-[140px]">
+                                 <img src={brand.logo} alt={brand.name} className="h-8 w-auto object-contain" loading="lazy" />
+                             </div>
+                         ))}
+                     </div>
+                 </div>
+             </section>
+
+            <Section title="ماذا يقول عملاؤنا" subtitle="آراء حقيقية من عملاء سعداء بتجربتهم معنا" className="bg-white">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    {loading ? Array.from({ length: 3 }).map((_, i) => <div key={i} className="bg-slate-200 h-64 rounded-2xl animate-pulse" />)
+                    : data?.testimonials.map(testimonial => (
+                        <article key={testimonial.id} className="bg-white p-8 rounded-2xl shadow-lg border border-slate-100 flex flex-col">
+                            <Quote className="w-10 h-10 text-blue-500 mb-4" />
+                            <p className="text-slate-700 leading-relaxed flex-grow">"{testimonial.quote}"</p>
+                            <div className="flex items-center mt-6 pt-6 border-t border-slate-200">
+                                <img src={testimonial.avatar} alt={testimonial.name} className="w-12 h-12 rounded-full object-cover" loading="lazy" />
+                                <div className="mr-4 text-right">
+                                    <p className="font-bold text-slate-900">{testimonial.name}</p>
+                                    <p className="text-sm text-slate-500">{testimonial.title}</p>
                                 </div>
-                            </a>
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* شريط ماركات ببساطة متناسقة */}
-            <section className="py-10 bg-gray-100 border-t border-b border-gray-200">
-                <div className="container mx-auto px-6 max-w-7xl">
-                    <div className="flex gap-10 overflow-x-auto scrollbar-hide">
-                        {brands.map(brand => (
-                            <div key={brand.id} className="flex-shrink-0 flex flex-col items-center min-w-[120px] bg-white rounded-xl px-4 py-3 shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-300">
-                                <img src={brand.logo} alt={brand.name} className="h-10 w-auto object-contain mb-2" loading="lazy" />
-                                <span className="font-semibold text-gray-700">{brand.name}</span>
                             </div>
-                        ))}
-                    </div>
+                        </article>
+                    ))}
                 </div>
-            </section>
-
-            {/* عروض فلاش */}
-            <section className="py-16 bg-gradient-to-r from-pink-50 to-white">
-                <div className="container mx-auto px-6 max-w-7xl">
-                    <h2 className="text-3xl font-extrabold text-pink-600 mb-10 text-center">عروض فلاش</h2>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-                        {flashOffers.map(product => <ProductCard key={product.id} product={product} />)}
-                    </div>
-                </div>
-            </section>
-
-            {/* عروض اليوم */}
-            <section className="py-20 bg-yellow-50">
-                <div className="container mx-auto px-6 max-w-7xl">
-                    <h2 className="text-4xl font-extrabold text-yellow-800 mb-3 text-center">عروض اليوم</h2>
-                    <p className="text-center text-yellow-700 mb-12">اغتنم أفضل التخفيضات لفترة محدودة</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-                        {loading ?
-                            Array.from({ length: 4 }).map((_, i) => (
-                                <div key={i} className="bg-white h-96 rounded-3xl animate-pulse shadow-sm" />
-                            ))
-                        : (data?.todayOffers?.length
-                            ? data.todayOffers.map((product) => <ProductCard key={product.id} product={product} />)
-                            : <div className="col-span-4 text-center text-yellow-800 font-semibold">لا توجد عروض اليوم حالياً</div>
-                        )}
-                    </div>
-                </div>
-            </section>
-
-            {/* منتجات مقترحة */}
-            <section className="py-16 bg-white">
-                <div className="container mx-auto px-6 max-w-7xl">
-                    <h2 className="text-3xl font-extrabold text-gray-900 mb-10 text-center">منتجات مقترحة لك</h2>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-                        {suggestedProducts.map(product => <ProductCard key={product.id} product={product} />)}
-                    </div>
-                </div>
-            </section>
-
-            {/* الأكثر مبيعاً */}
-            <section className="py-24 bg-gray-50">
-                <div className="container mx-auto px-6 max-w-7xl">
-                    <h2 className="text-4xl font-extrabold text-gray-900 mb-4 text-center">الأكثر مبيعاً</h2>
-                    <p className="text-center text-gray-700 mb-14">اكتشف المنتجات التي يعشقها عملاؤنا</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-                        {loading ? 
-                            Array.from({ length: 4 }).map((_, i) => <div key={i} className="bg-white h-96 rounded-3xl animate-pulse shadow-sm" />) : 
-                            data?.featuredProducts?.map((product) => <ProductCard key={product.id} product={product} />)
-                        }
-                    </div>
-                </div>
-            </section>
-
-            {/* تسوق حسب التصنيف */}
-            <section className="py-20 bg-white">
-                <div className="container mx-auto px-6 max-w-7xl">
-                    <h2 className="text-4xl font-extrabold text-gray-900 mb-3 text-center">تسوق حسب التصنيف</h2>
-                    <p className="text-center text-gray-700 mb-12">تصفح مجموعاتنا المتنوعة</p>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                         {loading ? 
-                             Array.from({ length: 3 }).map((_, i) => (
-                                <div key={i} className="w-full h-96 bg-gray-100 rounded-3xl animate-pulse shadow-sm" />
-                             )) : 
-                             data?.categories?.map(category => (
-                                <a href={`/category/${category.slug}`} key={category.id} className="group relative rounded-3xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-400">
-                                    <img src={category.image} alt={category.name} className="w-full h-96 object-cover transform group-hover:scale-105 transition-transform duration-700 rounded-3xl" />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/75 to-transparent flex items-end rounded-3xl">
-                                        <h3 className="text-3xl font-extrabold text-white p-8 transform group-hover:-translate-y-2 transition-transform duration-300">{category.name}</h3>
-                                    </div>
-                                </a>
-                             ))
-                         }
-                    </div>
-                </div>
-            </section>
-
-            {/* كلام العملاء */}
-            <section className="py-24 bg-gray-50">
-                <div className="container mx-auto px-6 max-w-7xl">
-                    <h2 className="text-4xl font-extrabold text-gray-900 mb-4 text-center">ماذا يقول عملاؤنا</h2>
-                    <p className="text-center text-gray-700 mb-12">آراء حقيقية من عملاء سعداء</p>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                        {loading ?
-                            Array.from({ length: 3 }).map((_, i) => (
-                                <div key={i} className="bg-white h-64 rounded-3xl animate-pulse shadow-sm" />
-                            )) :
-                            data?.testimonials?.map(testimonial => (
-                                <article key={testimonial.id} className="bg-white p-8 rounded-3xl shadow-lg border border-gray-200">
-                                    <Quote className="w-10 h-10 text-blue-600 mb-4" />
-                                    <p className="text-gray-700 mt-2 text-lg leading-relaxed">{testimonial.quote}</p>
-                                    <div className="flex items-center mt-6 pt-6 border-t border-gray-200">
-                                        <img src={testimonial.avatar} alt={testimonial.name} className="w-12 h-12 rounded-full object-cover" loading="lazy" />
-                                        <div className="mr-4 text-right">
-                                            <p className="font-bold text-gray-900">{testimonial.name}</p>
-                                            <p className="text-sm text-gray-500">{testimonial.title}</p>
-                                        </div>
-                                    </div>
-                                </article>
-                            ))
-                        }
-                    </div>
-                </div>
-            </section>
-
-            {/* مميزات التسوق */}
-            <section className="py-24 bg-white">
-                <div className="container mx-auto px-6 max-w-7xl">
-                    <h2 className="text-4xl font-extrabold text-gray-900 mb-10 text-center">تجربة تسوق لا مثيل لها</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-                        <div className="bg-gray-50 p-8 rounded-3xl border border-gray-200 text-center hover:shadow-lg transition-shadow duration-300">
-                            <div className="w-16 h-16 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center mb-4 mx-auto">
-                                <Truck size={32} />
-                            </div>
-                            <h3 className="text-xl font-semibold text-gray-900 mb-2">شحن سريع وموثوق</h3>
-                            <p className="text-gray-600">توصيل سريع وآمن لجميع أنحاء المغرب.</p>
-                        </div>
-                        <div className="bg-gray-50 p-8 rounded-3xl border border-gray-200 text-center hover:shadow-lg transition-shadow duration-300">
-                            <div className="w-16 h-16 bg-green-100 text-green-700 rounded-full flex items-center justify-center mb-4 mx-auto">
-                                <ShieldCheck size={32} />
-                            </div>
-                            <h3 className="text-xl font-semibold text-gray-900 mb-2">دفع آمن 100%</h3>
-                            <p className="text-gray-600">حماية كاملة لبياناتك وحسابك.</p>
-                        </div>
-                        <div className="bg-gray-50 p-8 rounded-3xl border border-gray-200 text-center hover:shadow-lg transition-shadow duration-300">
-                            <div className="w-16 h-16 bg-purple-100 text-purple-700 rounded-full flex items-center justify-center mb-4 mx-auto">
-                                <PhoneCall size={32} />
-                            </div>
-                            <h3 className="text-xl font-semibold text-gray-900 mb-2">دعم فني متميز</h3>
-                            <p className="text-gray-600">خدمة عملاء متوفرة على مدار الساعة لمساعدتك.</p>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* النشرة البريدية */}
-            <section className="py-20 bg-gradient-to-r from-blue-900 to-blue-800 text-white rounded-t-3xl">
+            </Section>
+            
+            <section className="py-20 bg-slate-800 text-white">
                 <div className="container mx-auto px-6 max-w-4xl text-center">
-                    <h2 className="text-4xl font-extrabold tracking-tight leading-tight">انضم إلى قائمتنا البريدية</h2>
-                    <p className="mt-4 text-lg max-w-xl mx-auto text-blue-200">كن أول من يعرف عن أحدث المنتجات والعروض الحصرية.</p>
+                    <h2 className="text-4xl font-extrabold">انضم إلى قائمتنا البريدية</h2>
+                    <p className="mt-4 text-lg max-w-xl mx-auto text-slate-300">كن أول من يعرف عن أحدث المنتجات والعروض الحصرية.</p>
                     <form className="mt-8 flex flex-col sm:flex-row justify-center gap-4 max-w-lg mx-auto">
                         <div className="relative flex-grow">
-                            <input 
-                              type="email" 
-                              placeholder="أدخل بريدك الإلكتروني" 
-                              aria-label="البريد الإلكتروني"
-                              className="w-full p-4 pr-12 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-400" 
-                            />
-                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
-                                <Mail className="h-5 w-5 text-gray-400" />
-                            </div>
+                             <input type="email" placeholder="أدخل بريدك الإلكتروني" aria-label="البريد الإلكتروني" className="w-full p-4 pr-12 rounded-lg text-slate-900 focus:outline-none focus:ring-4 focus:ring-blue-400 transition" />
+                             <Mail className="h-5 w-5 text-slate-400 pointer-events-none absolute inset-y-0 right-4 top-1/2 -translate-y-1/2" />
                         </div>
-                        <button 
-                          type="submit" 
-                          className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-lg transition-colors shadow-lg"
-                          aria-label="اشتراك في النشرة البريدية"
-                        >
-                          اشتراك الآن
-                        </button>
+                        <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-lg transition-colors shadow-lg">اشتراك</button>
                     </form>
                 </div>
             </section>
@@ -607,48 +559,16 @@ function HomePageContent() {
     );
 }
 
-// --- Entry Point ---
+// --- ( APP ENTRY POINT ) ---
 export default function Page() {
     return (
-        <>
-            <Head>
-                <title>تقدا | أفضل متجر إلكتروني في المغرب</title>
-                <meta name="description" content="تقدا - تسوق إلكتروني في المغرب، عروض حصرية، شحن سريع، دفع آمن، منتجات أصلية، آراء العملاء، أقسام متنوعة." />
-                <meta name="keywords" content="تقدا, متجر إلكتروني, المغرب, تسوق, عروض, شحن مجاني, دفع عند الاستلام, منتجات أصلية" />
-                <meta property="og:title" content="تقدا | أفضل متجر إلكتروني في المغرب" />
-                <meta property="og:description" content="تقدا - تسوق إلكتروني في المغرب، عروض حصرية، شحن سريع، دفع آمن، منتجات أصلية." />
-                <meta property="og:type" content="website" />
-                <meta property="og:url" content="https://t9da.com/" />
-                <meta property="og:image" content="https://t9da.com/logo.png" />
-                <meta name="twitter:card" content="summary_large_image" />
-                <meta name="twitter:title" content="تقدا | أفضل متجر إلكتروني في المغرب" />
-                <meta name="twitter:description" content="تقدا - تسوق إلكتروني في المغرب، عروض حصرية، شحن سريع، دفع آمن، منتجات أصلية." />
-                <meta name="twitter:image" content="https://t9da.com/logo.png" />
-                <link rel="canonical" href="https://t9da.com/" />
-                <script type="application/ld+json">
-                {`
-                {
-                  "@context": "https://schema.org",
-                  "@type": "Store",
-                  "name": "تقدا",
-                  "url": "https://t9da.com/",
-                  "logo": "https://t9da.com/logo.png",
-                  "description": "تقدا - أفضل متجر إلكتروني في المغرب، عروض حصرية، شحن سريع، دفع آمن، منتجات أصلية.",
-                  "address": {
-                    "@type": "PostalAddress",
-                    "addressCountry": "MA"
-                  }
-                }
-                `}
-                </script>
-            </Head>
-            <ToastProvider>
-                <FavoritesProvider>
-                    <main className="bg-gray-50 min-h-screen flex flex-col">
-                        <HomePageContent />
-                    </main>
-                </FavoritesProvider>
-            </ToastProvider>
-        </>
+        <ToastProvider>
+            <MockProviders>
+                <main className="bg-slate-50 min-h-screen">
+                    <HomePageContent />
+                </main>
+            </MockProviders>
+        </ToastProvider>
     );
 }
+
