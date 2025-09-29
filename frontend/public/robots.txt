@@ -1,0 +1,9 @@
+# *
+User-agent: *
+Allow: /
+
+# Host
+Host: https://t9da.com
+
+# Sitemaps
+Sitemap: https://t9da.com/sitemap.xml
