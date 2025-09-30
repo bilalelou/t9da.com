@@ -1012,14 +1012,13 @@ function EditProductPageInner() {
                     <Image src={thumbnailPreview} alt="معاينة" width={200} height={128} className="h-32 rounded-lg object-cover" />
                     <button
                       type="button"
-                      onClick={() => {
-                        setNewThumbnail(null);
-                        setThumbnailPreview('');
-                        // If there was an original product thumbnail, restore it
-                        if (product?.thumbnail) {
-                          setThumbnailPreview(product.thumbnail);
-                        }
-                      }}
+onClick={() => {
+  setNewThumbnail(null);
+  setThumbnailPreview('');
+  if (product) {
+    setProduct({ ...product, thumbnail: null });
+  }
+}}
                       className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors duration-200 shadow-md"
                     >
                       <X className="w-3 h-3" />
@@ -1044,18 +1043,28 @@ function EditProductPageInner() {
                 <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
                   <Images className="w-4 h-4 text-green-600" />صور إضافية
                 </label>
-                {product?.images && product.images.length > 0 && (
-                  <div className="grid grid-cols-3 gap-2">
-                    {product.images.map((imgUrl, index) => (
-                      <div key={index} className="relative group">
-                        <Image src={imgUrl} alt={`صورة ${index + 1}`} width={80} height={60} className="w-full h-20 object-cover rounded-lg" />
-                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg flex items-center justify-center">
-                          <span className="text-white text-xs">صورة حالية</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+{product?.images && product.images.length > 0 && (
+  <div className="grid grid-cols-3 gap-2">
+    {product.images.map((imgUrl, index) => (
+      <div key={index} className="relative group">
+        <Image src={imgUrl} alt={`صورة ${index + 1}`} width={80} height={60} className="w-full h-20 object-cover rounded-lg" />
+        <button
+          type="button"
+          onClick={() => {
+            setProduct((prev) => prev ? { ...prev, images: prev.images?.filter((_, i) => i !== index) } : prev);
+          }}
+          className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors duration-200 shadow-md"
+          title="إزالة الصورة"
+        >
+          <X className="w-3 h-3" />
+        </button>
+        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg flex items-center justify-center">
+          <span className="text-white text-xs">صورة حالية</span>
+        </div>
+      </div>
+    ))}
+  </div>
+)}
                 {imagesPreviews.length > 0 && (
                   <div className="grid grid-cols-3 gap-2 mt-4">
                     {imagesPreviews.map((preview, index) => (
