@@ -64,7 +64,7 @@ const formatCurrency = (price: number): string => {
 // --- ( API LAYER ) ---
 const api = {
     getActiveSliders: async (): Promise<Slide[]> => {
-        const response = await fetch(`${API_BASE_URL}/api/sliders/active`);
+        const response = await fetch(`${API_BASE_URL}/sliders/active`);
         if (!response.ok) throw new Error('فشل جلب بيانات السلايدر من الخادم');
         const result = await response.json();
         if (!result.success || !Array.isArray(result.data)) throw new Error('صيغة البيانات المستلمة للسلايدر غير صحيحة');
@@ -74,7 +74,14 @@ const api = {
         const response = await fetch(`${API_BASE_URL}/public/categories`);
         if (!response.ok) throw new Error('فشل جلب التصنيفات من الخادم');
         const result = await response.json();
-        if (!result.success || !Array.isArray(result.data)) throw new Error('صيغة البيانات المستلمة للتصنيفات غير صحيحة');
+        
+        // ✅ **هذا السطر لم يتغير**
+        // هو كان سبب ظهور المشكلة لأن استجابة الخادم لم تكن تحتوي على 'success' و 'data'
+        // الآن بعد إصلاح الخادم، سيمر هذا التحقق بنجاح.
+        if (!result.success || !Array.isArray(result.data)) {
+            throw new Error('صيغة البيانات المستلمة للتصنيفات غير صحيحة');
+        }
+
         return result.data;
     },
     getHomePageData: async (): Promise<HomePageData> => {
@@ -273,12 +280,12 @@ const CategorySliderSkeleton = () => (
      <Section title="تسوق حسب الفئات" className="bg-white">
         <div className="relative overflow-hidden">
              <div className="flex gap-6 animate-pulse">
-                 {Array.from({ length: 6 }).map((_, i) => (
-                     <div key={i} className="flex-shrink-0 flex flex-col items-center w-40">
-                         <div className="w-40 h-40 rounded-full bg-slate-200"></div>
-                         <div className="mt-4 h-5 w-24 bg-slate-200 rounded-md"></div>
-                     </div>
-                 ))}
+                  {Array.from({ length: 6 }).map((_, i) => (
+                       <div key={i} className="flex-shrink-0 flex flex-col items-center w-40">
+                            <div className="w-40 h-40 rounded-full bg-slate-200"></div>
+                            <div className="mt-4 h-5 w-24 bg-slate-200 rounded-md"></div>
+                       </div>
+                  ))}
              </div>
         </div>
      </Section>
