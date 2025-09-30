@@ -3,19 +3,57 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { User, ShoppingCart, Heart, Search, Menu, X, ChevronLeft, Smartphone, Home, Tv, Monitor, Gamepad2, Sparkles, Shirt, Dumbbell, Car } from "lucide-react";
 import { AppProviders, useCart, useWishlist } from "@/contexts/Providers";
 
 const Navbar = () => {
     const pathname = usePathname();
+    const router = useRouter();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [userRole, setUserRole] = useState<string | null>(null);
     const { totalItems } = useCart();
     const { wishlistItems } = useWishlist();
 
     useEffect(() => {
         setIsMenuOpen(false);
     }, [pathname]);
+
+    useEffect(() => {
+        // التحقق من حالة تسجيل الدخول ودور المستخدم
+        const token = localStorage.getItem('token');
+        const user = localStorage.getItem('user');
+        
+        if (token && user) {
+            setIsLoggedIn(true);
+            try {
+                const userData = JSON.parse(user);
+                // التحقق من الدور من عدة مصادر محتملة
+                const role = userData.role || userData.roles?.[0]?.name || userData.roles?.[0] || null;
+                setUserRole(role);
+            } catch (error) {
+                console.error('خطأ في تحليل بيانات المستخدم:', error);
+                setUserRole(null);
+            }
+        } else {
+            setIsLoggedIn(false);
+            setUserRole(null);
+        }
+    }, []);
+
+    const handleAccountClick = () => {
+        if (isLoggedIn) {
+            // توجيه المستخدم حسب دوره
+            if (userRole === 'admin') {
+                router.push('/admin');
+            } else {
+                router.push('/user-dashboard');
+            }
+        } else {
+            router.push('/login');
+        }
+    };
 
     const isActive = (path: string) => pathname === path;
 
@@ -68,9 +106,13 @@ const Navbar = () => {
                         )}
                     </Link>
                     
-                    <Link href="/user-dashboard" className="relative p-2 hover:bg-gray-100 rounded-full transition-colors">
+                    <button 
+                        onClick={handleAccountClick}
+                        className="relative p-2 hover:bg-gray-100 rounded-full transition-colors"
+                        title={isLoggedIn ? (userRole === 'admin' ? 'لوحة إدارة' : 'لوحة التحكم') : 'تسجيل الدخول'}
+                    >
                         <User size={18} className="text-gray-600" />
-                    </Link>
+                    </button>
                     
                     <Link href="/cart" className="relative p-2 hover:bg-gray-100 rounded-full transition-colors">
                         <ShoppingCart size={18} className="text-gray-600" />
@@ -231,13 +273,16 @@ const Navbar = () => {
                                     )}
                                 </Link>
                                 
-                                <Link 
-                                    href="/user-dashboard" 
+                                <button 
+                                    onClick={() => {
+                                        setIsMenuOpen(false);
+                                        handleAccountClick();
+                                    }}
                                     className="p-3 bg-white rounded-full shadow-sm hover:shadow-md transition-shadow"
-                                    onClick={() => setIsMenuOpen(false)}
+                                    title={isLoggedIn ? (userRole === 'admin' ? 'لوحة إدارة' : 'لوحة التحكم') : 'تسجيل الدخول'}
                                 >
                                     <User size={18} className="text-gray-600" />
-                                </Link>
+                                </button>
                                 
                                 <Link 
                                     href="/cart" 
