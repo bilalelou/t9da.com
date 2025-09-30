@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, createContext, useContext, useMemo, useRef } from 'react';
-import { Heart, CheckCircle, ChevronLeft, ChevronRight, ShoppingCart, ShieldCheck, Truck, PhoneCall, Mail, Quote, Zap, Star, Tag, Clock } from 'lucide-react';
+import { Heart, CheckCircle, ChevronLeft, ChevronRight, ShoppingCart, ShieldCheck, Truck, PhoneCall, Mail, Quote, Zap, Star, Tag, Clock, Menu, X } from 'lucide-react';
 
 // --- ( MOCK PROVIDERS ) ---
 // These are mock providers to make the component self-contained and runnable.
@@ -298,6 +298,8 @@ const CountdownTimer = ({ endDate }: { endDate: string }) => {
     return (<div className="flex items-center gap-2 sm:gap-4" dir="ltr">{[{label: 'أيام', value: days}, {label: 'ساعات', value: hours}, {label: 'دقائق', value: minutes}, {label: 'ثواني', value: seconds}].map(time => (<div key={time.label} className="flex flex-col items-center"><div className="text-2xl sm:text-3xl font-bold bg-white text-red-500 w-16 h-16 rounded-lg flex items-center justify-center shadow-inner">{format(time.value)}</div><span className="text-xs sm:text-sm text-white/80 mt-2">{time.label}</span></div>))}</div>);
 };
 const FlashSaleSection = ({ flashSale }: { flashSale: FlashSale }) => (<section className="py-16 sm:py-20 bg-gradient-to-r from-red-600 to-orange-500"><div className="container mx-auto px-4 sm:px-6 max-w-7xl"><div className="flex flex-col md:flex-row items-center justify-between gap-8 mb-12"><div className="text-white text-center md:text-right"><h2 className="text-3xl sm:text-4xl font-extrabold flex items-center gap-3 justify-center md:justify-start"><Zap size={36} className="text-yellow-300" />عروض الفلاش</h2><p className="mt-2 text-lg text-white/90">تنتهي خلال:</p></div><CountdownTimer endDate={flashSale.endDate} /></div><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-8">{flashSale.products.map(product => <ProductCard key={product.id} product={product} />)}</div></div></section>);
+
+
 
 // --- ( MAIN HOME PAGE CONTENT ) ---
 function HomePageContent() {
