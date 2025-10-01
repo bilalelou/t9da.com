@@ -110,7 +110,7 @@ const StatCard = ({ title, value, icon }) => (
     </div>
 );
 
-const ProductCard = ({ product, onSelect, isSelected }) => {
+const ProductCard = ({ product, onSelect, isSelected, onDelete }) => {
     const status = getStatusInfo(product.status);
     return (
         <div className="bg-white rounded-lg shadow p-4 border border-gray-100 space-y-3">
@@ -166,6 +166,7 @@ const ProductCard = ({ product, onSelect, isSelected }) => {
                     <Edit size={18} />
                 </button>
                 <button 
+                    onClick={() => onDelete(product.id)}
                     className="text-red-600 hover:text-red-800 p-1"
                     title="حذف المنتج"
                 >
@@ -196,6 +197,7 @@ const ProductsPage = ({
     const [shippingFilter, setShippingFilter] = useState('all'); // all, free_shipping, paid_shipping
     const [selectedProducts, setSelectedProducts] = useState<number[]>([]);
     const [showBulkModal, setShowBulkModal] = useState(false);
+    const [deleteModal, setDeleteModal] = useState({ show: false, productId: null, productName: '' });
 
     // حالة الترتيب
     const [sortColumn, setSortColumn] = useState<string>('id');
@@ -252,6 +254,31 @@ const ProductsPage = ({
 
     const toggleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
         setSelectedProducts(e.target.checked ? displayedProducts.map((p: Product) => p.id) : []);
+    };
+
+    const showDeleteModal = (productId: number) => {
+        const product = displayedProducts.find(p => p.id === productId);
+        setDeleteModal({ show: true, productId, productName: product?.name || '' });
+    };
+
+    const handleDeleteProduct = async () => {
+        try {
+            const token = localStorage.getItem('api_token');
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/${deleteModal.productId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/json'
+                }
+            });
+
+            if (response.ok) {
+                setDeleteModal({ show: false, productId: null, productName: '' });
+                window.location.reload();
+            }
+        } catch (error) {
+            console.error('Error deleting product:', error);
+        }
     };
     
     return (
@@ -400,6 +427,7 @@ const ProductsPage = ({
                                                 <Edit size={18} />
                                             </button>
                                             <button 
+                                                onClick={() => showDeleteModal(product.id)}
                                                 className="hover:text-red-600"
                                                 title="حذف المنتج"
                                             >
@@ -413,7 +441,7 @@ const ProductsPage = ({
                     </table>
                 </div>
                 <div className="sm:hidden p-4 space-y-4 bg-gray-50">
-                     {displayedProducts.map((product) => (<ProductCard key={product.id} product={product} onSelect={toggleProductSelection} isSelected={selectedProducts.includes(product.id)} />))}
+                     {displayedProducts.map((product) => (<ProductCard key={product.id} product={product} onSelect={toggleProductSelection} isSelected={selectedProducts.includes(product.id)} onDelete={showDeleteModal} />))}
                 </div>
                 <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
                     <p className="text-sm text-gray-700">
@@ -438,6 +466,32 @@ const ProductsPage = ({
                 </div>
             </div>
             
+            {/* Delete Confirmation Modal */}
+            {deleteModal.show && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4">تأكيد الحذف</h3>
+                        <p className="text-gray-600 mb-6">
+                            هل أنت متأكد من حذف المنتج "{deleteModal.productName}"؟
+                        </p>
+                        <div className="flex gap-3 justify-end">
+                            <button
+                                onClick={() => setDeleteModal({ show: false, productId: null, productName: '' })}
+                                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                            >
+                                إلغاء
+                            </button>
+                            <button
+                                onClick={handleDeleteProduct}
+                                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                            >
+                                حذف
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Bulk Product Modal */}
             <BulkProductModal
                 isOpen={showBulkModal}

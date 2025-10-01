@@ -661,6 +661,44 @@ class ProductController extends Controller
     }
 
     /**
+     * حذف منتج
+     */
+    public function destroy(Product $product)
+    {
+        try {
+            // حذف الصور المرتبطة
+            if ($product->thumbnail) {
+                Storage::disk('public')->delete('uploads/' . $product->thumbnail);
+            }
+            
+            $gallery = json_decode($product->images, true) ?? [];
+            foreach ($gallery as $image) {
+                Storage::disk('public')->delete('uploads/' . $image);
+            }
+            
+            // حذف الفيديوهات المرتبطة
+            $product->videos()->delete();
+            
+            // حذف المتغيرات المرتبطة
+            $product->variants()->delete();
+            
+            // حذف المنتج
+            $product->delete();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'تم حذف المنتج بنجاح'
+            ]);
+        } catch (Exception $e) {
+            Log::error('خطأ في حذف المنتج: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'حدث خطأ في حذف المنتج'
+            ], 500);
+        }
+    }
+
+    /**
      * توليد SKU فريد للمنتج
      */
     private function generateSKU(string $productName): string
