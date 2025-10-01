@@ -67,7 +67,7 @@ const DEFAULT_PRODUCT_IMAGE = 'https://images.unsplash.com/photo-1560472354-b33f
 const api = {
     getActiveSliders: async (): Promise<Slide[]> => {
         try {
-            const response = await fetch(`${API_BASE_URL}/api/sliders/active`, {
+            const response = await fetch(`${API_BASE_URL}/sliders/active`, {
                 headers: { 'Accept': 'application/json' }
             });
             if (!response.ok) return [];
@@ -81,7 +81,7 @@ const api = {
     },
     getCategories: async (): Promise<Category[]> => {
         try {
-            const response = await fetch(`${API_BASE_URL}/api/public/categories`, {
+            const response = await fetch(`${API_BASE_URL}/public/categories`, {
                 headers: { 'Accept': 'application/json' }
             });
             if (!response.ok) return [];
@@ -95,7 +95,7 @@ const api = {
     },
     getProducts: async (type: string): Promise<Product[]> => {
         try {
-            const url = `${API_BASE_URL}/api/public/products/${type}`;
+            const url = `${API_BASE_URL}/public/products/${type}`;
             const response = await fetch(url, {
                 method: 'GET',
                 headers: {
