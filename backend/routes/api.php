@@ -45,6 +45,93 @@ Route::get('/public/colors', [ColorController::class, 'index']);
 Route::get('/public/sizes', [SizeController::class, 'index']);
 Route::get('/public/categories', [CategoryController::class, 'index']);
 Route::get('/public/brands', [BrandController::class, 'index']);
+
+// Public Products by Type Routes (يجب أن تكون قبل المسار العام)
+Route::get('/public/products/featured', [ProductController::class, 'getFeaturedProducts']);
+Route::get('/public/products/today-offers', [ProductController::class, 'getTodayOffers']);
+Route::get('/public/products/new-arrivals', [ProductController::class, 'getNewArrivals']);
+Route::get('/public/products/petits-prix', [ProductController::class, 'getPetitsPrix']);
+Route::get('/public/products/trending', [ProductController::class, 'getTrendingProducts']);
+Route::get('/public/products/electronics', [ProductController::class, 'getElectronicsProducts']);
+
+// مسار تشخيص للتأكد من عمل API
+Route::get('/public/products/test', function() {
+    try {
+        $productsCount = \App\Models\Product::count();
+        $featuredCount = \App\Models\Product::where('is_featured', true)->count();
+        $saleCount = \App\Models\Product::whereNotNull('sale_price')->where('sale_price', '>', 0)->count();
+        $trendingCount = \App\Models\Product::where('quantity', '>', 10)->count();
+        $electronicsCount = \App\Models\Product::where('name', 'like', '%هاتف%')
+            ->orWhere('name', 'like', '%لابتوب%')
+            ->orWhere('name', 'like', '%سماعة%')
+            ->count();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'API يعمل بشكل صحيح',
+            'timestamp' => now(),
+            'database_connection' => 'متصل',
+            'products_count' => $productsCount,
+            'featured_products' => $featuredCount,
+            'sale_products' => $saleCount,
+            'trending_products' => $trendingCount,
+            'electronics_products' => $electronicsCount,
+            'sample_products' => \App\Models\Product::limit(3)->get(['id', 'name', 'regular_price', 'sale_price', 'is_featured', 'quantity'])
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'خطأ في قاعدة البيانات',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
+
+// مسارات تشخيص للقسمين الجديدين
+Route::get('/public/products/test-trending', function() {
+    try {
+        $products = \App\Models\Product::where('quantity', '>', 10)
+            ->orderBy('created_at', 'desc')
+            ->limit(5)
+            ->get(['id', 'name', 'quantity', 'created_at']);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'اختبار المنتجات الرائجة',
+            'count' => $products->count(),
+            'products' => $products
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
+
+Route::get('/public/products/test-electronics', function() {
+    try {
+        $products = \App\Models\Product::where('name', 'like', '%هاتف%')
+            ->orWhere('name', 'like', '%لابتوب%')
+            ->orWhere('name', 'like', '%سماعة%')
+            ->limit(5)
+            ->get(['id', 'name']);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'اختبار منتجات الإلكترونيات',
+            'count' => $products->count(),
+            'products' => $products
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
+
+// المسارات العامة للمنتجات (يجب أن تكون في النهاية)
 Route::get('/public/products/{product}', [ProductController::class, 'showPublic']);
 Route::get('/public/products/{product}/variants', [ProductVariantController::class, 'getProductVariants']);
 
@@ -57,74 +144,6 @@ Route::get('/products/{product}/videos', [ProductVideoController::class, 'index'
 // Public Checkout Routes (لا تحتاج authentication)
 Route::post('/validate-coupon', [OrderController::class, 'validateCoupon']);
 Route::post('/shipping-costs', [OrderController::class, 'getShippingCosts']);
-
-// Test authentication endpoint (no middleware)
-Route::get('/test-auth-debug', function(Request $request) {
-    $token = $request->bearerToken();
-    $user = null;
-    $tokenValid = false;
-
-    if ($token) {
-        try {
-            $personalAccessToken = \Laravel\Sanctum\PersonalAccessToken::findToken($token);
-            if ($personalAccessToken) {
-                $user = $personalAccessToken->tokenable;
-                $tokenValid = true;
-            }
-        } catch (Exception $e) {
-            // Token validation failed
-        }
-    }
-
-    return response()->json([
-        'success' => true,
-        'token_present' => !!$token,
-        'token_preview' => $token ? substr($token, 0, 20) . '...' : null,
-        'token_valid' => $tokenValid,
-        'user' => $user ? ['id' => $user->id, 'name' => $user->name, 'email' => $user->email] : null,
-        'auth_check' => Auth::check(),
-        'sanctum_guard' => config('sanctum.guard')
-    ]);
-});
-
-// Test authentication endpoint
-Route::get('/test-auth', function(Request $request) {
-    return response()->json([
-        'success' => true,
-        'authenticated' => Auth::check(),
-        'user' => Auth::user(),
-        'token_present' => $request->hasHeader('Authorization'),
-        'token_preview' => $request->header('Authorization') ? substr($request->header('Authorization'), 0, 20) . '...' : null
-    ]);
-})->middleware('auth:sanctum');
-
-// Simple order test endpoint
-Route::post('/test-order', function(Request $request) {
-    Log::info('Test order request received', [
-        'has_auth_header' => $request->hasHeader('Authorization'),
-        'auth_header' => $request->header('Authorization') ? substr($request->header('Authorization'), 0, 20) . '...' : null,
-        'user_id' => Auth::id(),
-        'user' => Auth::user() ? ['id' => Auth::user()->id, 'name' => Auth::user()->name] : null,
-        'request_data' => $request->all()
-    ]);
-
-    if (!Auth::check()) {
-        return response()->json([
-            'success' => false,
-            'message' => 'غير مصادق عليه',
-            'debug' => [
-                'token_present' => $request->hasHeader('Authorization'),
-                'token_preview' => $request->header('Authorization') ? substr($request->header('Authorization'), 0, 20) . '...' : null
-            ]
-        ], 401);
-    }
-
-    return response()->json([
-        'success' => true,
-        'message' => 'تم الاختبار بنجاح',
-        'user' => Auth::user()
-    ]);
-})->middleware('auth:sanctum');
 
 // Orders Route with optional authentication
 Route::post('/orders', [OrderController::class, 'store'])->middleware('auth:sanctum');

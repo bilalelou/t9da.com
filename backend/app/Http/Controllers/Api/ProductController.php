@@ -15,6 +15,7 @@ use Exception;
 
 class ProductController extends Controller
 {
+    const DEFAULT_PRODUCT_IMAGE = 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?q=80&w=400&h=400&auto=format&fit=crop&ixlib=rb-4.0.3';
     /**
      * عرض قائمة المنتجات.
      */
@@ -708,5 +709,271 @@ class ProductController extends Controller
             $prefix = 'PRD';
         }
         return $prefix . '-' . uniqid();
+    }
+
+    /**
+     * جلب المنتجات المميزة
+     */
+    public function getFeaturedProducts(Request $request)
+    {
+        try {
+            Log::info('🔍 طلب جلب المنتجات المميزة');
+            
+            $limit = $request->get('limit', 8);
+            Log::info("🔢 الحد الأقصى: {$limit}");
+            
+            $totalProducts = Product::count();
+            Log::info("📊 إجمالي المنتجات في قاعدة البيانات: {$totalProducts}");
+            
+            $products = Product::where('is_featured', true)
+                ->orWhere('sale_price', '>', 0)
+                ->with(['category', 'brand'])
+                ->limit($limit)
+                ->get();
+            
+            Log::info("📦 عدد المنتجات المجلوبة: " . $products->count());
+            
+            if ($products->isEmpty()) {
+                Log::warning('⚠️ لا توجد منتجات مميزة أو بتخفيضات');
+                // جلب أي منتجات متاحة
+                $products = Product::with(['category', 'brand'])->limit($limit)->get();
+                Log::info("🔄 تم جلب منتجات عامة بدلاً: " . $products->count());
+            }
+
+            $formattedProducts = $products->map(function($product) {
+                return $this->formatProductForPublic($product);
+            });
+            
+            Log::info('✅ تم تنسيق المنتجات بنجاح');
+
+            return response()->json([
+                'success' => true,
+                'data' => $formattedProducts,
+                'debug' => [
+                    'total_products' => $totalProducts,
+                    'returned_count' => $formattedProducts->count(),
+                    'limit' => $limit
+                ]
+            ], 200, [], JSON_UNESCAPED_UNICODE);
+        } catch (Exception $e) {
+            Log::error('Error in getFeaturedProducts: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Server error', 'error' => $e->getMessage()], 500, [], JSON_UNESCAPED_UNICODE);
+        }
+    }
+
+    /**
+     * جلب عروض اليوم
+     */
+    public function getTodayOffers(Request $request)
+    {
+        try {
+            $limit = $request->get('limit', 8);
+            $products = Product::whereNotNull('sale_price')
+                ->where('sale_price', '>', 0)
+                ->with(['category', 'brand'])
+                ->limit($limit)
+                ->get();
+
+            $formattedProducts = $products->map(function($product) {
+                return $this->formatProductForPublic($product);
+            });
+
+            return response()->json([
+                'success' => true,
+                'data' => $formattedProducts
+            ], 200, [], JSON_UNESCAPED_UNICODE);
+        } catch (Exception $e) {
+            Log::error('Error in getTodayOffers: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Server error'], 500, [], JSON_UNESCAPED_UNICODE);
+        }
+    }
+
+    /**
+     * جلب المنتجات الجديدة
+     */
+    public function getNewArrivals(Request $request)
+    {
+        try {
+            $limit = $request->get('limit', 8);
+            $products = Product::latest()
+                ->with(['category', 'brand'])
+                ->limit($limit)
+                ->get();
+
+            $formattedProducts = $products->map(function($product) {
+                return $this->formatProductForPublic($product);
+            });
+
+            return response()->json([
+                'success' => true,
+                'data' => $formattedProducts
+            ], 200, [], JSON_UNESCAPED_UNICODE);
+        } catch (Exception $e) {
+            Log::error('Error in getNewArrivals: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Server error'], 500, [], JSON_UNESCAPED_UNICODE);
+        }
+    }
+
+    /**
+     * جلب منتجات الأسعار الصغيرة
+     */
+    public function getPetitsPrix(Request $request)
+    {
+        try {
+            $limit = $request->get('limit', 8);
+            $products = Product::where('regular_price', '<=', 100)
+                ->with(['category', 'brand'])
+                ->limit($limit)
+                ->get();
+
+            $formattedProducts = $products->map(function($product) {
+                return $this->formatProductForPublic($product);
+            });
+
+            return response()->json([
+                'success' => true,
+                'data' => $formattedProducts
+            ], 200, [], JSON_UNESCAPED_UNICODE);
+        } catch (Exception $e) {
+            Log::error('Error in getPetitsPrix: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Server error'], 500, [], JSON_UNESCAPED_UNICODE);
+        }
+    }
+
+    /**
+     * جلب المنتجات الرائجة
+     */
+    public function getTrendingProducts(Request $request)
+    {
+        try {
+            Log::info('🔍 طلب جلب المنتجات الرائجة');
+            
+            $limit = $request->get('limit', 8);
+            Log::info("🔢 الحد الأقصى: {$limit}");
+            
+            $totalProducts = Product::count();
+            Log::info("📊 إجمالي المنتجات: {$totalProducts}");
+            
+            $products = Product::where('quantity', '>', 10)
+                ->orderBy('created_at', 'desc')
+                ->with(['category', 'brand'])
+                ->limit($limit)
+                ->get();
+            
+            Log::info("📦 عدد المنتجات الرائجة: " . $products->count());
+            
+            if ($products->isEmpty()) {
+                Log::warning('⚠️ لا توجد منتجات رائجة، جلب منتجات عامة');
+                $products = Product::with(['category', 'brand'])->limit($limit)->get();
+                Log::info("🔄 تم جلب منتجات عامة: " . $products->count());
+            }
+
+            $formattedProducts = $products->map(function($product) {
+                return $this->formatProductForPublic($product);
+            });
+            
+            Log::info('✅ تم تنسيق المنتجات الرائجة بنجاح');
+
+            return response()->json([
+                'success' => true,
+                'data' => $formattedProducts,
+                'debug' => [
+                    'total_products' => $totalProducts,
+                    'returned_count' => $formattedProducts->count(),
+                    'limit' => $limit
+                ]
+            ], 200, [], JSON_UNESCAPED_UNICODE);
+        } catch (Exception $e) {
+            Log::error('Error in getTrendingProducts: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Server error', 'error' => $e->getMessage()], 500, [], JSON_UNESCAPED_UNICODE);
+        }
+    }
+
+    /**
+     * جلب منتجات الإلكترونيات
+     */
+    public function getElectronicsProducts(Request $request)
+    {
+        try {
+            Log::info('🔍 طلب جلب منتجات الإلكترونيات');
+            
+            $limit = $request->get('limit', 8);
+            Log::info("🔢 الحد الأقصى: {$limit}");
+            
+            // بحث في أسماء المنتجات فقط لتبسيط الاستعلام
+            $products = Product::where(function($query) {
+                $query->where('name', 'like', '%هاتف%')
+                      ->orWhere('name', 'like', '%لابتوب%')
+                      ->orWhere('name', 'like', '%سماعة%')
+                      ->orWhere('name', 'like', '%حاسوب%')
+                      ->orWhere('name', 'like', '%إلكترون%')
+                      ->orWhere('name', 'like', '%تلفزيون%')
+                      ->orWhere('name', 'like', '%كاميرا%');
+            })
+            ->with(['category', 'brand'])
+            ->limit($limit)
+            ->get();
+            
+            Log::info("📦 عدد منتجات الإلكترونيات: " . $products->count());
+
+            if ($products->isEmpty()) {
+                Log::warning('⚠️ لا توجد منتجات إلكترونية، جلب منتجات عامة');
+                $products = Product::with(['category', 'brand'])->limit($limit)->get();
+                Log::info("🔄 تم جلب منتجات عامة: " . $products->count());
+            }
+
+            $formattedProducts = $products->map(function($product) {
+                return $this->formatProductForPublic($product);
+            });
+            
+            Log::info('✅ تم تنسيق منتجات الإلكترونيات بنجاح');
+
+            return response()->json([
+                'success' => true,
+                'data' => $formattedProducts,
+                'debug' => [
+                    'returned_count' => $formattedProducts->count(),
+                    'limit' => $limit
+                ]
+            ], 200, [], JSON_UNESCAPED_UNICODE);
+        } catch (Exception $e) {
+            Log::error('Error in getElectronicsProducts: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Server error', 'error' => $e->getMessage()], 500, [], JSON_UNESCAPED_UNICODE);
+        }
+    }
+
+    /**
+     * تنسيق المنتج للعرض العام
+     */
+    private function formatProductForPublic(Product $product)
+    {
+        $thumbnailUrl = self::DEFAULT_PRODUCT_IMAGE;
+        if ($product->thumbnail) {
+            $thumbnailUrl = asset('storage/uploads/' . $product->thumbnail);
+        }
+
+        // تنظيف وتقصير الوصف بطريقة آمنة لل UTF-8
+        $shortDesc = $product->short_description ?? '';
+        $shortDesc = mb_convert_encoding($shortDesc, 'UTF-8', 'UTF-8');
+        if (mb_strlen($shortDesc, 'UTF-8') > 50) {
+            $shortDesc = mb_substr($shortDesc, 0, 50, 'UTF-8') . '...';
+        }
+
+        // تنظيف اسم المنتج
+        $productName = mb_convert_encoding($product->name ?? '', 'UTF-8', 'UTF-8');
+        $productSlug = mb_convert_encoding($product->slug ?? '', 'UTF-8', 'UTF-8');
+
+        return [
+            'id' => $product->id,
+            'name' => $productName,
+            'slug' => $productSlug,
+            'regular_price' => (float)$product->regular_price,
+            'sale_price' => $product->sale_price ? (float)$product->sale_price : null,
+            'thumbnail' => $thumbnailUrl,
+            'short_description' => $shortDesc,
+            'has_free_shipping' => (bool)$product->has_free_shipping,
+            'rating' => 4.5,
+            'review_count' => rand(10, 200)
+        ];
     }
 }
