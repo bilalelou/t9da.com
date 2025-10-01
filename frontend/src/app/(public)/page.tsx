@@ -54,7 +54,7 @@ interface HomePageData { slides: Slide[]; featuredProducts: Product[]; categorie
 
 
 // --- ( UTILS & CONFIG ) ---
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || (typeof window !== 'undefined' && window.location.origin.includes('localhost') ? 'http://localhost:8000' : 'https://your-domain.com');
 
 const formatCurrency = (price: number): string => {
     if (typeof price !== 'number' || isNaN(price)) return '';
@@ -66,56 +66,72 @@ const DEFAULT_PRODUCT_IMAGE = 'https://images.unsplash.com/photo-1560472354-b33f
 // --- ( API LAYER ) ---
 const api = {
     getActiveSliders: async (): Promise<Slide[]> => {
-        const response = await fetch(`${API_BASE_URL}/api/sliders/active`);
-        if (!response.ok) throw new Error('فشل جلب بيانات السلايدر من الخادم');
-        const result = await response.json();
-        if (!result.success || !Array.isArray(result.data)) throw new Error('صيغة البيانات المستلمة للسلايدر غير صحيحة');
-        return result.data.map((slider: any) => ({ id: slider.id, title: slider.title, subtitle: slider.description, image_url: slider.image_url, link: slider.button_link }));
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/sliders/active`, {
+                headers: { 'Accept': 'application/json' }
+            });
+            if (!response.ok) return [];
+            const result = await response.json();
+            if (!result.success || !Array.isArray(result.data)) return [];
+            return result.data.map((slider: any) => ({ id: slider.id, title: slider.title, subtitle: slider.description, image_url: slider.image_url, link: slider.button_link }));
+        } catch (error) {
+            console.error('Error fetching sliders:', error);
+            return [];
+        }
     },
     getCategories: async (): Promise<Category[]> => {
-        const response = await fetch(`${API_BASE_URL}/api/public/categories`);
-        if (!response.ok) throw new Error('فشل جلب التصنيفات من الخادم');
-        const result = await response.json();
-        if (!result.success || !Array.isArray(result.data)) {
-            throw new Error('صيغة البيانات المستلمة للتصنيفات غير صحيحة');
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/public/categories`, {
+                headers: { 'Accept': 'application/json' }
+            });
+            if (!response.ok) return [];
+            const result = await response.json();
+            if (!result.success || !Array.isArray(result.data)) return [];
+            return result.data;
+        } catch (error) {
+            console.error('Error fetching categories:', error);
+            return [];
         }
-        return result.data;
     },
     getProducts: async (type: string): Promise<Product[]> => {
-        const url = `${API_BASE_URL}/api/public/products/${type}`;
-        console.log(`🔍 جلب منتجات ${type} من: ${url}`);
-        
-        const response = await fetch(url);
-        console.log(`📡 استجابة HTTP: ${response.status} ${response.statusText}`);
-        
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`❌ خطأ HTTP: ${response.status}`, errorText);
-            throw new Error(`فشل جلب منتجات ${type} من الخادم: ${response.status}`);
+        try {
+            const url = `${API_BASE_URL}/api/public/products/${type}`;
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (!response.ok) {
+                console.error(`HTTP Error ${response.status} for ${type}`);
+                return [];
+            }
+            
+            const result = await response.json();
+            
+            if (!result.success || !Array.isArray(result.data)) {
+                console.error(`Invalid data format for ${type}:`, result);
+                return [];
+            }
+            
+            return result.data.map((product: any) => ({
+                id: product.id,
+                name: product.name,
+                slug: product.slug,
+                regular_price: parseFloat(product.regular_price) || 0,
+                sale_price: product.sale_price ? parseFloat(product.sale_price) : undefined,
+                thumbnail: product.thumbnail || DEFAULT_PRODUCT_IMAGE,
+                short_description: product.short_description || '',
+                has_free_shipping: product.has_free_shipping || false,
+                rating: product.rating ? parseFloat(product.rating) : undefined,
+                review_count: product.review_count || 0
+            }));
+        } catch (error) {
+            console.error(`Error fetching ${type} products:`, error);
+            return [];
         }
-        
-        const result = await response.json();
-        console.log(`📦 بيانات منتجات ${type}:`, result);
-        
-        if (!result.success || !Array.isArray(result.data)) {
-            console.error(`❌ صيغة بيانات غير صحيحة:`, result);
-            throw new Error(`صيغة بيانات منتجات ${type} غير صحيحة`);
-        }
-        
-        console.log(`✅ تم جلب ${result.data.length} منتج من نوع ${type}`);
-        
-        return result.data.map((product: any) => ({
-            id: product.id,
-            name: product.name,
-            slug: product.slug,
-            regular_price: parseFloat(product.regular_price),
-            sale_price: product.sale_price ? parseFloat(product.sale_price) : undefined,
-            thumbnail: product.thumbnail || DEFAULT_PRODUCT_IMAGE,
-            short_description: product.short_description || '',
-            has_free_shipping: product.has_free_shipping || false,
-            rating: product.rating ? parseFloat(product.rating) : undefined,
-            review_count: product.review_count || 0
-        }));
     },
     getHomePageData: async (): Promise<HomePageData> => {
         const [
