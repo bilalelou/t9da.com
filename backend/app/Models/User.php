@@ -35,6 +35,9 @@ class User extends Authenticatable
         'mobile',
         'password',
         'is_active',
+        'address',
+        'city',
+        'postal_code',
     ];
 
     protected $appends = ['role'];

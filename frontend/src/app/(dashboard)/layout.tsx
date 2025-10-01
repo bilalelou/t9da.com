@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
@@ -14,13 +14,7 @@ interface NavItem {
   badge?: number;
 }
 
-// Sample user data
-const userProfile = {
-  name: 'أحمد محمد العلي',
-  email: 'ahmed@example.com',
-  avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&h=150',
-  loyaltyPoints: 1250
-};
+
 
 const navigationItems: NavItem[] = [
   {
@@ -82,7 +76,44 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [userProfile, setUserProfile] = useState({
+    name: 'تحميل...',
+    email: 'تحميل...',
+    avatar: 'https://placehold.co/150x150/EBF4FF/3B82F6?text=U',
+    loyaltyPoints: 0
+  });
   const pathname = usePathname();
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const token = localStorage.getItem('api_token');
+        if (token) {
+          const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+          const response = await fetch(`${API_BASE_URL}/user`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Accept': 'application/json'
+            }
+          });
+
+          if (response.ok) {
+            const userData = await response.json();
+            setUserProfile({
+              name: userData.name || 'مستخدم',
+              email: userData.email || '',
+              avatar: userData.avatar || `https://placehold.co/150x150/EBF4FF/3B82F6?text=${userData.name?.charAt(0) || 'U'}`,
+              loyaltyPoints: userData.loyalty_points || 0
+            });
+          }
+        }
+      } catch (error) {
+        console.error('خطأ في جلب بيانات المستخدم:', error);
+      }
+    };
+
+    fetchUserData();
+  }, []);
 
   const isActiveRoute = (href: string) => {
     if (href === '/user-dashboard') {

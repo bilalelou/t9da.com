@@ -13,9 +13,15 @@ class OrderItem extends Model
     protected $fillable = [
         'order_id',
         'product_id',
+        'product_name',
+        'product_sku',
+        'product_image',
+        'product_description',
         'quantity',
         'price',
         'total',
+        'discount_amount',
+        'tax_amount',
     ];
 
     protected $casts = [

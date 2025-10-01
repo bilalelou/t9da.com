@@ -63,6 +63,27 @@ class OrderController extends Controller
      */
     public function store(Request $request)
     {
+        // إضافة تسجيل للتحقق من حالة المصادقة
+        Log::info('طلب إنشاء طلب جديد', [
+            'has_auth_header' => $request->hasHeader('Authorization'),
+            'auth_header' => $request->header('Authorization') ? substr($request->header('Authorization'), 0, 20) . '...' : null,
+            'user_id' => Auth::id(),
+            'user' => Auth::user() ? ['id' => Auth::user()->id, 'name' => Auth::user()->name, 'email' => Auth::user()->email] : null,
+            'request_data' => $request->all()
+        ]);
+
+        // التحقق من وجود مستخدم مسجل دخول أولاً
+        if (!Auth::check()) {
+            Log::error('محاولة إنشاء طلب بدون مصادقة', [
+                'headers' => $request->headers->all(),
+                'ip' => $request->ip()
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'يجب تسجيل الدخول أولاً'
+            ], 401);
+        }
+
         $validator = Validator::make($request->all(), [
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
@@ -89,6 +110,8 @@ class OrderController extends Controller
             ], 422);
         }
 
+
+
         DB::beginTransaction();
 
         try {
@@ -97,13 +120,22 @@ class OrderController extends Controller
                 'user_id' => Auth::id(),
                 'order_number' => 'ORD-' . time() . '-' . rand(1000, 9999),
                 'status' => 'pending',
-                'total_price' => $request->order_summary['total'],
+                'total' => $request->order_summary['total'],
                 'subtotal' => $request->order_summary['subtotal'],
-                'shipping_cost' => $request->order_summary['shipping'],
-                'tax_amount' => $request->order_summary['tax'],
-                'discount_amount' => $request->order_summary['discount'] ?? 0,
+                'tax' => $request->order_summary['tax'],
+                'discount' => $request->order_summary['discount'] ?? 0,
 
                 // معلومات الشحن
+                'name' => $request->shipping_info['fullName'],
+                'phone' => $request->shipping_info['phone'],
+                'address' => $request->shipping_info['address'],
+                'city' => $request->shipping_info['city'],
+                'state' => $request->shipping_info['state'],
+                'zip' => $request->shipping_info['postalCode'],
+                'locality' => $request->shipping_info['city'],
+                'country' => 'Morocco',
+                'payment_method' => $request->shipping_info['paymentMethod'],
+                'total_amount' => $request->order_summary['total'],
                 'shipping_name' => $request->shipping_info['fullName'],
                 'shipping_email' => $request->shipping_info['email'],
                 'shipping_phone' => $request->shipping_info['phone'],
@@ -112,19 +144,41 @@ class OrderController extends Controller
                 'shipping_state' => $request->shipping_info['state'],
                 'shipping_postal_code' => $request->shipping_info['postalCode'],
                 'shipping_method' => $request->shipping_info['shippingMethod'],
-                'payment_method' => $request->shipping_info['paymentMethod'],
+                'payment_status' => 'pending',
             ]);
 
             // إضافة عناصر الطلب
             foreach ($request->items as $item) {
                 $product = Product::find($item['product_id']);
 
+                Log::info('Product data for order item', [
+                    'product_id' => $item['product_id'],
+                    'product_found' => !!$product,
+                    'product_price' => $product ? $product->price : 'null',
+                    'product_data' => $product ? $product->toArray() : 'not found'
+                ]);
+
+                if (!$product) {
+                    throw new Exception("Product with ID {$item['product_id']} not found");
+                }
+
+                $price = $product->price ?? 0;
+                if ($price === null) {
+                    throw new Exception("Product {$item['product_id']} has null price");
+                }
+
                 OrderItem::create([
                     'order_id' => $order->id,
                     'product_id' => $item['product_id'],
+                    'product_name' => $product->name ?? 'Unknown Product',
+                    'product_sku' => $product->sku ?? 'N/A',
+                    'product_image' => $product->thumbnail ?? null,
+                    'product_description' => $product->description ?? null,
                     'quantity' => $item['quantity'],
-                    'price' => $product->price,
-                    'total' => $product->price * $item['quantity'],
+                    'price' => $price,
+                    'total' => $price * $item['quantity'],
+                    'discount_amount' => 0,
+                    'tax_amount' => 0,
                 ]);
             }
 
@@ -141,10 +195,16 @@ class OrderController extends Controller
 
         } catch (Exception $e) {
             DB::rollBack();
-            Log::error('خطأ في إنشاء الطلب: ' . $e->getMessage());
+            Log::error('خطأ في إنشاء الطلب: ' . $e->getMessage(), [
+                'exception' => $e,
+                'trace' => $e->getTraceAsString(),
+                'user_id' => Auth::id(),
+                'request_data' => $request->all()
+            ]);
             return response()->json([
                 'success' => false,
-                'message' => 'حدث خطأ في إنشاء الطلب'
+                'message' => 'حدث خطأ في إنشاء الطلب: ' . $e->getMessage(),
+                'debug' => config('app.debug') ? $e->getTraceAsString() : null
             ], 500);
         }
     }

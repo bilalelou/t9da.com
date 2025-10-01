@@ -58,6 +58,77 @@ Route::get('/products/{product}/videos', [ProductVideoController::class, 'index'
 Route::post('/validate-coupon', [OrderController::class, 'validateCoupon']);
 Route::post('/shipping-costs', [OrderController::class, 'getShippingCosts']);
 
+// Test authentication endpoint (no middleware)
+Route::get('/test-auth-debug', function(Request $request) {
+    $token = $request->bearerToken();
+    $user = null;
+    $tokenValid = false;
+
+    if ($token) {
+        try {
+            $personalAccessToken = \Laravel\Sanctum\PersonalAccessToken::findToken($token);
+            if ($personalAccessToken) {
+                $user = $personalAccessToken->tokenable;
+                $tokenValid = true;
+            }
+        } catch (Exception $e) {
+            // Token validation failed
+        }
+    }
+
+    return response()->json([
+        'success' => true,
+        'token_present' => !!$token,
+        'token_preview' => $token ? substr($token, 0, 20) . '...' : null,
+        'token_valid' => $tokenValid,
+        'user' => $user ? ['id' => $user->id, 'name' => $user->name, 'email' => $user->email] : null,
+        'auth_check' => Auth::check(),
+        'sanctum_guard' => config('sanctum.guard')
+    ]);
+});
+
+// Test authentication endpoint
+Route::get('/test-auth', function(Request $request) {
+    return response()->json([
+        'success' => true,
+        'authenticated' => Auth::check(),
+        'user' => Auth::user(),
+        'token_present' => $request->hasHeader('Authorization'),
+        'token_preview' => $request->header('Authorization') ? substr($request->header('Authorization'), 0, 20) . '...' : null
+    ]);
+})->middleware('auth:sanctum');
+
+// Simple order test endpoint
+Route::post('/test-order', function(Request $request) {
+    Log::info('Test order request received', [
+        'has_auth_header' => $request->hasHeader('Authorization'),
+        'auth_header' => $request->header('Authorization') ? substr($request->header('Authorization'), 0, 20) . '...' : null,
+        'user_id' => Auth::id(),
+        'user' => Auth::user() ? ['id' => Auth::user()->id, 'name' => Auth::user()->name] : null,
+        'request_data' => $request->all()
+    ]);
+
+    if (!Auth::check()) {
+        return response()->json([
+            'success' => false,
+            'message' => 'غير مصادق عليه',
+            'debug' => [
+                'token_present' => $request->hasHeader('Authorization'),
+                'token_preview' => $request->header('Authorization') ? substr($request->header('Authorization'), 0, 20) . '...' : null
+            ]
+        ], 401);
+    }
+
+    return response()->json([
+        'success' => true,
+        'message' => 'تم الاختبار بنجاح',
+        'user' => Auth::user()
+    ]);
+})->middleware('auth:sanctum');
+
+// Orders Route with optional authentication
+Route::post('/orders', [OrderController::class, 'store'])->middleware('auth:sanctum');
+
 // Public Cities Routes (للعرض العام)
 Route::get('/cities/active', [CityController::class, 'active']);
 
@@ -110,9 +181,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/inventory', [InventoryController::class, 'index']);
     Route::put('/inventory/{product}', [InventoryController::class, 'update']);
 
-    // Orders Routes
+    // Orders Routes (للقراءة والتحديث فقط)
     Route::get('/orders', [OrderController::class, 'index']);
-    Route::post('/orders', [OrderController::class, 'store']);
     Route::get('/orders/{order}', [OrderController::class, 'show']);
     Route::put('/orders/{order}/status', [OrderController::class, 'updateStatus']);
 

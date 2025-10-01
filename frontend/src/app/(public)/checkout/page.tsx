@@ -18,7 +18,8 @@ import {
     Plus,
     Minus,
     Edit,
-    Trash2
+    Trash2,
+    LogIn
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -85,12 +86,7 @@ export default function CheckoutPage() {
 
     // Simple toast function (replace with your toast system)
     const showToast = (message: string, type: 'success' | 'error') => {
-        // For now, just use alert - replace with your toast implementation
-        if (type === 'success') {
-            alert(`✅ ${message}`);
-        } else {
-            alert(`❌ ${message}`);
-        }
+        console.log(`${type === 'success' ? '✅' : '❌'} ${message}`);
     };
 
     // حالات الصفحة
@@ -99,6 +95,13 @@ export default function CheckoutPage() {
     const [isLoadingUser, setIsLoadingUser] = useState(true);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
+    
+    // حالات تسجيل الدخول والضيف
+    const [showLoginOption, setShowLoginOption] = useState(true);
+    const [proceedAsGuest, setProceedAsGuest] = useState(false);
+    const [loginData, setLoginData] = useState({ email: '', password: '' });
+    const [loginError, setLoginError] = useState('');
+    const [isLoggingIn, setIsLoggingIn] = useState(false);
 
     // بيانات الشحن
     const [shippingAddress, setShippingAddress] = useState<ShippingAddress>({
@@ -151,6 +154,8 @@ export default function CheckoutPage() {
                         const userData = await response.json();
                         console.log('👤 User data received:', userData);
                         setIsLoggedIn(true);
+                        setShowLoginOption(false);
+                        setProceedAsGuest(false);
                         
                         // ملء بيانات الشحن تلقائياً من بيانات المستخدم
                         setShippingAddress(prev => ({
@@ -240,6 +245,111 @@ export default function CheckoutPage() {
         showToast('تم إزالة كود الخصم', 'success');
     };
 
+    // تسجيل الدخول
+    const handleLogin = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoginError('');
+        setIsLoggingIn(true);
+
+        try {
+            const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+            const response = await fetch(`${API_BASE_URL}/login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    email: loginData.email,
+                    password: loginData.password
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.token) {
+                localStorage.setItem('api_token', data.token);
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('user', JSON.stringify(data.user));
+                
+                setIsLoggedIn(true);
+                setShowLoginOption(false);
+                setProceedAsGuest(false);
+                
+                // ملء بيانات الشحن من بيانات المستخدم
+                if (data.user) {
+                    setShippingAddress(prev => ({
+                        ...prev,
+                        fullName: data.user.name || prev.fullName,
+                        email: data.user.email || prev.email,
+                        phone: data.user.phone || prev.phone,
+                        address: data.user.address || prev.address,
+                        city: data.user.city || prev.city,
+                        postalCode: data.user.postal_code || prev.postalCode
+                    }));
+                }
+                
+                showToast('تم تسجيل الدخول بنجاح', 'success');
+            } else {
+                setLoginError(data.message || 'فشل في تسجيل الدخول');
+            }
+        } catch (error) {
+            console.error('خطأ في تسجيل الدخول:', error);
+            setLoginError('حدث خطأ في الاتصال بالخادم');
+        } finally {
+            setIsLoggingIn(false);
+        }
+    };
+
+    // إنشاء مستخدم جديد
+    const createGuestUser = async (): Promise<string | null> => {
+        try {
+            const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+            
+            // إنشاء كلمة مرور تلقائية
+            const tempPassword = Math.random().toString(36).slice(-8);
+            
+            const response = await fetch(`${API_BASE_URL}/register`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    name: shippingAddress.fullName,
+                    email: shippingAddress.email,
+                    phone: shippingAddress.phone,
+                    password: tempPassword,
+                    password_confirmation: tempPassword,
+                    // إضافة معلومات إضافية
+                    city: shippingAddress.city,
+                    address: shippingAddress.address,
+                    postal_code: shippingAddress.postalCode
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.token) {
+                // حفظ التوكن
+                localStorage.setItem('api_token', data.token);
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('user', JSON.stringify(data.user));
+                
+                setIsLoggedIn(true);
+                
+                console.log('✅ تم إنشاء المستخدم الجديد بنجاح');
+                return data.token;
+            } else {
+                console.error('❌ فشل في إنشاء المستخدم:', data);
+                throw new Error(data.message || 'فشل في إنشاء الحساب');
+            }
+        } catch (error) {
+            console.error('❌ خطأ في إنشاء المستخدم:', error);
+            throw error;
+        }
+    };
+
     // الانتقال للخطوة التالية
     const nextStep = () => {
         if (validateStep(currentStep)) {
@@ -247,16 +357,65 @@ export default function CheckoutPage() {
         }
     };
 
+    // اختبار المصادقة
+    const testAuth = async () => {
+        try {
+            const token = localStorage.getItem('api_token');
+            if (!token) {
+                console.log('❌ لا يوجد توكن');
+                return;
+            }
+            
+            const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+            
+            // اختبار التوكن بدون middleware
+            const debugResponse = await fetch(`${API_BASE_URL}/test-auth-debug`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/json'
+                }
+            });
+            const debugResult = await debugResponse.json();
+            console.log('🔍 نتيجة اختبار التوكن (بدون middleware):', debugResult);
+            
+            // اختبار المصادقة مع middleware
+            const response = await fetch(`${API_BASE_URL}/test-auth`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/json'
+                }
+            });
+            const result = await response.json();
+            console.log('🔍 نتيجة اختبار المصادقة (مع middleware):', result);
+            console.log('🔍 Response status:', response.status);
+            
+        } catch (error) {
+            console.error('❌ خطأ في اختبار المصادقة:', error);
+        }
+    };
+
     // إتمام الطلب
     const completeOrder = async () => {
         if (!validateStep(1)) return;
         
+        // اختبار المصادقة أولاً
+        await testAuth();
+        
         setIsLoading(true);
         try {
-            const token = localStorage.getItem('api_token');
+            let token = localStorage.getItem('api_token');
+            
+            // إذا لم يكن مسجل دخول ويريد المتابعة كضيف، أنشئ حساباً جديداً
+            if (!token && proceedAsGuest) {
+                console.log('🔄 إنشاء مستخدم جديد...');
+                token = await createGuestUser();
+                if (!token) {
+                    throw new Error('فشل في إنشاء الحساب');
+                }
+            }
+            
             if (!token) {
-                showToast('يجب تسجيل الدخول أولاً', 'error');
-                router.push('/login');
+                showToast('يجب تسجيل الدخول أو اختيار المتابعة كضيف', 'error');
                 return;
             }
 
@@ -300,13 +459,30 @@ export default function CheckoutPage() {
                 body: JSON.stringify(orderData)
             });
 
-            const result = await response.json();
+            let result;
+            try {
+                result = await response.json();
+            } catch (jsonError) {
+                console.error('❌ خطأ في تحليل JSON:', jsonError);
+                const responseText = await response.text();
+                console.error('❌ نص الاستجابة:', responseText);
+                throw new Error('استجابة غير صحيحة من الخادم');
+            }
+            
             console.log('📡 استجابة الخادم:', result);
+            console.log('📡 Response status:', response.status);
+            console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
 
             if (response.ok && result.success) {
                 // مسح السلة وإعادة التوجيه
                 clearCart();
                 showToast(`تم إرسال طلبك بنجاح! رقم الطلب: ${result.data.order_number}`, 'success');
+                
+                // إذا كان مستخدم جديد، أعلمه بأنه تم إنشاء حساب له
+                if (proceedAsGuest) {
+                    showToast('تم إنشاء حساب جديد لك! يمكنك الآن متابعة طلباتك من لوحة التحكم', 'success');
+                }
+                
                 router.push(`/user-dashboard/orders`);
             } else {
                 console.error('❌ فشل الاستجابة:', {
@@ -314,11 +490,35 @@ export default function CheckoutPage() {
                     statusText: response.statusText,
                     result: result
                 });
-                throw new Error(result.message || `خطأ ${response.status}: ${response.statusText}`);
+                
+                // Handle specific error cases
+                if (response.status === 401) {
+                    // Authentication failed
+                    localStorage.removeItem('api_token');
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    throw new Error('انتهت جلسة تسجيل الدخول. يرجى تسجيل الدخول مرة أخرى');
+                } else if (response.status === 422) {
+                    // Validation errors
+                    const errorMessages = [];
+                    if (result.errors) {
+                        for (const [field, messages] of Object.entries(result.errors)) {
+                            if (Array.isArray(messages)) {
+                                errorMessages.push(...messages);
+                            } else {
+                                errorMessages.push(messages);
+                            }
+                        }
+                    }
+                    throw new Error(errorMessages.length > 0 ? errorMessages.join(', ') : result.message || 'بيانات غير صحيحة');
+                } else {
+                    throw new Error(result.message || `خطأ ${response.status}: ${response.statusText}`);
+                }
             }
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'خطأ غير معروف';
             console.error('❌ خطأ في إرسال الطلب:', error);
+            console.error('❌ فشل الاستجابة:', {});
             showToast(`حدث خطأ: ${errorMessage}`, 'error');
         } finally {
             setIsLoading(false);
@@ -399,13 +599,132 @@ export default function CheckoutPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Main Content */}
                     <div className="lg:col-span-2">
-                        {currentStep === 1 && (
+                        {/* خيارات تسجيل الدخول أو المتابعة كضيف */}
+                        {showLoginOption && !isLoggedIn && (
+                            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+                                <h2 className="text-lg font-medium text-gray-900 mb-4">اختر طريقة المتابعة</h2>
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {/* تسجيل الدخول */}
+                                    <div className="border border-gray-200 rounded-lg p-4">
+                                        <h3 className="font-medium text-gray-800 mb-3 flex items-center gap-2">
+                                            <User className="w-5 h-5" />
+                                            لديك حساب؟ سجل دخولك
+                                        </h3>
+                                        
+                                        {loginError && (
+                                            <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
+                                                {loginError}
+                                            </div>
+                                        )}
+                                        
+                                        <form onSubmit={handleLogin} className="space-y-3">
+                                            <div>
+                                                <input
+                                                    type="email"
+                                                    placeholder="البريد الإلكتروني"
+                                                    value={loginData.email}
+                                                    onChange={(e) => setLoginData(prev => ({ ...prev, email: e.target.value }))}
+                                                    required
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                />
+                                            </div>
+                                            <div>
+                                                <input
+                                                    type="password"
+                                                    placeholder="كلمة المرور"
+                                                    value={loginData.password}
+                                                    onChange={(e) => setLoginData(prev => ({ ...prev, password: e.target.value }))}
+                                                    required
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                />
+                                            </div>
+                                            <button
+                                                type="submit"
+                                                disabled={isLoggingIn}
+                                                className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium py-2 px-4 rounded-md transition-colors flex items-center justify-center gap-2"
+                                            >
+                                                {isLoggingIn ? (
+                                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                                ) : (
+                                                    <>
+                                                        <LogIn className="w-4 h-4" />
+                                                        تسجيل الدخول
+                                                    </>
+                                                )}
+                                            </button>
+                                        </form>
+                                        
+                                        <p className="text-sm text-gray-600 mt-2 text-center">
+                                            <Link href="/register" className="text-blue-600 hover:underline">
+                                                إنشاء حساب جديد
+                                            </Link>
+                                        </p>
+                                    </div>
+
+                                    {/* المتابعة كضيف */}
+                                    <div className="border border-gray-200 rounded-lg p-4">
+                                        <h3 className="font-medium text-gray-800 mb-3 flex items-center gap-2">
+                                            <Shield className="w-5 h-5" />
+                                            متابعة كضيف
+                                        </h3>
+                                        
+                                        <p className="text-sm text-gray-600 mb-4">
+                                            سيتم إنشاء حساب جديد لك تلقائياً باستخدام المعلومات المدخلة لمتابعة طلباتك مستقبلاً.
+                                        </p>
+                                        
+                                        <button
+                                            onClick={() => {
+                                                setProceedAsGuest(true);
+                                                setShowLoginOption(false);
+                                            }}
+                                            className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md transition-colors flex items-center justify-center gap-2"
+                                        >
+                                            <Plus className="w-4 h-4" />
+                                            متابعة كضيف
+                                        </button>
+                                        
+                                        <p className="text-xs text-gray-500 mt-2 text-center">
+                                            سيتم إنشاء حساب تلقائياً
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* رسالة للضيف */}
+                        {proceedAsGuest && !isLoggedIn && (
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                                <div className="flex items-start gap-3">
+                                    <Shield className="w-5 h-5 text-blue-600 mt-0.5" />
+                                    <div>
+                                        <h3 className="font-medium text-blue-800">متابعة كضيف</h3>
+                                        <p className="text-sm text-blue-700 mt-1">
+                                            سيتم إنشاء حساب جديد لك تلقائياً عند إتمام الطلب. ستتمكن من متابعة طلباتك من لوحة التحكم.
+                                        </p>
+                                        <button
+                                            onClick={() => {
+                                                setProceedAsGuest(false);
+                                                setShowLoginOption(true);
+                                            }}
+                                            className="text-sm text-blue-600 hover:underline mt-2"
+                                        >
+                                            تراجع لخيارات تسجيل الدخول
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {(isLoggedIn || proceedAsGuest) && currentStep === 1 && (
                             <ShippingAddressStep 
                                 shippingAddress={shippingAddress}
                                 setShippingAddress={setShippingAddress}
                                 errors={errors}
                                 cities={cities}
                                 onNext={nextStep}
+                                isLoggedIn={isLoggedIn}
+                                proceedAsGuest={proceedAsGuest}
                             />
                         )}
                         
@@ -461,18 +780,32 @@ const ShippingAddressStep: React.FC<{
     errors: Record<string, string>;
     cities: string[];
     onNext: () => void;
-}> = ({ shippingAddress, setShippingAddress, errors, cities, onNext }) => (
+    isLoggedIn: boolean;
+    proceedAsGuest: boolean;
+}> = ({ shippingAddress, setShippingAddress, errors, cities, onNext, isLoggedIn, proceedAsGuest }) => (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h2 className="text-lg font-medium text-gray-900 mb-6">معلومات الشحن</h2>
         
         {/* رسالة ترحيبية للمستخدم المسجل دخوله */}
-        {shippingAddress.fullName && (
+        {isLoggedIn && shippingAddress.fullName && (
             <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
                 <div className="flex items-center">
-                    <Check className="h-5 w-5 text-green-600 ml-2" />
-                    <p className="text-sm text-green-800">
-                        مرحباً <span className="font-semibold">{shippingAddress.fullName}</span>! تم ملء معلوماتك تلقائياً من حسابك.
-                    </p>
+                    <Check className="w-5 h-5 text-green-600 ml-2" />
+                    <span className="text-green-800 font-medium">
+                        مرحباً {shippingAddress.fullName}! تم تحميل بياناتك المحفوظة.
+                    </span>
+                </div>
+            </div>
+        )}
+
+        {/* رسالة للضيف */}
+        {proceedAsGuest && (
+            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center">
+                    <Shield className="w-5 h-5 text-blue-600 ml-2" />
+                    <span className="text-blue-800 font-medium">
+                        سيتم إنشاء حساب جديد لك تلقائياً بهذه المعلومات عند إتمام الطلب.
+                    </span>
                 </div>
             </div>
         )}

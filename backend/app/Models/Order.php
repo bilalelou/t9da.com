@@ -13,13 +13,27 @@ class Order extends Model
 
     protected $fillable = [
         'user_id',
-        'order_number',
-        'status',
-        'total_price',
         'subtotal',
-        'shipping_cost',
-        'tax_amount',
-        'discount_amount',
+        'discount',
+        'tax',
+        'total',
+        'name',
+        'phone',
+        'locality',
+        'address',
+        'city',
+        'state',
+        'country',
+        'landmark',
+        'zip',
+        'type',
+        'status',
+        'is_shipping_different',
+        'delivered_date',
+        'canceled_date',
+        'payment_method',
+        'total_amount',
+        'order_number',
         'shipping_name',
         'shipping_email',
         'shipping_phone',
@@ -28,17 +42,16 @@ class Order extends Model
         'shipping_state',
         'shipping_postal_code',
         'shipping_method',
-        'payment_method',
         'payment_status',
         'notes',
     ];
 
     protected $casts = [
-        'total_price' => 'decimal:2',
+        'total' => 'decimal:2',
         'subtotal' => 'decimal:2',
-        'shipping_cost' => 'decimal:2',
-        'tax_amount' => 'decimal:2',
-        'discount_amount' => 'decimal:2',
+        'tax' => 'decimal:2',
+        'discount' => 'decimal:2',
+        'total_amount' => 'decimal:2',
     ];
 
     public function user(): BelongsTo
@@ -94,6 +107,6 @@ class Order extends Model
 
     public function getFormattedTotalAttribute()
     {
-        return number_format($this->total_price, 2) . ' درهم';
+        return number_format($this->total, 2) . ' درهم';
     }
 }

@@ -23,7 +23,10 @@ $validator = Validator::make($request->all(), [
     'name' => ['required', 'string', 'max:255'],
     'phone' => ['required', 'string', 'max:20', 'unique:users,mobile'],
     'password' => ['required', 'confirmed', Rules\Password::defaults()],
-    // 'email' => ['nullable', 'string', 'email', 'max:255', 'unique:'.User::class], // اجعل البريد الإلكتروني اختياري
+    'email' => ['nullable', 'string', 'email', 'max:255', 'unique:'.User::class],
+    'address' => ['nullable', 'string', 'max:500'],
+    'city' => ['nullable', 'string', 'max:100'],
+    'postal_code' => ['nullable', 'string', 'max:20'],
 ]);
 
         if ($validator->fails()) {
@@ -39,6 +42,9 @@ $user = User::create([
     'email' => $request->email ?? null,
     'mobile' => $request->phone,
     'password' => Hash::make($request->password),
+    'address' => $request->address,
+    'city' => $request->city,
+    'postal_code' => $request->postal_code,
 ]);
 
         // تعيين دور "customer" للمستخدم الجديد تلقائياً
