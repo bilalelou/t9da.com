@@ -180,12 +180,14 @@ const ProductCard = ({ product, onSelect, isSelected, onDelete }) => {
 // --- Main Products Page Component ---
 const ProductsPage = ({
     products,
+    allProducts,
     totalProducts,
     currentPage,
     lastPage,
     onPageChange,
 }: {
     products: Product[];
+    allProducts: Product[];
     totalProducts: number;
     currentPage: number;
     lastPage: number;
@@ -198,6 +200,8 @@ const ProductsPage = ({
     const [selectedProducts, setSelectedProducts] = useState<number[]>([]);
     const [showBulkModal, setShowBulkModal] = useState(false);
     const [deleteModal, setDeleteModal] = useState({ show: false, productId: null, productName: '' });
+    const [itemsPerPage, setItemsPerPage] = useState(10);
+    const [searchPage, setSearchPage] = useState(1);
 
     // حالة الترتيب
     const [sortColumn, setSortColumn] = useState<string>('id');
@@ -216,18 +220,24 @@ const ProductsPage = ({
         }
     };
 
-    // تصفية وترتيب المنتجات محلياً
-    const displayedProducts = useMemo(() => {
-        let filtered = products;
+    // تصفية وترتيب المنتجات
+    const { filteredProducts, paginatedProducts } = useMemo(() => {
+        let filtered = [];
+        
         if (searchTerm.trim()) {
+            // عند البحث، استخدم جميع المنتجات
             const term = searchTerm.trim().toLowerCase();
-            filtered = filtered.filter(p =>
+            filtered = (allProducts || products).filter(p =>
                 p.name.toLowerCase().includes(term) ||
                 p.category.toLowerCase().includes(term) ||
                 p.id.toString().includes(term) ||
                 p.stock.toString().includes(term)
             );
+        } else {
+            // بدون بحث، استخدم المنتجات المحدودة بالصفحة
+            filtered = products;
         }
+        
         // ترتيب حسب العمود المختار
         filtered = [...filtered].sort((a, b) => {
             const aValue = getSortValue(a, sortColumn);
@@ -236,28 +246,47 @@ const ProductsPage = ({
             if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
             return 0;
         });
-        return filtered;
-    }, [products, searchTerm, sortColumn, sortDirection]);
+        
+        // تطبيق التصفح على نتائج البحث
+        let paginated = filtered;
+        if (searchTerm.trim()) {
+            const startIndex = (searchPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            paginated = filtered.slice(startIndex, endIndex);
+        }
+        
+        return { filteredProducts: filtered, paginatedProducts: paginated };
+    }, [allProducts, products, searchTerm, sortColumn, sortDirection, searchPage, itemsPerPage]);
 
     const productStats = useMemo(() => ({
         total: totalProducts,
-        active: products.filter(p => p.status === 'published').length,
-        outOfStock: products.filter(p => p.stock === 0).length,
-        lowStock: products.filter(p => p.stock > 0 && p.stock <= 10).length,
-        freeShipping: products.filter(p => p.has_free_shipping).length,
-        totalValue: products.reduce((acc, p) => acc + (p.price * p.stock), 0)
-    }), [products, totalProducts]);
+        active: (allProducts || products).filter(p => p.status === 'published').length,
+        outOfStock: (allProducts || products).filter(p => p.stock === 0).length,
+        lowStock: (allProducts || products).filter(p => p.stock > 0 && p.stock <= 10).length,
+        freeShipping: (allProducts || products).filter(p => p.has_free_shipping).length,
+        totalValue: (allProducts || products).reduce((acc, p) => acc + (p.price * p.stock), 0)
+    }), [allProducts, products, totalProducts]);
 
     const toggleProductSelection = (productId: number) => {
         setSelectedProducts(prev => prev.includes(productId) ? prev.filter(id => id !== productId) : [...prev, productId]);
     };
 
     const toggleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setSelectedProducts(e.target.checked ? displayedProducts.map((p: Product) => p.id) : []);
+        setSelectedProducts(e.target.checked ? paginatedProducts.map((p: Product) => p.id) : []);
     };
+    
+    // إعادة تعيين صفحة البحث عند تغيير مصطلح البحث
+    React.useEffect(() => {
+        setSearchPage(1);
+    }, [searchTerm]);
+    
+    // حساب عدد صفحات البحث
+    const searchLastPage = Math.ceil(filteredProducts.length / itemsPerPage);
+    const displayLastPage = searchTerm.trim() ? searchLastPage : lastPage;
+    const displayCurrentPage = searchTerm.trim() ? searchPage : currentPage;
 
     const showDeleteModal = (productId: number) => {
-        const product = displayedProducts.find(p => p.id === productId);
+        const product = paginatedProducts.find(p => p.id === productId);
         setDeleteModal({ show: true, productId, productName: product?.name || '' });
     };
 
@@ -316,11 +345,17 @@ const ProductsPage = ({
             </div>
 
             <div className="bg-white rounded-2xl shadow-md p-4 border border-gray-100">
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
                     <div className="relative md:col-span-2">
                         <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3"><Search className="h-5 w-5 text-gray-400" /></div>
                         <input type="text" placeholder="ابحث عن منتج..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pr-10 pl-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
                     </div>
+                    <select value={itemsPerPage} onChange={(e) => setItemsPerPage(Number(e.target.value))} className="w-full py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value={10}>10 في الصفحة</option>
+                        <option value={25}>25 في الصفحة</option>
+                        <option value={50}>50 في الصفحة</option>
+                        <option value={100}>100 في الصفحة</option>
+                    </select>
                     <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)} className="w-full py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                         {categories.map(cat => <option key={cat} value={cat}>{cat === 'all' ? 'جميع التصنيفات' : cat}</option>)}
                     </select>
@@ -343,7 +378,7 @@ const ProductsPage = ({
                     <table className="min-w-full divide-y divide-gray-200">
 <thead className="bg-gray-50">
     <tr>
-        <th className="px-6 py-3 text-right"><input type="checkbox" onChange={toggleSelectAll} checked={selectedProducts.length === displayedProducts.length && displayedProducts.length > 0} className="rounded" /></th>
+        <th className="px-6 py-3 text-right"><input type="checkbox" onChange={toggleSelectAll} checked={selectedProducts.length === paginatedProducts.length && paginatedProducts.length > 0} className="rounded" /></th>
         <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer"
             onClick={() => {
                 setSortColumn('id');
@@ -391,7 +426,7 @@ const ProductsPage = ({
     </tr>
 </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-{displayedProducts.map((product) => (
+{paginatedProducts.map((product) => (
     <tr key={product.id} className="hover:bg-gray-50">
         <td className="px-6 py-4"><input type="checkbox" checked={selectedProducts.includes(product.id)} onChange={() => toggleProductSelection(product.id)} className="rounded" /></td>
         <td className="px-4 py-4 text-center font-mono text-xs text-gray-700">{product.id}</td>
@@ -441,24 +476,36 @@ const ProductsPage = ({
                     </table>
                 </div>
                 <div className="sm:hidden p-4 space-y-4 bg-gray-50">
-                     {displayedProducts.map((product) => (<ProductCard key={product.id} product={product} onSelect={toggleProductSelection} isSelected={selectedProducts.includes(product.id)} onDelete={showDeleteModal} />))}
+                     {paginatedProducts.map((product) => (<ProductCard key={product.id} product={product} onSelect={toggleProductSelection} isSelected={selectedProducts.includes(product.id)} onDelete={showDeleteModal} />))}
                 </div>
                 <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
                     <p className="text-sm text-gray-700">
-                        صفحة <span className="font-medium">{currentPage}</span> من <span className="font-medium">{lastPage}</span> | عرض <span className="font-medium">{products.length}</span> من <span className="font-medium">{totalProducts}</span> منتج
+                        صفحة <span className="font-medium">{displayCurrentPage}</span> من <span className="font-medium">{displayLastPage}</span> | عرض <span className="font-medium">{paginatedProducts.length}</span> من <span className="font-medium">{searchTerm.trim() ? filteredProducts.length : totalProducts}</span> منتج
                     </p>
                     <div className="flex gap-1">
                         <button
                             className="px-3 py-1 border rounded-md text-sm hover:bg-gray-50"
-                            disabled={currentPage === 1}
-                            onClick={() => onPageChange(currentPage - 1)}
+                            disabled={displayCurrentPage === 1}
+                            onClick={() => {
+                                if (searchTerm.trim()) {
+                                    setSearchPage(searchPage - 1);
+                                } else {
+                                    onPageChange(currentPage - 1);
+                                }
+                            }}
                         >
                             السابق
                         </button>
                         <button
                             className="px-3 py-1 border rounded-md text-sm hover:bg-gray-50"
-                            disabled={currentPage === lastPage}
-                            onClick={() => onPageChange(currentPage + 1)}
+                            disabled={displayCurrentPage === displayLastPage}
+                            onClick={() => {
+                                if (searchTerm.trim()) {
+                                    setSearchPage(searchPage + 1);
+                                } else {
+                                    onPageChange(currentPage + 1);
+                                }
+                            }}
                         >
                             التالي
                         </button>
@@ -509,6 +556,7 @@ const ProductsPage = ({
 // --- Data Fetching Wrapper ---
 export default function ProductsPageLoader() {
     const [products, setProducts] = useState<Product[]>([]);
+    const [allProducts, setAllProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
@@ -529,6 +577,7 @@ export default function ProductsPageLoader() {
                     lastPage = response.pagination?.last_page || 1;
                     page++;
                 } while (page <= lastPage);
+                setAllProducts(allProducts);
                 setProducts(allProducts);
             } catch (err) {
                 setError(err instanceof Error ? err.message : 'An unknown error occurred');
@@ -555,6 +604,7 @@ export default function ProductsPageLoader() {
     return (
         <ProductsPage
             products={paginatedProducts}
+            allProducts={allProducts}
             totalProducts={totalProducts}
             currentPage={currentPage}
             lastPage={lastPage}
