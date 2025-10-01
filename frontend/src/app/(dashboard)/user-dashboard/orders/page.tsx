@@ -104,10 +104,16 @@ const api = {
         const order = data.data || data;
         return {
             ...order,
+            shipping_address: {
+                name: order.shipping_name || order.name || '',
+                phone: order.shipping_phone || order.phone || '',
+                address: order.shipping_address || order.address || '',
+                city: order.shipping_city || order.city || ''
+            },
             items: order.order_items?.map((item: any) => ({
                 id: item.id,
-                product_name: item.product?.name || 'منتج غير معروف',
-                product_image: item.product?.thumbnail || '',
+                product_name: item.product_name || item.product?.name || 'منتج غير معروف',
+                product_image: item.product_image || item.product?.thumbnail || '',
                 quantity: item.quantity,
                 price: item.price,
                 total: item.quantity * item.price,

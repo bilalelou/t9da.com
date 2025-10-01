@@ -23,7 +23,7 @@ const navigationItems: NavItem[] = [
     href: '/user-dashboard',
     icon: (
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-            <rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/>
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/>
         </svg>
     )
   },
@@ -33,10 +33,9 @@ const navigationItems: NavItem[] = [
     href: '/user-dashboard/orders',
     icon: (
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-            <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>
+            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M9 14l2 2 4-4"/>
         </svg>
     ),
-    badge: 2
   },
   {
     id: 'wishlist',
@@ -44,7 +43,7 @@ const navigationItems: NavItem[] = [
     href: '/user-dashboard/wishlist',
     icon: (
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-            <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
         </svg>
     )
   },
@@ -54,7 +53,7 @@ const navigationItems: NavItem[] = [
     href: '/user-dashboard/addresses',
     icon: (
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-            <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
         </svg>
     )
   },
@@ -64,7 +63,7 @@ const navigationItems: NavItem[] = [
     href: '/user-dashboard/profile',
     icon: (
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-            <circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3"/><path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662"/>
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
         </svg>
     )
   }
@@ -82,6 +81,7 @@ export default function DashboardLayout({
     avatar: 'https://placehold.co/150x150/EBF4FF/3B82F6?text=U',
     loyaltyPoints: 0
   });
+  const [pendingOrdersCount, setPendingOrdersCount] = useState(0);
   const pathname = usePathname();
 
   useEffect(() => {
@@ -106,6 +106,20 @@ export default function DashboardLayout({
               loyaltyPoints: userData.loyalty_points || 0
             });
           }
+          
+          // Fetch pending orders count
+          const ordersResponse = await fetch(`${API_BASE_URL}/user/dashboard`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Accept': 'application/json'
+            }
+          });
+          
+          if (ordersResponse.ok) {
+            const dashboardData = await ordersResponse.json();
+            const pendingCount = dashboardData.orders?.data?.filter(order => order.status === 'pending').length || 0;
+            setPendingOrdersCount(pendingCount);
+          }
         }
       } catch (error) {
         console.error('خطأ في جلب بيانات المستخدم:', error);
@@ -114,6 +128,27 @@ export default function DashboardLayout({
 
     fetchUserData();
   }, []);
+
+  const handleLogout = async () => {
+    try {
+      const token = localStorage.getItem('api_token');
+      if (token) {
+        const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+        await fetch(`${API_BASE_URL}/logout`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json'
+          }
+        });
+      }
+    } catch (error) {
+      console.error('خطأ في تسجيل الخروج:', error);
+    } finally {
+      localStorage.removeItem('api_token');
+      window.location.href = '/login';
+    }
+  };
 
   const isActiveRoute = (href: string) => {
     if (href === '/user-dashboard') {
@@ -133,17 +168,19 @@ export default function DashboardLayout({
       )}
 
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 right-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${
+      <div className={`fixed inset-y-0 right-0 z-50 w-72 bg-white shadow-2xl transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${
         sidebarOpen ? 'translate-x-0' : 'translate-x-full'
       }`}>
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">T</span>
+            <Link href="/" className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl flex items-center justify-center shadow-lg">
+                <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                </svg>
               </div>
-              <span className="text-xl font-bold text-gray-900">T9ad.com</span>
+              <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">T9da.com</span>
             </Link>
             <button
               onClick={() => setSidebarOpen(false)}
@@ -156,52 +193,63 @@ export default function DashboardLayout({
           </div>
 
           {/* User Profile Summary */}
-          <div className="px-6 py-6 bg-blue-50 border-b border-gray-200">
+          <div className="px-6 py-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200">
             <div className="flex items-center gap-4">
-              <div className="relative w-12 h-12 flex-shrink-0">
+              <div className="relative w-14 h-14 flex-shrink-0">
                 <Image
                   src={userProfile.avatar}
                   alt={userProfile.name}
                   fill
-                  className="object-cover rounded-full"
+                  className="object-cover rounded-full ring-2 ring-white shadow-md"
                   onError={(e) => { e.currentTarget.src = `https://placehold.co/150x150/EBF4FF/3B82F6?text=${userProfile.name.charAt(0)}` }}
                 />
+                <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-white"></div>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">{userProfile.name}</p>
-                <p className="text-xs text-gray-600 truncate">{userProfile.email}</p>
-                <div className="flex items-center gap-1 mt-1">
-                  <svg className="w-3 h-3 text-yellow-500" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                  </svg>
-                  <span className="text-xs font-medium text-gray-900">{userProfile.loyaltyPoints} نقطة</span>
+                <p className="text-base font-semibold text-gray-900 truncate">{userProfile.name}</p>
+                <p className="text-sm text-gray-600 truncate">{userProfile.email}</p>
+                <div className="flex items-center gap-2 mt-2">
+                  <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-full">
+                    <svg className="w-3 h-3 text-yellow-500" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                    </svg>
+                    <span className="text-xs font-medium text-gray-900">{userProfile.loyaltyPoints}</span>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+          <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
             {navigationItems.map((item) => (
               <Link
                 key={item.id}
                 href={item.href}
-                className={`flex items-center justify-between px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
+                className={`group flex items-center justify-between px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 ${
                   isActiveRoute(item.href)
-                    ? 'bg-blue-100 text-blue-700 border-l-4 border-blue-600'
-                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                    ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg transform scale-[1.02]'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 hover:transform hover:scale-[1.01]'
                 }`}
                 onClick={() => setSidebarOpen(false)}
               >
                 <div className="flex items-center gap-3">
-                  <div className={`${isActiveRoute(item.href) ? 'text-blue-600' : 'text-gray-400'}`}>
+                  <div className={`transition-colors ${
+                    isActiveRoute(item.href) 
+                      ? 'text-white' 
+                      : 'text-gray-400 group-hover:text-blue-500'
+                  }`}>
                     {item.icon}
                   </div>
-                  <span>{item.name}</span>
+                  <span className="font-medium">{item.name}</span>
                 </div>
-                {item.badge && (
-                  <span className="bg-red-100 text-red-800 text-xs font-medium px-2 py-1 rounded-full">
-                    {item.badge}
+                {item.id === 'orders' && pendingOrdersCount > 0 && (
+                  <span className={`text-xs font-bold px-2 py-1 rounded-full ${
+                    isActiveRoute(item.href)
+                      ? 'bg-white/20 text-white'
+                      : 'bg-red-100 text-red-600'
+                  }`}>
+                    {pendingOrdersCount}
                   </span>
                 )}
               </Link>
@@ -209,21 +257,25 @@ export default function DashboardLayout({
           </nav>
 
           {/* Footer */}
-          <div className="p-4 border-t border-gray-200">
-            <div className="flex items-center justify-between">
+          <div className="p-4 border-t border-gray-100 bg-gray-50">
+            <div className="space-y-3">
               <Link
-                href="/products"
-                className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
+                href="/"
+                className="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:text-blue-600 rounded-lg hover:bg-white transition-colors"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
                     <path d="M19 12H5"/><path d="m12 19-7-7 7-7"/>
                 </svg>
                 <span>العودة للمتجر</span>
               </Link>
-              <button className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+              <button 
+                onClick={handleLogout}
+                className="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors w-full"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
                     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/>
                 </svg>
+                <span>تسجيل الخروج</span>
               </button>
             </div>
           </div>
@@ -248,8 +300,10 @@ export default function DashboardLayout({
         </div>
 
         {/* Page content */}
-        <main className="flex-1 overflow-auto p-6">
-          {children}
+        <main className="flex-1 overflow-auto p-6 bg-gray-50">
+          <div className="max-w-7xl mx-auto">
+            {children}
+          </div>
         </main>
       </div>
     </div>
