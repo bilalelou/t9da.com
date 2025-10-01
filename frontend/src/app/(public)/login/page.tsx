@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Mail, Lock, LogIn, Eye, EyeOff, LoaderCircle, Building } from 'lucide-react';
+import Image from 'next/image';
+import { Mail, Lock, LogIn, Eye, EyeOff, LoaderCircle } from 'lucide-react';
 
 export default function LoginPage() {
     const [email, setEmail] = useState('');
@@ -22,7 +23,7 @@ export default function LoginPage() {
             return;
         }
 
-    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
+        const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
 
         try {
             const response = await fetch(`${apiBaseUrl}/login`, {
@@ -38,6 +39,8 @@ export default function LoginPage() {
 
             if (response.ok && data.token) {
                 localStorage.setItem('api_token', data.token);
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('user', JSON.stringify(data.user));
                 
                 if (data.user && data.user.role) {
                     const userRole = data.user.role;
@@ -73,30 +76,41 @@ export default function LoginPage() {
     };
 
     return (
-        <div dir="rtl" className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 p-4">
+        <div dir="rtl" className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 via-white to-gray-50 p-4">
             <div className="w-full max-w-md">
+                {/* Logo Section */}
                 <div className="text-center mb-8">
-                    <a href="#" className="inline-flex items-center gap-2 text-4xl font-bold text-[#eab676] tracking-wider">
-                        <Building size={36}/>
-                        <span>متجري</span>
-                    </a>
+                    <Link href="/" className="inline-flex items-center gap-3 group">
+                        <div className="relative h-14 w-14">
+                            <Image 
+                                src="/images/logo.png" 
+                                alt="T9DA.COM Logo" 
+                                fill
+                                className="object-contain"
+                            />
+                        </div>
+                        <div className="flex flex-col items-end">
+                            <span className="font-bold text-2xl text-gray-800 group-hover:text-blue-600 transition-colors">T9DA.COM</span>
+                            <span className="text-sm text-gray-500">تسوق سعيد</span>
+                        </div>
+                    </Link>
                 </div>
                 
-                <div className="bg-white p-8 shadow-2xl rounded-2xl space-y-6 transition-all duration-500 hover:shadow-3xl">
+                <div className="bg-white p-8 shadow-xl rounded-2xl border border-gray-100 space-y-6">
                     <div className="text-center">
-                         <h1 className="text-2xl font-bold text-[#1e81b0]">مرحباً بعودتك!</h1>
-                         <p className="mt-1 text-gray-500">
-                             سجل الدخول للمتابعة إلى حسابك.
+                         <h1 className="text-2xl font-bold text-gray-800">مرحباً بعودتك!</h1>
+                         <p className="mt-2 text-gray-600">
+                             سجل الدخول للمتابعة إلى حسابك
                          </p>
                     </div>
 
                     {error && (
-                        <div className="text-center bg-red-100 text-red-700 text-sm p-3 rounded-lg border border-red-200 animate-shake">
+                        <div className="bg-red-50 text-red-700 text-sm p-4 rounded-lg border border-red-200">
                             {error}
                         </div>
                     )}
 
-                    <form className="space-y-6" onSubmit={handleSubmit}>
+                    <form className="space-y-5" onSubmit={handleSubmit}>
                         <div>
                             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
                                 البريد الإلكتروني
@@ -162,7 +176,7 @@ export default function LoginPage() {
                             </div>
 
                             <div className="text-sm">
-                                <Link href="/forgot-password" className="font-medium text-[#1e81b0] hover:text-[#eab676]">
+                                <Link href="/forgot-password" className="font-medium text-blue-600 hover:text-blue-800 transition">
                                     هل نسيت كلمة المرور؟
                                 </Link>
                             </div>
@@ -172,25 +186,38 @@ export default function LoginPage() {
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="flex w-full justify-center rounded-lg bg-[#2596be] hover:bg-[#1e81b0] py-3 px-4 font-semibold text-white shadow-md focus:outline-none focus:ring-2 focus:ring-[#eab676] focus:ring-offset-2 transition-all duration-300 disabled:opacity-50"
+                                className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 hover:bg-blue-700 py-3 px-4 font-semibold text-white shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {loading ? (
-                                    <LoaderCircle className="animate-spin" />
+                                    <LoaderCircle className="animate-spin" size={20} />
                                 ) : (
                                     <>
-                                        <LogIn className="ml-2 h-5 w-5" />
+                                        <LogIn size={20} />
                                         تسجيل الدخول
                                     </>
                                 )}
                             </button>
                         </div>
                     </form>
+
+                    <div className="text-center pt-4 border-t border-gray-100">
+                        <p className="text-sm text-gray-600">
+                            ليس لديك حساب؟{' '}
+                            <Link href="/register" className="font-semibold text-blue-600 hover:text-blue-800 transition">
+                                إنشاء حساب جديد
+                            </Link>
+                        </p>
+                    </div>
                 </div>
                 
-                 <p className="mt-8 text-center text-sm text-gray-600">
-                    ليس لديك حساب؟{' '}
-                    <Link href="/register" className="font-medium text-[#1e81b0] hover:text-[#eab676]">
-                        أنشئ حساباً جديداً
+                <p className="text-center text-sm text-gray-500 mt-6">
+                    بتسجيل الدخول، أنت توافق على{' '}
+                    <Link href="/terms" className="text-blue-600 hover:underline">
+                        شروط الخدمة
+                    </Link>
+                    {' '}و{' '}
+                    <Link href="/privacy" className="text-blue-600 hover:underline">
+                        سياسة الخصوصية
                     </Link>
                 </p>
             </div>

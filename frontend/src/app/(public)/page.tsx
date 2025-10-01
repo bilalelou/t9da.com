@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, createContext, useContext, useMemo, useRef } from 'react';
-import { Heart, CheckCircle, ChevronLeft, ChevronRight, ShoppingCart, ShieldCheck, Truck, PhoneCall, Mail, Quote, Zap, Star, Tag, Clock, Menu, X } from 'lucide-react';
+import { Heart, CheckCircle, ChevronLeft, ChevronRight, ShoppingCart, ShieldCheck, Truck, PhoneCall, Mail, Quote, Zap, Star, Tag, Clock, Menu, X, Smartphone, Home, Tv, Monitor, Gamepad2, Sparkles, Shirt, Dumbbell, Car } from 'lucide-react';
 
 // --- ( MOCK PROVIDERS ) ---
 // These are mock providers to make the component self-contained and runnable.
@@ -174,6 +174,74 @@ const ErrorDisplay = ({ error }: { error?: string | null }) => {
 };
 const ProductCardSkeleton = () => (<div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm animate-pulse"><div className="bg-slate-200 h-64 w-full"></div><div className="p-4"><div className="bg-slate-200 h-5 w-3/4 rounded-md"></div><div className="bg-slate-200 h-4 w-1/2 mt-4 rounded-md"></div><div className="flex justify-between items-center mt-4"><div className="bg-slate-200 h-7 w-1/3 rounded-md"></div><div className="bg-slate-200 h-10 w-10 rounded-full"></div></div></div></div>);
 
+// Categories Menu Component
+const CategoriesMenu = () => {
+    const [isOpen, setIsOpen] = useState(false);
+    
+    const categories = [
+        { name: 'الأجهزة الإلكترونية', icon: <Smartphone size={18} className="text-blue-500" /> },
+        { name: 'المنزل والمطبخ', icon: <Home size={18} className="text-green-500" /> },
+        { name: 'الهواتف', icon: <Smartphone size={18} className="text-purple-500" /> },
+        { name: 'تلفزيون وصوت', icon: <Tv size={18} className="text-red-500" /> },
+        { name: 'الحاسوب والألعاب', icon: <Monitor size={18} className="text-indigo-500" /> },
+        { name: 'الجمال والصحة', icon: <Sparkles size={18} className="text-pink-500" /> },
+        { name: 'ملابس وإكسسوارات', icon: <Shirt size={18} className="text-orange-500" /> },
+        { name: 'الرياضة والألعاب', icon: <Gamepad2 size={18} className="text-cyan-500" /> },
+        { name: 'رياضة', icon: <Dumbbell size={18} className="text-emerald-500" /> },
+        { name: 'السيارات', icon: <Car size={18} className="text-gray-600" /> }
+    ];
+
+    return (
+        <div className="relative">
+            <button 
+                onClick={() => setIsOpen(!isOpen)}
+                className="bg-slate-700 hover:bg-slate-800 text-white px-6 py-3 rounded-lg flex items-center gap-3 transition-colors shadow-lg"
+            >
+                <Menu size={20} />
+                <span className="font-medium">جميع الفئات</span>
+            </button>
+            
+            {isOpen && (
+                <>
+                    <div 
+                        className="fixed inset-0 bg-black bg-opacity-50 z-40"
+                        onClick={() => setIsOpen(false)}
+                    ></div>
+                    
+                    <div className="absolute top-full right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-200 z-50 overflow-hidden">
+                        <div className="bg-slate-700 text-white p-4 flex items-center justify-between">
+                            <span className="font-bold text-lg">جميع الفئات</span>
+                            <button 
+                                onClick={() => setIsOpen(false)}
+                                className="p-1 hover:bg-slate-600 rounded transition-colors"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+                        
+                        <div className="max-h-96 overflow-y-auto">
+                            {categories.map((category, index) => (
+                                <a 
+                                    key={index}
+                                    href={`/category/${category.name}`}
+                                    className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0 group"
+                                    onClick={() => setIsOpen(false)}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        {category.icon}
+                                        <span className="text-gray-700 group-hover:text-blue-600 transition-colors">{category.name}</span>
+                                    </div>
+                                    <ChevronRight size={16} className="text-gray-400 group-hover:text-blue-600 transition-colors" />
+                                </a>
+                            ))}
+                        </div>
+                    </div>
+                </>
+            )}
+        </div>
+    );
+};
+
 // --- ( HOME PAGE COMPONENTS ) ---
 const Section = ({ title, subtitle, children, className = '' }: { title: string, subtitle?: string, children: React.ReactNode, className?: string }) => (<section className={`py-16 sm:py-20 ${className}`}><div className="container mx-auto px-4 sm:px-6 max-w-7xl"><div className="text-center mb-12"><h2 className="text-3xl sm:text-4xl font-extrabold text-gray-800 mb-4 relative inline-block">{title}<div className="absolute bottom-0 right-1/2 transform translate-x-1/2 w-16 h-1 bg-yellow-400 rounded-full"></div></h2>{subtitle && <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto">{subtitle}</p>}</div>{children}</div></section>);
 const StarRating = ({ rating, review_count }: { rating: number, review_count: number }) => (<div className="flex items-center gap-1.5"><div className="flex items-center">{[...Array(5)].map((_, i) => <Star key={i} size={16} className={i < Math.round(rating) ? 'text-amber-400 fill-amber-400' : 'text-slate-300'} />)}</div><span className="text-xs text-slate-500 font-medium">({review_count})</span></div>);
@@ -192,11 +260,107 @@ const HeroSlider = ({ slides }: { slides: Slide[] }) => {
     const [currentSlide, setCurrentSlide] = useState(0);
     const next = useCallback(() => setCurrentSlide(curr => (curr === slides.length - 1 ? 0 : curr + 1)), [slides.length]);
     const prev = () => setCurrentSlide(curr => (curr === 0 ? slides.length - 1 : curr - 1));
-    useEffect(() => { if (slides.length > 1) { const slideInterval = setInterval(next, 5000); return () => clearInterval(slideInterval); } }, [slides.length, next]);
-    if (!slides || slides.length === 0) { return <div className="relative h-[80vh] w-full bg-slate-200 animate-pulse"></div>; }
-    return (<section className="relative h-[80vh] w-full overflow-hidden" dir="ltr"><div className="flex transition-transform ease-in-out duration-700 h-full" style={{ transform: `translateX(-${currentSlide * 100}%)` }}>{slides.map(slide => (<div key={slide.id} className="w-full h-full flex-shrink-0 relative"><img src={slide.image_url} alt={slide.title} className="w-full h-full object-cover" /><div className="absolute inset-0 bg-black/50"></div><div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white p-6" dir="rtl"><div className="bg-black/40 backdrop-blur-md p-8 rounded-2xl max-w-3xl animate-fade-in-up"><h1 className="text-4xl md:text-6xl font-extrabold tracking-tight drop-shadow-lg">{slide.title}</h1><p className="mt-4 text-lg md:text-xl text-slate-200 drop-shadow">{slide.subtitle}</p><a href={slide.link} className="mt-8 inline-block bg-blue-600 text-white font-bold py-3 px-12 rounded-lg hover:bg-blue-700 transition-all duration-300 transform hover:scale-105 shadow-lg">تسوق الآن</a></div></div></div>))}</div>{slides.length > 1 && (<><button onClick={prev} aria-label="Previous slide" className="absolute top-1/2 left-5 transform -translate-y-1/2 bg-white/80 hover:bg-white p-3 rounded-full z-10 transition-colors shadow-md"><ChevronLeft size={28} /></button><button onClick={next} aria-label="Next slide" className="absolute top-1/2 right-5 transform -translate-y-1/2 bg-white/80 hover:bg-white p-3 rounded-full z-10 transition-colors shadow-md"><ChevronRight size={28} /></button></>)}</section>);
+    useEffect(() => { if (slides.length > 1) { const slideInterval = setInterval(next, 6000); return () => clearInterval(slideInterval); } }, [slides.length, next]);
+    if (!slides || slides.length === 0) { return <div className="relative h-[85vh] w-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 animate-pulse"></div>; }
+    return (
+        <section className="relative h-[85vh] w-full overflow-hidden shadow-2xl" dir="ltr">
+            <div className="flex transition-transform ease-out duration-1000 h-full" style={{ transform: `translateX(-${currentSlide * 100}%)` }}>
+                {slides.map((slide) => (
+                    <div key={slide.id} className="w-full h-full flex-shrink-0 relative">
+                        <img src={slide.image_url} alt={slide.title} className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-gradient-to-br from-black/60 via-black/40 to-transparent"></div>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white p-6" dir="rtl">
+                            <div className="max-w-4xl space-y-6 animate-fade-in-up">
+                                <div className="inline-block px-6 py-2 bg-yellow-500/90 backdrop-blur-sm rounded-full text-sm font-bold text-gray-900 mb-4">
+                                    عرض خاص ⚡
+                                </div>
+                                <h1 className="text-5xl md:text-7xl font-black tracking-tight drop-shadow-2xl leading-tight bg-gradient-to-r from-white to-gray-200 bg-clip-text text-transparent">
+                                    {slide.title}
+                                </h1>
+                                <p className="mt-6 text-xl md:text-2xl text-gray-100 drop-shadow-lg font-medium max-w-3xl mx-auto">
+                                    {slide.subtitle}
+                                </p>
+                                <div className="flex gap-4 justify-center mt-10">
+                                    <a 
+                                        href={slide.link} 
+                                        className="inline-flex items-center gap-2 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-gray-900 font-bold py-4 px-10 rounded-full transition-all duration-300 transform hover:scale-110 shadow-2xl hover:shadow-yellow-500/50"
+                                    >
+                                        تسوق الآن
+                                        <ChevronLeft size={20} className="rotate-180" />
+                                    </a>
+                                    <a 
+                                        href="#featured" 
+                                        className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md hover:bg-white/20 text-white font-bold py-4 px-10 rounded-full border-2 border-white/30 hover:border-white/50 transition-all duration-300 shadow-xl"
+                                    >
+                                        اكتشف المزيد
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        {/* Slide indicators */}
+                        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex gap-2 z-20">
+                            {slides.map((_, idx) => (
+                                <button
+                                    key={idx}
+                                    onClick={() => setCurrentSlide(idx)}
+                                    className={`transition-all duration-300 rounded-full ${
+                                        idx === currentSlide 
+                                            ? 'w-12 h-3 bg-yellow-500' 
+                                            : 'w-3 h-3 bg-white/50 hover:bg-white/75'
+                                    }`}
+                                    aria-label={`Go to slide ${idx + 1}`}
+                                />
+                            ))}
+                        </div>
+                    </div>
+                ))}
+            </div>
+            {slides.length > 1 && (
+                <>
+                    <button 
+                        onClick={prev} 
+                        aria-label="Previous slide" 
+                        className="absolute top-1/2 left-6 transform -translate-y-1/2 bg-white/90 hover:bg-white p-4 rounded-full z-10 transition-all duration-300 shadow-xl hover:scale-110 group"
+                    >
+                        <ChevronLeft size={28} className="text-gray-800 group-hover:text-yellow-600" />
+                    </button>
+                    <button 
+                        onClick={next} 
+                        aria-label="Next slide" 
+                        className="absolute top-1/2 right-6 transform -translate-y-1/2 bg-white/90 hover:bg-white p-4 rounded-full z-10 transition-all duration-300 shadow-xl hover:scale-110 group"
+                    >
+                        <ChevronRight size={28} className="text-gray-800 group-hover:text-yellow-600" />
+                    </button>
+                </>
+            )}
+        </section>
+    );
 };
-const ServicesBar = ({ services }: { services: Service[] }) => (<div className="bg-white border-b border-gray-100"><div className="container mx-auto px-6 max-w-7xl grid grid-cols-1 md:grid-cols-3 gap-8 py-12">{services.map(service => (<div key={service.id} className="flex items-center gap-4 p-6 bg-gray-50 hover:bg-yellow-50 rounded-2xl border-2 border-gray-100 hover:border-yellow-200 transition-all duration-300 group"><div className="text-yellow-600 bg-yellow-100 group-hover:bg-yellow-200 p-4 rounded-2xl transition-colors">{service.icon}</div><div><h3 className="font-bold text-lg text-gray-800 group-hover:text-yellow-600 transition-colors">{service.title}</h3><p className="text-gray-600 text-sm mt-1">{service.description}</p></div></div>))}</div></div>);
+const ServicesBar = ({ services }: { services: Service[] }) => (
+    <div className="bg-gradient-to-r from-gray-50 via-white to-gray-50 border-y border-gray-200 shadow-sm">
+        <div className="container mx-auto px-6 max-w-7xl grid grid-cols-1 md:grid-cols-3 gap-8 py-16">
+            {services.map((service, index) => (
+                <div 
+                    key={service.id} 
+                    className="flex flex-col items-center text-center gap-4 p-8 bg-white hover:bg-gradient-to-br hover:from-yellow-50 hover:to-orange-50 rounded-3xl border-2 border-gray-100 hover:border-yellow-300 transition-all duration-500 group hover:shadow-2xl hover:-translate-y-3"
+                    style={{ animationDelay: `${index * 100}ms` }}
+                >
+                    <div className="text-yellow-600 bg-gradient-to-br from-yellow-100 to-orange-100 group-hover:from-yellow-200 group-hover:to-orange-200 p-6 rounded-full transition-all duration-500 group-hover:rotate-12 group-hover:scale-110 shadow-lg">
+                        {service.icon}
+                    </div>
+                    <div>
+                        <h3 className="font-black text-xl text-gray-800 group-hover:text-yellow-600 transition-colors mb-2">
+                            {service.title}
+                        </h3>
+                        <p className="text-gray-600 text-sm leading-relaxed">
+                            {service.description}
+                        </p>
+                    </div>
+                </div>
+            ))}
+        </div>
+    </div>
+);
 
 const CategorySlider = ({ categories }: { categories: Category[] }) => {
     const [currentIndex, setCurrentIndex] = useState(1);
@@ -357,6 +521,13 @@ function HomePageContent() {
 
     return (
         <div dir="rtl" className="bg-gradient-to-br from-gray-50 via-white to-gray-50 text-gray-800 min-h-screen">
+            {/* Categories Menu Section */}
+            <div className="bg-white border-b border-gray-100 py-4">
+                <div className="container mx-auto px-4 sm:px-6 max-w-7xl flex justify-start">
+                    <CategoriesMenu />
+                </div>
+            </div>
+            
             <HeroSlider slides={data?.slides || []} />
             <ServicesBar services={data?.services || []} />
             <ErrorDisplay error={error} />

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from 'next/navigation';
-import { User, ShoppingCart, Heart, Search, Menu, X, ChevronLeft, Smartphone, Home, Tv, Monitor, Gamepad2, Sparkles, Shirt, Dumbbell, Car } from "lucide-react";
+import { User, ShoppingCart, Heart, Search, Menu, X } from "lucide-react";
 import { AppProviders, useCart, useWishlist } from "@/contexts/Providers";
 
 const Navbar = () => {
@@ -305,74 +305,6 @@ const Navbar = () => {
     );
 };
 
-// Categories Menu Component
-const CategoriesMenu = () => {
-    const [isOpen, setIsOpen] = useState(false);
-    
-    const categories = [
-        { name: 'الأجهزة الإلكترونية', icon: <Smartphone size={18} className="text-blue-500" /> },
-        { name: 'المنزل والمطبخ', icon: <Home size={18} className="text-green-500" /> },
-        { name: 'الهواتف', icon: <Smartphone size={18} className="text-purple-500" /> },
-        { name: 'تلفزيون وصوت', icon: <Tv size={18} className="text-red-500" /> },
-        { name: 'الحاسوب والألعاب', icon: <Monitor size={18} className="text-indigo-500" /> },
-        { name: 'الجمال والصحة', icon: <Sparkles size={18} className="text-pink-500" /> },
-        { name: 'ملابس وإكسسوارات', icon: <Shirt size={18} className="text-orange-500" /> },
-        { name: 'الرياضة والألعاب', icon: <Gamepad2 size={18} className="text-cyan-500" /> },
-        { name: 'رياضة', icon: <Dumbbell size={18} className="text-emerald-500" /> },
-        { name: 'السيارات', icon: <Car size={18} className="text-gray-600" /> }
-    ];
-
-    return (
-        <div className="relative">
-            <button 
-                onClick={() => setIsOpen(!isOpen)}
-                className="bg-slate-700 hover:bg-slate-800 text-white px-6 py-3 rounded-lg flex items-center gap-3 transition-colors shadow-lg"
-            >
-                <Menu size={20} />
-                <span className="font-medium">جميع الفئات</span>
-            </button>
-            
-            {isOpen && (
-                <>
-                    <div 
-                        className="fixed inset-0 bg-black bg-opacity-50 z-40"
-                        onClick={() => setIsOpen(false)}
-                    ></div>
-                    
-                    <div className="absolute top-full right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-200 z-50 overflow-hidden">
-                        <div className="bg-slate-700 text-white p-4 flex items-center justify-between">
-                            <span className="font-bold text-lg">جميع الفئات</span>
-                            <button 
-                                onClick={() => setIsOpen(false)}
-                                className="p-1 hover:bg-slate-600 rounded transition-colors"
-                            >
-                                <X size={20} />
-                            </button>
-                        </div>
-                        
-                        <div className="max-h-96 overflow-y-auto">
-                            {categories.map((category, index) => (
-                                <a 
-                                    key={index}
-                                    href={`/category/${category.name}`}
-                                    className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0 group"
-                                    onClick={() => setIsOpen(false)}
-                                >
-                                    <div className="flex items-center gap-3">
-                                        {category.icon}
-                                        <span className="text-gray-700 group-hover:text-blue-600 transition-colors">{category.name}</span>
-                                    </div>
-                                    <ChevronLeft size={16} className="text-gray-400 group-hover:text-blue-600 transition-colors" />
-                                </a>
-                            ))}
-                        </div>
-                    </div>
-                </>
-            )}
-        </div>
-    );
-};
-
 const Footer = () => {
     return (
         <footer className="bg-white border-t border-gray-100 mt-20">
@@ -500,13 +432,6 @@ export default function PublicLayout({
         <AppProviders>
             <div className="min-h-screen flex flex-col">
                 <Navbar />
-                
-                {/* Categories Menu Section */}
-                <div className="bg-white border-b border-gray-100 py-4">
-                    <div className="container mx-auto px-4 sm:px-6 max-w-7xl flex justify-end">
-                        <CategoriesMenu />
-                    </div>
-                </div>
                 
                 <main className="flex-1">
                     {children}
