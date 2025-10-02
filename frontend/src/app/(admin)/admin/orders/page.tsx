@@ -507,7 +507,7 @@ const OrdersPage = ({ initialOrders, initialPagination, token }) => {
         setTimeout(() => setToast(prev => ({ ...prev, isVisible: false })), 5000);
     };
     
-    const fetchOrders = useCallback(async (page = pagination.current_page, perPage = pagination.per_page) => {
+    const fetchOrders = useCallback(async (page = 1, perPage = 10) => {
         try {
             const { data, pagination: newPagination } = await api.getOrders(token, page, perPage);
             setOrders(data);
@@ -516,7 +516,7 @@ const OrdersPage = ({ initialOrders, initialPagination, token }) => {
             console.error(error);
             showToast('فشل في جلب الطلبات', 'error');
         }
-    }, [token, pagination.current_page, pagination.per_page]);
+    }, [token]);
     
     const handleStatusUpdate = async (orderId: number, newStatus: Order['status'], notes?: string) => {
         try {
@@ -612,8 +612,8 @@ const OrdersPage = ({ initialOrders, initialPagination, token }) => {
     };
     
     useEffect(() => {
-        fetchOrders();
-    }, [fetchOrders]);
+        fetchOrders(pagination.current_page, pagination.per_page);
+    }, []);
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -708,7 +708,7 @@ const OrdersPage = ({ initialOrders, initialPagination, token }) => {
                             {filteredOrders.map((order) => {
                                 const status = getStatusInfo(order.status);
                                 return (
-                                <tr key={order.id} className="hover:bg-gray-50">
+                                <tr key={`order-${order.id}`} className="hover:bg-gray-50">
                                     <td className="px-4 lg:px-6 py-4 font-mono text-sm text-gray-700">#{order.id}</td>
                                     <td className="px-4 lg:px-6 py-4 font-mono text-sm text-gray-700">{order.order_number}</td>
                                     <td className="px-4 lg:px-6 py-4 font-semibold text-gray-800">{order.customer_name}</td>
@@ -785,7 +785,7 @@ const OrdersPage = ({ initialOrders, initialPagination, token }) => {
             <div className="block md:hidden space-y-4">
                 {filteredOrders.map((order) => (
                     <OrderCard 
-                        key={order.id}
+                        key={`order-card-${order.id}`}
                         order={order}
                         onViewDetails={handleViewDetails}
                         onUpdateStatus={openStatusModal}
