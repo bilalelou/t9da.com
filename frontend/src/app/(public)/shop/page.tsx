@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useCart, useWishlist } from '@/contexts/Providers'; // تأكد من أن المسار صحيح
+import { useCart, useWishlist } from '@/contexts/Providers';
 import { LoaderCircle, SlidersHorizontal, X, ChevronDown, ShoppingCart, CheckCircle, ChevronLeft, ChevronRight, Heart } from 'lucide-react';
 import * as api from '@/lib/api';
 
@@ -84,6 +84,7 @@ const ProductCard = React.memo(({ product }: { product: Product }) => {
     
     const isInCart = useMemo(() => cartItems.some(item => item.id === product.id), [cartItems, product.id]);
     const isWishlisted = isInWishlist(product.id);
+    const hasSale = product.originalPrice && product.originalPrice > product.price;
 
     const handleCartClick = (e: React.MouseEvent) => {
         e.preventDefault();
@@ -104,83 +105,69 @@ const ProductCard = React.memo(({ product }: { product: Product }) => {
     };
     
     return (
-        <div className="group relative bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 flex flex-col h-full">
+        <div className="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-gray-100">
             <a href={`/shop/${product.slug}`} className="block">
-                <div className="relative overflow-hidden h-80">
-                    <img src={product.thumbnail} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onError={(e) => { (e.target as HTMLImageElement).src = 'https://placehold.co/400x400/f0f0f0/cccccc?text=No+Image'; }} />
+                <div className="relative h-52 bg-gradient-to-br from-gray-50 to-gray-100">
+                    <img 
+                        src={product.thumbnail} 
+                        alt={product.name} 
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                        onError={(e) => { (e.target as HTMLImageElement).src = 'https://placehold.co/400x400/f0f0f0/cccccc?text=No+Image'; }} 
+                    />
                     
-                    {/* مؤشر الشحن المجاني */}
+                    {hasSale && (
+                        <div className="absolute top-3 right-3 bg-gradient-to-r from-red-500 to-red-600 text-white px-3 py-1.5 rounded-full text-xs font-semibold shadow-lg">
+                            خصم
+                        </div>
+                    )}
+                    
                     {product.has_free_shipping && (
-                        <div className="absolute top-3 right-3 bg-green-500 text-white px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1 shadow-md">
-                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/>
-                                <path d="M3 4a1 1 0 00-1 1v1a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.5h1.5a2.5 2.5 0 005 0V8a1 1 0 00-1-1h-4.5z"/>
-                            </svg>
+                        <div className="absolute top-3 right-3 bg-gradient-to-r from-green-500 to-green-600 text-white px-3 py-1.5 rounded-full text-xs font-semibold shadow-lg" style={{top: hasSale ? '3.5rem' : '0.75rem'}}>
                             شحن مجاني
                         </div>
                     )}
                     
-                    {/* أزرار الإجراءات */}
-                    <div className="absolute top-3 left-3 flex flex-col gap-2">
-                        <button
-                            onClick={handleWishlistClick}
-                            className={`w-9 h-9 rounded-full flex items-center justify-center shadow-md transition-all duration-300 ${
-                                isWishlisted 
-                                    ? 'bg-red-500 text-white hover:bg-red-600' 
-                                    : 'bg-white text-gray-600 hover:bg-red-50 hover:text-red-500'
-                            }`}
-                            title={isWishlisted ? "إزالة من المفضلة" : "إضافة للمفضلة"}
-                        >
-                            <Heart size={18} className={isWishlisted ? 'fill-current' : ''} />
-                        </button>
-                    </div>
-                    
-                    {isInCart && (
-                        <div className="absolute top-0 right-0 bg-blue-600 text-white text-xs font-semibold px-3 py-1 m-3 rounded-full flex items-center gap-1 z-10">
-                            <CheckCircle size={14} />
-                            <span>في السلة</span>
-                        </div>
-                    )}
+                    <button
+                        onClick={handleWishlistClick}
+                        className={`absolute top-3 left-3 w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-sm transition-all duration-300 shadow-lg ${
+                            isWishlisted 
+                                ? 'bg-red-500 text-white hover:bg-red-600 scale-110' 
+                                : 'bg-white/90 text-gray-600 hover:text-red-500 hover:bg-white'
+                        }`}
+                    >
+                        <Heart size={18} className={isWishlisted ? 'fill-current' : ''} />
+                    </button>
                 </div>
             </a>
-            <div className="p-5 flex flex-col flex-grow">
-                <div className="flex-grow mb-4">
-                     <a href={`/shop/${product.slug}`} className="block">
-                        <h3 className="text-lg font-semibold text-gray-900 truncate hover:text-blue-600 transition-colors">{product.name}</h3>
-                        <p className="text-sm text-gray-500 mt-1 line-clamp-2">{product.short_description}</p>
-                    </a>
-                </div>
-                <div className="pt-3 mt-auto flex items-end justify-between">
-                    {product.originalPrice ? (
-                        <div><span className="text-xl font-bold text-red-600">{formatCurrency(product.price)}</span><span className="text-sm text-gray-400 line-through mr-2">{formatCurrency(product.originalPrice)}</span></div>
-                    ) : (<span className="text-xl font-bold text-gray-800">{formatCurrency(product.price)}</span>)}
-
-                    <div className="flex gap-2">
-                        <button
-                            onClick={handleWishlistClick}
-                            className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
-                                isWishlisted 
-                                    ? 'bg-red-500 text-white hover:bg-red-600' 
-                                    : 'bg-gray-100 text-gray-600 hover:bg-red-50 hover:text-red-500'
-                            }`}
-                            title={isWishlisted ? "إزالة من المفضلة" : "إضافة للمفضلة"}
-                        >
-                            <Heart size={18} className={isWishlisted ? 'fill-current' : ''} />
-                        </button>
-                        
-                        <button 
-                            onClick={handleCartClick} 
-                            disabled={isInCart}
-                            aria-label={isInCart ? "المنتج في السلة" : "إضافة إلى السلة"}
-                            className={`w-10 h-10 text-white rounded-full flex items-center justify-center transition-all duration-300 transform 
-                                ${isInCart 
-                                    ? 'bg-gray-300 cursor-not-allowed' 
-                                    : 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50'
-                                }`}
-                        >
-                            {isInCart ? <CheckCircle size={20}/> : <ShoppingCart size={20}/>}
-                        </button>
+            
+            <div className="p-5">
+                <a href={`/shop/${product.slug}`}>
+                    <h3 className="font-semibold text-gray-900 text-sm mb-3 line-clamp-2 group-hover:text-blue-600 transition-colors">{product.name}</h3>
+                </a>
+                
+                <div className="flex items-end justify-between">
+                    <div className="flex flex-col">
+                        {hasSale ? (
+                            <>
+                                <span className="text-xl font-bold text-red-600">{formatCurrency(product.price)}</span>
+                                <span className="text-sm text-gray-400 line-through">{formatCurrency(product.originalPrice!)}</span>
+                            </>
+                        ) : (
+                            <span className="text-xl font-bold text-gray-900">{formatCurrency(product.price)}</span>
+                        )}
                     </div>
+                    
+                    <button
+                        onClick={handleCartClick}
+                        disabled={isInCart}
+                        className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg hover:scale-110 ${
+                            isInCart 
+                                ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
+                                : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white'
+                        }`}
+                    >
+                        {isInCart ? <CheckCircle size={20}/> : <ShoppingCart size={20}/>}
+                    </button>
                 </div>
             </div>
         </div>
@@ -263,149 +250,103 @@ const FilterSidebar: React.FC<{
     };
 
     const content = (
-       <div className="px-4">
-            <div className="flex justify-between items-center py-4 border-b border-gray-200 mb-2">
-                <h3 className="font-bold text-lg text-gray-900">الفلترة</h3>
-                <button onClick={clearAllFilters} className="text-sm text-red-500 hover:underline">مسح الكل</button>
+        <div className="p-6">
+            <div className="flex justify-between items-center mb-6">
+                <h3 className="font-bold text-lg text-gray-900">الفلاتر</h3>
+                <button onClick={clearAllFilters} className="text-sm text-blue-600 hover:text-blue-800 font-medium px-3 py-1 rounded-lg hover:bg-blue-50 transition-colors">مسح الكل</button>
             </div>
             
             <AccordionItem title="التصنيفات" defaultOpen={true}>
-                <ul className="space-y-3 max-h-60 overflow-y-auto pr-2">
+                <div className="space-y-2">
                     {categories.map((c: Category) => (
-                        <li key={c.id}>
-                            <label className="flex items-center cursor-pointer">
-                                <input 
-                                    type="checkbox" 
-                                    checked={localFilters.categories.includes(c.name)} 
-                                    onChange={() => handleCategoryChange(c.name)} 
-                                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                /> 
-                                <span className="mr-3 text-sm text-gray-700">{c.name}</span>
-                            </label>
-                        </li>
+                        <label key={c.id} className="flex items-center cursor-pointer">
+                            <input 
+                                type="checkbox" 
+                                checked={localFilters.categories.includes(c.name)} 
+                                onChange={() => handleCategoryChange(c.name)} 
+                                className="h-4 w-4 text-blue-600 rounded border-gray-300"
+                            /> 
+                            <span className="mr-2 text-sm text-gray-700">{c.name}</span>
+                        </label>
                     ))}
-                </ul>
+                </div>
             </AccordionItem>
             
             <AccordionItem title="الماركات">
-                <ul className="space-y-3 max-h-60 overflow-y-auto pr-2">
+                <div className="space-y-2">
                     {brands.map((b: Brand) => (
-                        <li key={b.id}>
-                            <label className="flex items-center cursor-pointer">
-                                <input 
-                                    type="checkbox" 
-                                    checked={localFilters.brands.includes(b.name)} 
-                                    onChange={() => handleBrandChange(b.name)} 
-                                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                /> 
-                                <span className="mr-3 text-sm text-gray-700">{b.name}</span>
-                            </label>
-                        </li>
+                        <label key={b.id} className="flex items-center cursor-pointer">
+                            <input 
+                                type="checkbox" 
+                                checked={localFilters.brands.includes(b.name)} 
+                                onChange={() => handleBrandChange(b.name)} 
+                                className="h-4 w-4 text-blue-600 rounded border-gray-300"
+                            /> 
+                            <span className="mr-2 text-sm text-gray-700">{b.name}</span>
+                        </label>
                     ))}
-                </ul>
+                </div>
             </AccordionItem>
             
             <AccordionItem title="الألوان">
-                <div className="grid grid-cols-3 gap-3 max-h-60 overflow-y-auto pr-2">
+                <div className="grid grid-cols-4 gap-2">
                     {colors.map((color: Color) => (
-                        <div key={color.id} className="flex flex-col items-center">
-                            <label className="flex flex-col items-center cursor-pointer">
-                                <input 
-                                    type="radio" 
-                                    name="color"
-                                    checked={localFilters.color === color.name} 
-                                    onChange={() => handleColorChange(color.name)} 
-                                    className="sr-only"
-                                /> 
-                                <div 
-                                    className={`w-8 h-8 rounded-full border-2 ${localFilters.color === color.name ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-300'}`} 
-                                    style={{ backgroundColor: color.hex_code }}
-                                ></div>
-                                <span className="text-xs text-gray-600 mt-1">{color.name}</span>
-                            </label>
-                        </div>
+                        <label key={color.id} className="flex flex-col items-center cursor-pointer">
+                            <input 
+                                type="radio" 
+                                name="color"
+                                checked={localFilters.color === color.name} 
+                                onChange={() => handleColorChange(color.name)} 
+                                className="sr-only"
+                            /> 
+                            <div 
+                                className={`w-6 h-6 rounded-full border-2 ${localFilters.color === color.name ? 'border-blue-500' : 'border-gray-300'}`} 
+                                style={{ backgroundColor: color.hex_code }}
+                            ></div>
+                            <span className="text-xs text-gray-600 mt-1">{color.name}</span>
+                        </label>
                     ))}
                 </div>
             </AccordionItem>
             
             <AccordionItem title="الأحجام">
-                <div className="grid grid-cols-4 gap-2 max-h-60 overflow-y-auto pr-2">
+                <div className="grid grid-cols-4 gap-2">
                     {sizes.map((size: Size) => (
-                        <div key={size.id}>
-                            <label className="flex items-center justify-center cursor-pointer">
-                                <input 
-                                    type="radio" 
-                                    name="size"
-                                    checked={localFilters.size === size.name} 
-                                    onChange={() => handleSizeChange(size.name)} 
-                                    className="sr-only"
-                                /> 
-                                <div 
-                                    className={`w-12 h-8 border-2 rounded-md flex items-center justify-center text-xs font-medium ${localFilters.size === size.name ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-300 text-gray-600 hover:border-gray-400'}`}
-                                >
-                                    {size.name}
-                                </div>
-                            </label>
-                        </div>
+                        <label key={size.id} className="cursor-pointer">
+                            <input 
+                                type="radio" 
+                                name="size"
+                                checked={localFilters.size === size.name} 
+                                onChange={() => handleSizeChange(size.name)} 
+                                className="sr-only"
+                            /> 
+                            <div className={`w-full h-8 border rounded flex items-center justify-center text-xs ${localFilters.size === size.name ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-300 text-gray-600'}`}>
+                                {size.name}
+                            </div>
+                        </label>
                     ))}
                 </div>
             </AccordionItem>
             
             <AccordionItem title="نطاق السعر">
-                <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-3">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">السعر الأدنى</label>
-                            <input
-                                type="number"
-                                placeholder="0"
-                                value={localFilters.min_price}
-                                onChange={(e) => setLocalFilters(prev => ({ ...prev, min_price: e.target.value }))}
-                                onBlur={(e) => handlePriceChange(e.target.value, localFilters.max_price)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">السعر الأقصى</label>
-                            <input
-                                type="number"
-                                placeholder="1000"
-                                value={localFilters.max_price}
-                                onChange={(e) => setLocalFilters(prev => ({ ...prev, max_price: e.target.value }))}
-                                onBlur={(e) => handlePriceChange(localFilters.min_price, e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
-                            />
-                        </div>
-                    </div>
-                    
-                    <div className="flex gap-2">
-                        <button
-                            onClick={() => handlePriceChange('0', '100')}
-                            className="flex-1 py-2 px-3 text-xs border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-                        >
-                            أقل من 100 درهم
-                        </button>
-                        <button
-                            onClick={() => handlePriceChange('100', '500')}
-                            className="flex-1 py-2 px-3 text-xs border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-                        >
-                            100 - 500 درهم
-                        </button>
-                    </div>
-                    
-                    <div className="flex gap-2">
-                        <button
-                            onClick={() => handlePriceChange('500', '1000')}
-                            className="flex-1 py-2 px-3 text-xs border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-                        >
-                            500 - 1000 درهم
-                        </button>
-                        <button
-                            onClick={() => handlePriceChange('1000', '')}
-                            className="flex-1 py-2 px-3 text-xs border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-                        >
-                            أكثر من 1000 درهم
-                        </button>
+                <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-2">
+                        <input
+                            type="number"
+                            placeholder="السعر الأدنى"
+                            value={localFilters.min_price}
+                            onChange={(e) => setLocalFilters(prev => ({ ...prev, min_price: e.target.value }))}
+                            onBlur={(e) => handlePriceChange(e.target.value, localFilters.max_price)}
+                            className="w-full px-2 py-1 border rounded text-sm"
+                        />
+                        <input
+                            type="number"
+                            placeholder="السعر الأقصى"
+                            value={localFilters.max_price}
+                            onChange={(e) => setLocalFilters(prev => ({ ...prev, max_price: e.target.value }))}
+                            onBlur={(e) => handlePriceChange(localFilters.min_price, e.target.value)}
+                            className="w-full px-2 py-1 border rounded text-sm"
+                        />
                     </div>
                 </div>
             </AccordionItem>
@@ -414,11 +355,14 @@ const FilterSidebar: React.FC<{
     
     return (
         <>
-            <aside className={`fixed top-0 right-0 h-full w-full max-w-xs bg-white shadow-xl z-[100] transform transition-transform lg:max-w-none lg:w-72 lg:flex-shrink-0 lg:h-auto lg:shadow-none lg:border lg:rounded-2xl lg:bg-white lg:sticky lg:top-24 ${isOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}`}>
-                <div className="flex justify-between items-center p-4 border-b lg:hidden"><h3 className="font-bold">الفلترة</h3><button onClick={onClose}><X size={24}/></button></div>
+            <aside className={`fixed top-0 right-0 h-full w-full max-w-xs bg-white shadow-xl z-[100] transform transition-transform lg:max-w-none lg:w-72 lg:flex-shrink-0 lg:h-auto lg:shadow-sm lg:border lg:border-gray-200 lg:rounded-xl lg:bg-white lg:sticky lg:top-4 ${isOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}`}>
+                <div className="flex justify-between items-center p-4 border-b lg:hidden">
+                    <h3 className="font-semibold">الفلاتر</h3>
+                    <button onClick={onClose}><X size={20}/></button>
+                </div>
                 <div className="overflow-y-auto h-[calc(100vh-60px)] lg:h-auto">{content}</div>
             </aside>
-            {isOpen && <div onClick={onClose} className="fixed inset-0 bg-black/60 z-[99] lg:hidden"></div>}
+            {isOpen && <div onClick={onClose} className="fixed inset-0 bg-black/50 z-[99] lg:hidden"></div>}
         </>
     );
 };
@@ -426,16 +370,29 @@ const FilterSidebar: React.FC<{
 const Pagination = ({ pagination, onPageChange }: { pagination: PaginationInfo, onPageChange: (page: number) => void }) => {
     if (!pagination || pagination.last_page <= 1) return null;
     return (
-        <div className="flex items-center justify-center gap-2 mt-12">
-            <button onClick={() => onPageChange(pagination.current_page - 1)} disabled={pagination.current_page === 1} className="p-2 border rounded-md disabled:opacity-50 hover:bg-gray-100 transition-colors"><ChevronRight size={18}/></button>
-            <span className="text-sm text-gray-700">صفحة {pagination.current_page} من {pagination.last_page}</span>
-            <button onClick={() => onPageChange(pagination.current_page + 1)} disabled={pagination.current_page === pagination.last_page} className="p-2 border rounded-md disabled:opacity-50 hover:bg-gray-100 transition-colors"><ChevronLeft size={18}/></button>
+        <div className="flex items-center justify-center gap-4 mt-16">
+            <button 
+                onClick={() => onPageChange(pagination.current_page - 1)} 
+                disabled={pagination.current_page === 1} 
+                className="p-3 border border-gray-200 rounded-xl disabled:opacity-50 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 disabled:cursor-not-allowed"
+            >
+                <ChevronRight size={20}/>
+            </button>
+            <div className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-xl">
+                <span className="text-sm font-medium text-gray-700">صفحة {pagination.current_page} من {pagination.last_page}</span>
+            </div>
+            <button 
+                onClick={() => onPageChange(pagination.current_page + 1)} 
+                disabled={pagination.current_page === pagination.last_page} 
+                className="p-3 border border-gray-200 rounded-xl disabled:opacity-50 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 disabled:cursor-not-allowed"
+            >
+                <ChevronLeft size={20}/>
+            </button>
         </div>
     );
 };
 
 const ActiveFilters = ({ filters, setFilters, categories, brands }: any) => {
-    // تحويل arrays إلى arrays إذا لم تكن كذلك
     const categoriesArray = Array.isArray(filters.categories) ? filters.categories : (filters.categories || '').split(',').filter(Boolean);
     const brandsArray = Array.isArray(filters.brands) ? filters.brands : (filters.brands || '').split(',').filter(Boolean);
     
@@ -490,7 +447,6 @@ export default function ShopPage() {
                 api.getSizes()
             ]);
             
-            // تحويل بيانات المنتجات إلى الشكل المطلوب
             const transformedData = {
                 ...data,
                 products: data.products.map(transformProduct)
@@ -525,7 +481,7 @@ export default function ShopPage() {
     const handlePageChange = (newPage: number) => {
         if(shopData && newPage > 0 && newPage <= shopData.pagination.last_page) {
             setFilters(prev => ({...prev, page: newPage}));
-            window.scrollTo(0, 0); // الانتقال لأعلى الصفحة عند تغيير الصفحة
+            window.scrollTo(0, 0);
         }
     };
 
@@ -535,11 +491,12 @@ export default function ShopPage() {
     const { products, categories, brands, pagination } = shopData;
 
     return (
-        <div className="bg-gray-50">
-            <div className="container mx-auto px-4 sm:px-6 py-12">
-                <div className="text-center mb-12">
-                    <h1 className="text-4xl lg:text-5xl font-extrabold text-gray-900 tracking-tight">اكتشف مجموعتنا</h1>
-                    <p className="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">تصفح أحدث المنتجات المختارة بعناية لتناسب جميع احتياجاتك.</p>
+        <div className="bg-gradient-to-br from-gray-50 to-white min-h-screen">
+            <div className="container mx-auto px-4 py-8">
+                <div className="mb-10 text-center">
+                    <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-3">المتجر</h1>
+                    <p className="text-gray-600 text-lg">اكتشف مجموعة واسعة من المنتجات المميزة</p>
+                    <div className="w-24 h-1 bg-gradient-to-r from-blue-500 to-purple-500 mx-auto mt-4 rounded-full"></div>
                 </div>
                 
                 <div className="flex flex-col lg:flex-row-reverse items-start gap-8">
@@ -557,15 +514,18 @@ export default function ShopPage() {
                     />
                     
                     <main className="flex-grow w-full">
-                        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 p-4 bg-white rounded-2xl border border-gray-200">
-                            <button onClick={() => setIsFilterOpen(true)} className="flex items-center gap-2 text-gray-700 font-semibold lg:hidden mb-4 sm:mb-0 w-full sm:w-auto justify-center py-2 px-4 border rounded-lg hover:bg-gray-100 transition-colors">
+                        <div className="flex flex-col sm:flex-row justify-between items-center mb-8 p-6 bg-white rounded-xl shadow-sm border border-gray-100">
+                            <button onClick={() => setIsFilterOpen(true)} className="flex items-center gap-2 text-gray-700 lg:hidden mb-4 sm:mb-0 py-3 px-5 border border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all duration-200">
                                 <SlidersHorizontal size={20} />
-                                <span>عرض الفلاتر</span>
+                                <span className="font-medium">الفلاتر</span>
                             </button>
                             
-                            <p className="text-gray-600 text-sm hidden sm:block">عرض {products.length} من {pagination.total} منتجات</p>
+                            <div className="flex items-center gap-2 text-gray-600 text-sm hidden sm:flex">
+                                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                <span className="font-medium">عرض {products.length} من {pagination.total} منتجات</span>
+                            </div>
                             
-                            <select value={filters.sort} onChange={(e) => setFilters(prev => ({...prev, sort: e.target.value, page: 1}))} className="border-gray-300 rounded-lg p-2 text-sm focus:ring-blue-500 focus:border-blue-500 w-full mt-2 sm:mt-0 sm:w-auto">
+                            <select value={filters.sort} onChange={(e) => setFilters(prev => ({...prev, sort: e.target.value, page: 1}))} className="border border-gray-200 rounded-xl p-3 text-sm w-full mt-2 sm:mt-0 sm:w-auto focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
                                 <option value="latest">الأحدث</option>
                                 <option value="price-asc">السعر: من الأقل للأعلى</option>
                                 <option value="price-desc">السعر: من الأعلى للأقل</option>
@@ -578,7 +538,7 @@ export default function ShopPage() {
                             <div className="text-center py-20"><LoaderCircle className="animate-spin mx-auto text-blue-600" size={32}/></div> : 
                             products.length > 0 ? (
                                 <>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8">
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
                                         {products.map(product => (<ProductCard key={product.id} product={product} />))}
                                     </div>
                                     <Pagination pagination={pagination} onPageChange={handlePageChange} />
