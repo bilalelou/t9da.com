@@ -4,21 +4,54 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Mail, Lock, LogIn, Eye, EyeOff, LoaderCircle } from 'lucide-react';
+import ErrorAlert from '@/components/ui/ErrorAlert';
+import { parseLoginError, getErrorSuggestions, LoginError } from '@/utils/loginErrorMessages';
 
 export default function LoginPage() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
+    const [error, setError] = useState<LoginError | null>(null);
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setError('');
+        setError(null);
         setLoading(true);
 
         if (!email || !password) {
-            setError('الرجاء إدخال البريد الإلكتروني وكلمة المرور.');
+            let errorMessage = '';
+            let errorType: 'email' | 'password' | 'general' = 'general';
+            
+            if (!email && !password) {
+                errorMessage = 'الرجاء إدخال البريد الإلكتروني وكلمة المرور.';
+            } else if (!email) {
+                errorMessage = 'الرجاء إدخال البريد الإلكتروني.';
+                errorType = 'email';
+            } else {
+                errorMessage = 'الرجاء إدخال كلمة المرور.';
+                errorType = 'password';
+            }
+            
+            setError({
+                type: 'validation_error',
+                message: errorMessage,
+                suggestion: 'تأكد من ملء جميع الحقول المطلوبة',
+                field: errorType
+            });
+            setLoading(false);
+            return;
+        }
+        
+        // التحقق من صحة البريد الإلكتروني
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            setError({
+                type: 'validation_error',
+                message: 'الرجاء إدخال بريد إلكتروني صحيح.',
+                suggestion: 'تأكد من كتابة البريد الإلكتروني بالشكل الصحيح (example@domain.com)',
+                field: 'email'
+            });
             setLoading(false);
             return;
         }
@@ -64,12 +97,18 @@ export default function LoginPage() {
                 }
 
             } else {
-                const errorMessage = data.message || "البريد الإلكتروني أو كلمة المرور غير صحيحة.";
-                setError(errorMessage);
+                // معالجة الأخطاء باستخدام النظام المحسن
+                const loginError = parseLoginError(data);
+                setError(loginError);
             }
         } catch (err) {
             console.error('Connection error:', err);
-            setError("حدث خطأ في الاتصال بالخادم. يرجى التأكد من تشغيله.");
+            setError({
+                type: 'connection_error',
+                message: 'حدث خطأ في الاتصال بالخادم',
+                suggestion: 'تحقق من اتصال الإنترنت والمحاولة مرة أخرى',
+                field: 'network'
+            });
         } finally {
             setLoading(false);
         }
@@ -105,9 +144,12 @@ export default function LoginPage() {
                     </div>
 
                     {error && (
-                        <div className="bg-red-50 text-red-700 text-sm p-4 rounded-lg border border-red-200">
-                            {error}
-                        </div>
+                        <ErrorAlert
+                            message={error.message}
+                            type={error.field as 'email' | 'password' | 'account' | 'network' | 'general'}
+                            suggestions={getErrorSuggestions(error.type)}
+                            onClose={() => setError(null)}
+                        />
                     )}
 
                     <form className="space-y-5" onSubmit={handleSubmit}>

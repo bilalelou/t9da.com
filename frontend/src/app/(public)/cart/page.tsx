@@ -80,9 +80,6 @@ const availableCoupons: Record<string, {
     type: string; 
     description: string 
 }> = {
-    'WELCOME10': { discount: 10, minAmount: 100, type: 'percentage', description: 'خصم 10% للعملاء الجدد' },
-    'SAVE50': { discount: 50, minAmount: 300, type: 'fixed', description: 'خصم 50 درهم على الطلبات أكثر من 300 درهم' },
-    'SUMMER20': { discount: 20, minAmount: 200, type: 'percentage', description: 'خصم 20% لفصل الصيف' },
     'FREESHIP': { discount: 30, minAmount: 0, type: 'shipping', description: 'شحن مجاني' },
     'VIP15': { discount: 15, minAmount: 500, type: 'percentage', description: 'خصم 15% للعملاء المميزين' }
 };

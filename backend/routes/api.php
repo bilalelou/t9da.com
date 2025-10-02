@@ -26,6 +26,7 @@ use App\Http\Controllers\ProductReviewController;
 use App\Http\Controllers\Api\CityController;
 
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\SettingController;
 
 Route::post('/login', [LoginController::class, 'login']);
 Route::post('/register', [RegisterController::class, 'store']);
@@ -232,5 +233,14 @@ Route::middleware('auth:sanctum')->group(function () {
     // Free Shipping Routes
     Route::get('/products/free-shipping', [ProductController::class, 'freeShippingProducts']);
     Route::post('/products/{product}/toggle-free-shipping', [ProductController::class, 'toggleFreeShipping']);
+
+    // Settings Routes
+    Route::get('/settings', [SettingController::class, 'index']);
+    Route::post('/settings', [SettingController::class, 'store']);
+    Route::get('/settings/{key}', [SettingController::class, 'show']);
+    Route::put('/settings/{key}', [SettingController::class, 'update']);
+    Route::delete('/settings/{key}', [SettingController::class, 'destroy']);
+    Route::get('/settings/defaults/all', [SettingController::class, 'getDefaults']);
+    Route::post('/settings/initialize/defaults', [SettingController::class, 'initializeDefaults']);
 });
 
