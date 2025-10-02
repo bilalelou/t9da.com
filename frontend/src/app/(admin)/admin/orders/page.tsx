@@ -10,8 +10,8 @@ interface Order {
     id: number;
     order_number: string;
     customer_name: string;
-    total_price: number;
-    status: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+    total_amount: number;
+    status: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'completed';
     created_at: string;
     name?: string;
     phone?: string;
@@ -30,7 +30,7 @@ interface PaginationInfo {
 // --- API Helper ---
 const api = {
     getOrders: async (token: string, page: number, perPage: number): Promise<{ data: Order[], pagination: PaginationInfo }> => {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/orders?page=${page}&per_page=${perPage}`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders?page=${page}&per_page=${perPage}`, {
             headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
         });
         if (!response.ok) throw new Error('فشل في جلب بيانات الطلبات.');
@@ -39,7 +39,7 @@ const api = {
     },
     
     updateOrderStatus: async (token: string, orderId: number, status: Order['status'], notes?: string): Promise<Order> => {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/orders/${orderId}/status`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders/${orderId}/status`, {
             method: 'PUT',
             headers: { 
                 'Authorization': `Bearer ${token}`, 
@@ -110,6 +110,7 @@ const OrderCard = ({ order, onViewDetails, onUpdateStatus, onPrintInvoice, onSen
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div className="flex-1">
+                    <p className="text-xs font-mono text-gray-500">ID: #{order.id}</p>
                     <p className="text-sm font-mono text-gray-600">#{order.order_number}</p>
                     <p className="font-semibold text-gray-800 text-sm">{order.customer_name}</p>
                 </div>
@@ -170,7 +171,7 @@ const OrderCard = ({ order, onViewDetails, onUpdateStatus, onPrintInvoice, onSen
             {/* Price */}
             <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">المبلغ الإجمالي:</span>
-                <span className="font-bold text-gray-800">{formatCurrency(order.total_price)}</span>
+                <span className="font-bold text-gray-800">{formatCurrency(order.total_amount)}</span>
             </div>
 
             {/* Action Button */}
@@ -338,6 +339,10 @@ const OrderDetailsModal = ({ isOpen, onClose, order }) => {
                     <h4 className="text-sm font-semibold text-gray-800 mb-3">معلومات الطلب</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 text-sm">
                         <div>
+                            <span className="text-gray-600">ID:</span>
+                            <span className="font-medium mr-2 block md:inline">#{order.id}</span>
+                        </div>
+                        <div>
                             <span className="text-gray-600">رقم الطلب:</span>
                             <span className="font-medium mr-2 block md:inline">{order.order_number}</span>
                         </div>
@@ -353,7 +358,7 @@ const OrderDetailsModal = ({ isOpen, onClose, order }) => {
                         </div>
                         <div>
                             <span className="text-gray-600">المبلغ الإجمالي:</span>
-                            <span className="font-bold text-green-600 mr-2 block md:inline">{formatCurrency(order.total_price)}</span>
+                            <span className="font-bold text-green-600 mr-2 block md:inline">{formatCurrency(order.total_amount)}</span>
                         </div>
                     </div>
                 </div>
@@ -575,7 +580,7 @@ const OrdersPage = ({ initialOrders, initialPagination, token }) => {
                                 <p><strong>العميل:</strong> ${order.customer_name}</p>
                                 <p><strong>تاريخ الطلب:</strong> ${formatDate(order.created_at)}</p>
                                 <p><strong>الحالة:</strong> ${getStatusInfo(order.status).text}</p>
-                                <p><strong>المبلغ الإجمالي:</strong> ${formatCurrency(order.total_price)}</p>
+                                <p><strong>المبلغ الإجمالي:</strong> ${formatCurrency(order.total_amount)}</p>
                             </div>
                         </div>
                         <script>window.print(); window.close();</script>
@@ -690,6 +695,7 @@ const OrdersPage = ({ initialOrders, initialPagination, token }) => {
                     <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gray-50">
                             <tr>
+                                <th className="px-4 lg:px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">ID</th>
                                 <th className="px-4 lg:px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">رقم الطلب</th>
                                 <th className="px-4 lg:px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">العميل</th>
                                 <th className="px-4 lg:px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">التاريخ</th>
@@ -703,10 +709,11 @@ const OrdersPage = ({ initialOrders, initialPagination, token }) => {
                                 const status = getStatusInfo(order.status);
                                 return (
                                 <tr key={order.id} className="hover:bg-gray-50">
+                                    <td className="px-4 lg:px-6 py-4 font-mono text-sm text-gray-700">#{order.id}</td>
                                     <td className="px-4 lg:px-6 py-4 font-mono text-sm text-gray-700">{order.order_number}</td>
                                     <td className="px-4 lg:px-6 py-4 font-semibold text-gray-800">{order.customer_name}</td>
                                     <td className="px-4 lg:px-6 py-4 text-sm text-gray-600">{formatDate(order.created_at)}</td>
-                                    <td className="px-4 lg:px-6 py-4 font-semibold text-gray-800">{formatCurrency(order.total_price)}</td>
+                                    <td className="px-4 lg:px-6 py-4 font-semibold text-gray-800">{formatCurrency(order.total_amount)}</td>
                                     <td className="px-4 lg:px-6 py-4 text-center"><span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${status.color}`}>{status.icon} {status.text}</span></td>
                                     <td className="px-4 lg:px-6 py-4">
                                         <div className="flex items-center space-x-2 space-x-reverse">

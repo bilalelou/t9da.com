@@ -21,12 +21,18 @@ class OrderController extends Controller
     /**
      * عرض قائمة بجميع الطلبات.
      */
-    public function index()
+    public function index(Request $request)
     {
         try {
+            $perPage = $request->get('per_page', 20); // عدد العناصر لكل صفحة
+            $page = $request->get('page', 1); // رقم الصفحة
+            
+            // تحديد الحد الأقصى لعدد العناصر لكل صفحة
+            $perPage = min($perPage, 100);
+            
             $orders = Order::with('user:id,name') // جلب بيانات المستخدم (العميل) مع الطلب
                 ->latest()
-                ->paginate(20);
+                ->paginate($perPage, ['*'], 'page', $page);
 
             // تنسيق البيانات لتناسب الواجهة الأمامية
             $formattedOrders = $orders->getCollection()->transform(function ($order) {
@@ -37,9 +43,15 @@ class OrderController extends Controller
                     'id' => $order->id,
                     'order_number' => $order->order_number ?? "#" . $order->id, // استخدم رقم الطلب إن وجد
                     'customer_name' => $order->user->name ?? 'عميل غير مسجل',
-                    'total_price' => $order->total_price ?? 0, // تأكد من وجود هذا الحقل
+                    'total_amount' => (float)($order->total_amount ?? $order->total ?? 0), // استخدم total_amount أو total
                     'status' => $status, // استخدم الحالة المحولة
                     'created_at' => $order->created_at,
+                    // إضافة معلومات إضافية للعرض التفصيلي
+                    'name' => $order->name,
+                    'phone' => $order->phone,
+                    'address' => $order->address,
+                    'city' => $order->city,
+                    'notes' => $order->notes,
                 ];
             });
 
@@ -50,6 +62,7 @@ class OrderController extends Controller
                     'total' => $orders->total(),
                     'current_page' => $orders->currentPage(),
                     'last_page' => $orders->lastPage(),
+                    'per_page' => $orders->perPage(),
                 ]
             ]);
         } catch (Exception $e) {
