@@ -725,7 +725,7 @@ class ProductController extends Controller
             $totalProducts = Product::count();
             Log::info("📊 إجمالي المنتجات في قاعدة البيانات: {$totalProducts}");
             
-            $products = Product::where('is_featured', true)
+            $products = Product::where('featured', true)
                 ->orWhere('sale_price', '>', 0)
                 ->with(['category', 'brand'])
                 ->limit($limit)
