@@ -217,4 +217,29 @@ class CityController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * جلب تكاليف الشحن للمدن النشطة
+     */
+    public function getShippingCosts(): JsonResponse
+    {
+        try {
+            $cities = City::active()->get(['name', 'price']);
+            
+            $shippingCosts = $cities->pluck('price', 'name')->toArray();
+            $shippingCosts['default'] = 40; // قيمة افتراضية
+            
+            return response()->json([
+                'success' => true,
+                'data' => $shippingCosts,
+                'cities' => $cities->pluck('name')->toArray()
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'فشل في جلب تكاليف الشحن',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 }

@@ -22,22 +22,9 @@ import {
 import Link from 'next/link';
 
 // تنسيق العملة
-const formatCurrency = (price) => new Intl.NumberFormat('ar-MA', { style: 'currency', currency: 'MAD' }).format(price);
+const formatCurrency = (price) => new Intl.NumberFormat('ar-MA', { style: 'currency', currency: 'MAD' }).format(price).replace('MAD', 'د.م.');
 
-// بيانات المدن وتكاليف الشحن
-const shippingCosts = {
-    'الدار البيضاء': 30,
-    'الرباط': 35,
-    'مراكش': 45,
-    'أكادير': 50,
-    'طنجة': 40,
-    'فاس': 40,
-    'مكناس': 40,
-    'وجدة': 55,
-    'default': 40,
-};
 
-const cities = Object.keys(shippingCosts).filter(c => c !== 'default');
 
 const paymentMethods = [
     {
@@ -69,6 +56,30 @@ export default function CheckoutPage() {
 
     // حالات الصفحة
     const [currentStep, setCurrentStep] = useState(1);
+    
+    // جلب تكاليف الشحن من API
+    useEffect(() => {
+        const fetchShippingCosts = async () => {
+            try {
+                const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+                const response = await fetch(`${API_BASE_URL}/shipping-costs`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    setShippingCosts(result.data);
+                    setCities(result.cities);
+                    console.log('✅ تم جلب تكاليف الشحن:', result.data);
+                    console.log('✅ تم جلب المدن:', result.cities);
+                } else {
+                    console.error('❌ فشل في جلب تكاليف الشحن:', result.message);
+                }
+            } catch (error) {
+                console.error('❌ خطأ في جلب تكاليف الشحن:', error);
+            }
+        };
+        
+        fetchShippingCosts();
+    }, []);
     const [isLoading, setIsLoading] = useState(false);
     const [errors, setErrors] = useState({});
 
@@ -89,6 +100,10 @@ export default function CheckoutPage() {
     // كود الخصم
     const [couponCode, setCouponCode] = useState('');
     const [appliedCoupon, setAppliedCoupon] = useState(null);
+    
+    // بيانات المدن وتكاليف الشحن
+    const [shippingCosts, setShippingCosts] = useState({});
+    const [cities, setCities] = useState([]);
 
     // التحقق من وجود منتجات في السلة
     useEffect(() => {

@@ -219,11 +219,11 @@ const ProductCard: React.FC<ProductCardProps> = ({
         {/* Price */}
         <div className="flex items-center space-x-2 space-x-reverse mb-3">
           <span className="text-lg font-bold text-blue-600">
-            {product.price.toLocaleString()} ر.س
+            {product.price.toLocaleString()} د.م.
           </span>
           {product.originalPrice && (
             <span className="text-sm text-gray-500 line-through">
-              {product.originalPrice.toLocaleString()} ر.س
+              {product.originalPrice.toLocaleString()} د.م.
             </span>
           )}
         </div>

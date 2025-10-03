@@ -22,30 +22,18 @@ import {
     LogIn
 } from 'lucide-react';
 import Link from 'next/link';
+import CheckoutPaymentMethods from '@/components/CheckoutPaymentMethods';
 
 // تنسيق العملة
 const formatCurrency = (price: number) => {
     try {
-        return new Intl.NumberFormat('ar-MA', { style: 'currency', currency: 'MAD' }).format(price);
+        return new Intl.NumberFormat('ar-MA', { style: 'currency', currency: 'MAD' }).format(price).replace('MAD', 'د.م.');
     } catch {
-        return `${price} درهم`;
+        return `${price} د.م.`;
     }
 };
 
-// بيانات المدن وتكاليف الشحن
-const shippingCosts: Record<string, number> = {
-    'الدار البيضاء': 30,
-    'الرباط': 35,
-    'مراكش': 45,
-    'أكادير': 50,
-    'طنجة': 40,
-    'فاس': 40,
-    'مكناس': 40,
-    'وجدة': 55,
-    'default': 40,
-};
 
-const cities = Object.keys(shippingCosts).filter(c => c !== 'default');
 
 // واجهات TypeScript
 interface ShippingAddress {
@@ -58,27 +46,7 @@ interface ShippingAddress {
     notes?: string;
 }
 
-interface PaymentMethod {
-    id: string;
-    name: string;
-    description: string;
-    icon: React.ReactElement;
-}
 
-const paymentMethods: PaymentMethod[] = [
-    {
-        id: 'cod',
-        name: 'الدفع عند الاستلام',
-        description: 'ادفع عند استلام الطلب',
-        icon: <Truck className="w-5 h-5" />
-    },
-    {
-        id: 'card',
-        name: 'بطاقة ائتمانية',
-        description: 'Visa, Mastercard',
-        icon: <CreditCard className="w-5 h-5" />
-    }
-];
 
 export default function CheckoutPage() {
     const { cartItems, clearCart, updateQuantity, removeFromCart, subtotal } = useCart();
@@ -120,6 +88,10 @@ export default function CheckoutPage() {
     // كود الخصم
     const [couponCode, setCouponCode] = useState('');
     const [appliedCoupon, setAppliedCoupon] = useState<{code: string, discount: number} | null>(null);
+    
+    // بيانات المدن وتكاليف الشحن
+    const [shippingCosts, setShippingCosts] = useState<Record<string, number>>({});
+    const [cities, setCities] = useState<string[]>([]);
 
     // التحقق من وجود منتجات في السلة
     useEffect(() => {
@@ -127,6 +99,30 @@ export default function CheckoutPage() {
             router.push('/cart');
         }
     }, [cartItems, router]);
+
+    // جلب تكاليف الشحن من API
+    useEffect(() => {
+        const fetchShippingCosts = async () => {
+            try {
+                const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+                const response = await fetch(`${API_BASE_URL}/shipping-costs`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    setShippingCosts(result.data);
+                    setCities(result.cities);
+                    console.log('✅ تم جلب تكاليف الشحن:', result.data);
+                    console.log('✅ تم جلب المدن:', result.cities);
+                } else {
+                    console.error('❌ فشل في جلب تكاليف الشحن:', result.message);
+                }
+            } catch (error) {
+                console.error('❌ خطأ في جلب تكاليف الشحن:', error);
+            }
+        };
+        
+        fetchShippingCosts();
+    }, []);
 
     // جلب بيانات المستخدم المسجل دخوله
     useEffect(() => {
@@ -729,20 +725,36 @@ export default function CheckoutPage() {
                         )}
                         
                         {currentStep === 2 && (
-                            <PaymentMethodStep 
-                                selectedPaymentMethod={selectedPaymentMethod}
-                                setSelectedPaymentMethod={setSelectedPaymentMethod}
-                                paymentMethods={paymentMethods}
-                                onNext={nextStep}
-                                onBack={() => setCurrentStep(1)}
-                            />
+                            <div className="space-y-6">
+                                <CheckoutPaymentMethods
+                                    selectedMethod={selectedPaymentMethod}
+                                    onMethodSelect={setSelectedPaymentMethod}
+                                    orderTotal={total}
+                                    currency="MAD"
+                                />
+                                
+                                <div className="flex justify-between">
+                                    <button
+                                        onClick={() => setCurrentStep(1)}
+                                        className="border border-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+                                    >
+                                        العودة
+                                    </button>
+                                    <button
+                                        onClick={nextStep}
+                                        disabled={!selectedPaymentMethod}
+                                        className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        مراجعة الطلب
+                                    </button>
+                                </div>
+                            </div>
                         )}
                         
                         {currentStep === 3 && (
                             <OrderReviewStep 
                                 shippingAddress={shippingAddress}
                                 selectedPaymentMethod={selectedPaymentMethod}
-                                paymentMethods={paymentMethods}
                                 onBack={() => setCurrentStep(2)}
                                 onComplete={completeOrder}
                                 isLoading={isLoading}
@@ -944,75 +956,10 @@ const ShippingAddressStep: React.FC<{
     </div>
 );
 
-// مكون خطوة طريقة الدفع
-const PaymentMethodStep = ({ selectedPaymentMethod, setSelectedPaymentMethod, paymentMethods, onNext, onBack }) => (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h2 className="text-lg font-medium text-gray-900 mb-6">طريقة الدفع</h2>
-        
-        <div className="space-y-4">
-            {paymentMethods.map((method) => (
-                <div
-                    key={method.id}
-                    className={`border rounded-lg p-4 cursor-pointer transition-colors ${
-                        selectedPaymentMethod === method.id
-                            ? 'border-blue-500 bg-blue-50'
-                            : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                    onClick={() => setSelectedPaymentMethod(method.id)}
-                >
-                    <div className="flex items-center">
-                        <input
-                            type="radio"
-                            checked={selectedPaymentMethod === method.id}
-                            onChange={() => setSelectedPaymentMethod(method.id)}
-                            className="h-4 w-4 text-blue-600 focus:ring-blue-500"
-                        />
-                        <div className="mr-3 flex items-center">
-                            {method.icon}
-                            <div className="mr-2">
-                                <div className="text-sm font-medium text-gray-900">{method.name}</div>
-                                <div className="text-sm text-gray-500">{method.description}</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            ))}
-        </div>
 
-        {selectedPaymentMethod === 'cod' && (
-            <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <div className="flex">
-                    <AlertTriangle className="h-5 w-5 text-yellow-400" />
-                    <div className="mr-3">
-                        <h3 className="text-sm font-medium text-yellow-800">الدفع عند الاستلام</h3>
-                        <p className="mt-1 text-sm text-yellow-700">
-                            ستدفع قيمة الطلب نقداً عند استلامه من المندوب. تأكد من توفر المبلغ المطلوب.
-                        </p>
-                    </div>
-                </div>
-            </div>
-        )}
-
-        <div className="mt-6 flex justify-between">
-            <button
-                onClick={onBack}
-                className="border border-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-                العودة
-            </button>
-            <button
-                onClick={onNext}
-                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-            >
-                مراجعة الطلب
-            </button>
-        </div>
-    </div>
-);
 
 // مكون خطوة مراجعة الطلب
-const OrderReviewStep = ({ shippingAddress, selectedPaymentMethod, paymentMethods, onBack, onComplete, isLoading }) => {
-    const selectedPayment = paymentMethods.find(p => p.id === selectedPaymentMethod);
+const OrderReviewStep = ({ shippingAddress, selectedPaymentMethod, onBack, onComplete, isLoading }) => {
     
     return (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -1038,12 +985,8 @@ const OrderReviewStep = ({ shippingAddress, selectedPaymentMethod, paymentMethod
             {/* طريقة الدفع */}
             <div className="mb-6">
                 <h3 className="text-md font-medium text-gray-900 mb-3">طريقة الدفع</h3>
-                <div className="bg-gray-50 rounded-lg p-4 flex items-center">
-                    {selectedPayment?.icon}
-                    <div className="mr-2">
-                        <p className="font-medium">{selectedPayment?.name}</p>
-                        <p className="text-sm text-gray-600">{selectedPayment?.description}</p>
-                    </div>
+                <div className="bg-gray-50 rounded-lg p-4">
+                    <p className="font-medium">طريقة الدفع المحددة: {selectedPaymentMethod}</p>
                 </div>
             </div>
 
