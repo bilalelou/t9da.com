@@ -151,6 +151,7 @@ Route::post('/orders', [OrderController::class, 'store'])->middleware('auth:sanc
 
 // Public Cities Routes (للعرض العام)
 Route::get('/cities/active', [CityController::class, 'active']);
+Route::get('/shipping-costs', [CityController::class, 'getShippingCosts']);
 
 // Public Free Shipping Routes
 Route::get('/products/free-shipping/public', [ProductController::class, 'freeShippingProducts']);

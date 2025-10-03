@@ -2,7 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { Save, RotateCcw, Store, CreditCard, Truck, Bell, Users, Shield, Search, CheckCircle, AlertCircle, X, Info, Plus, Edit, Trash2 } from 'lucide-react';
+import { Save, RotateCcw, Store, CreditCard, Truck, Bell, Users, Shield, Search, CheckCircle, AlertCircle, X, Info, Plus, Edit, Trash2, Loader2 } from 'lucide-react';
+import { useSettings } from '@/hooks/useSettings';
+import { usePaymentMethods, PaymentMethod } from '@/hooks/usePaymentMethods';
+import PaymentMethodCard from '@/components/PaymentMethodCard';
+import PaymentMethodModal from '@/components/PaymentMethodModal';
+import PaymentMethodSkeleton from '@/components/PaymentMethodSkeleton';
+import '@/styles/payment-methods.css';
 
 // CSS Animation for Toast
 const toastAnimationCSS = `
@@ -466,217 +472,7 @@ const initialRoles: Role[] = [
   }
 ];
 
-// Payment Method Modal Component
-interface PaymentMethodModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSave: (method: Omit<CustomPaymentMethod, 'id'> | CustomPaymentMethod) => void;
-  editingMethod?: CustomPaymentMethod | null;
-}
 
-const PaymentMethodModal: React.FC<PaymentMethodModalProps> = ({ 
-  isOpen, 
-  onClose, 
-  onSave, 
-  editingMethod 
-}) => {
-  const [formData, setFormData] = useState<Omit<CustomPaymentMethod, 'id'>>({
-    name: '',
-    description: '',
-    isEnabled: true,
-    apiKey: '',
-    secretKey: '',
-    webhookUrl: '',
-    supportedCurrencies: ['SAR'],
-    fees: { percentage: 0, fixed: 0 },
-    type: 'gateway'
-  });
-
-  useEffect(() => {
-    if (editingMethod) {
-      setFormData({
-        name: editingMethod.name,
-        description: editingMethod.description,
-        isEnabled: editingMethod.isEnabled,
-        apiKey: editingMethod.apiKey || '',
-        secretKey: editingMethod.secretKey || '',
-        webhookUrl: editingMethod.webhookUrl || '',
-        supportedCurrencies: editingMethod.supportedCurrencies,
-        fees: editingMethod.fees,
-        type: editingMethod.type
-      });
-    } else {
-      setFormData({
-        name: '',
-        description: '',
-        isEnabled: true,
-        apiKey: '',
-        secretKey: '',
-        webhookUrl: '',
-        supportedCurrencies: ['SAR'],
-        fees: { percentage: 0, fixed: 0 },
-        type: 'gateway'
-      });
-    }
-  }, [editingMethod, isOpen]);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (editingMethod) {
-      onSave({ ...editingMethod, ...formData });
-    } else {
-      onSave(formData);
-    }
-  };
-
-  return (
-    <Modal isOpen={isOpen} onClose={onClose}>
-      <form onSubmit={handleSubmit} className="bg-white">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">
-            {editingMethod ? 'تعديل طريقة الدفع' : 'إضافة طريقة دفع جديدة'}
-          </h3>
-        </div>
-        
-        <div className="px-6 py-4 max-h-96 overflow-y-auto">
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">اسم طريقة الدفع</label>
-              <input
-                type="text"
-                required
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="مثال: Apple Pay"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">الوصف</label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                rows={3}
-                placeholder="وصف مختصر لطريقة الدفع"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">نوع طريقة الدفع</label>
-              <select
-                value={formData.type}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value as CustomPaymentMethod['type'] })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="gateway">بوابة دفع</option>
-                <option value="digital_wallet">محفظة رقمية</option>
-                <option value="bank_transfer">تحويل بنكي</option>
-                <option value="cash">نقدي</option>
-                <option value="crypto">عملة رقمية</option>
-              </select>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">رسوم النسبة المئوية (%)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.fees.percentage}
-                  onChange={(e) => setFormData({ 
-                    ...formData, 
-                    fees: { ...formData.fees, percentage: parseFloat(e.target.value) || 0 }
-                  })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">رسوم ثابتة</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.fees.fixed}
-                  onChange={(e) => setFormData({ 
-                    ...formData, 
-                    fees: { ...formData.fees, fixed: parseFloat(e.target.value) || 0 }
-                  })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">API Key (اختياري)</label>
-              <input
-                type="text"
-                value={formData.apiKey}
-                onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="مفتاح API الخاص بالطريقة"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Secret Key (اختياري)</label>
-              <input
-                type="password"
-                value={formData.secretKey}
-                onChange={(e) => setFormData({ ...formData, secretKey: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="المفتاح السري"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Webhook URL (اختياري)</label>
-              <input
-                type="url"
-                value={formData.webhookUrl}
-                onChange={(e) => setFormData({ ...formData, webhookUrl: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="https://example.com/webhook"
-              />
-            </div>
-
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="isEnabled"
-                checked={formData.isEnabled}
-                onChange={(e) => setFormData({ ...formData, isEnabled: e.target.checked })}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label htmlFor="isEnabled" className="mr-2 block text-sm text-gray-900">
-                تفعيل طريقة الدفع
-              </label>
-            </div>
-          </div>
-        </div>
-        
-        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end space-x-3 space-x-reverse">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-          >
-            إلغاء
-          </button>
-          <button
-            type="submit"
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
-          >
-            {editingMethod ? 'تحديث' : 'إضافة'}
-          </button>
-        </div>
-      </form>
-    </Modal>
-  );
-};
 
 // RoleModal Props
 interface RoleModalProps {
@@ -880,23 +676,35 @@ const RoleModal: React.FC<RoleModalProps> = ({
 export default function SettingsPage() {
   type TabType = 'store' | 'payment' | 'shipping' | 'notifications' | 'users' | 'security' | 'seo';
   
-  const [activeTab, setActiveTab] = useState<TabType>('store');
-  const [store, setStore] = useState(initialStoreSettings);
-  const [payment, setPayment] = useState(initialPaymentSettings);
-  const [shipping, setShipping] = useState(initialShippingSettings);
-  const [notifications, setNotifications] = useState(initialNotificationSettings);
-  const [security, setSecurity] = useState(initialSecuritySettings);
-  const [seo, setSeo] = useState(initialSEOSettings);
+  const [activeTab, setActiveTab] = useState<TabType>('payment');
+  const { settings, loading: settingsLoading, error: settingsError, saveSettings, fetchSettings, initializeDefaults } = useSettings();
+  const { 
+    paymentMethods, 
+    loading: paymentMethodsLoading, 
+    error: paymentMethodsError,
+    addPaymentMethod,
+    updatePaymentMethod,
+    deletePaymentMethod,
+    togglePaymentMethod
+  } = usePaymentMethods();
+  
+  // Local state for form data with default values to prevent uncontrolled to controlled warning
+  const [store, setStore] = useState(() => ({ ...initialStoreSettings, ...settings.store }));
+  const [payment, setPayment] = useState(() => ({ ...initialPaymentSettings, ...settings.payment }));
+  const [shipping, setShipping] = useState(() => ({ ...initialShippingSettings, ...settings.shipping }));
+  const [notifications, setNotifications] = useState(() => ({ ...initialNotificationSettings, ...settings.notifications }));
+  const [security, setSecurity] = useState(() => ({ ...initialSecuritySettings, ...settings.security }));
+  const [seo, setSeo] = useState(() => ({ ...initialSEOSettings, ...settings.seo }));
   const [permissions, setPermissions] = useState(initialPermissions);
   const [roles, setRoles] = useState(initialRoles);
   
-  // Saved versions for comparison
-  const [savedStore, setSavedStore] = useState(initialStoreSettings);
-  const [savedPayment, setSavedPayment] = useState(initialPaymentSettings);
-  const [savedShipping, setSavedShipping] = useState(initialShippingSettings);
-  const [savedNotifications, setSavedNotifications] = useState(initialNotificationSettings);
-  const [savedSecurity, setSavedSecurity] = useState(initialSecuritySettings);
-  const [savedSeo, setSavedSeo] = useState(initialSEOSettings);
+  // Saved versions for comparison with default values
+  const [savedStore, setSavedStore] = useState(() => ({ ...initialStoreSettings, ...settings.store }));
+  const [savedPayment, setSavedPayment] = useState(() => ({ ...initialPaymentSettings, ...settings.payment }));
+  const [savedShipping, setSavedShipping] = useState(() => ({ ...initialShippingSettings, ...settings.shipping }));
+  const [savedNotifications, setSavedNotifications] = useState(() => ({ ...initialNotificationSettings, ...settings.notifications }));
+  const [savedSecurity, setSavedSecurity] = useState(() => ({ ...initialSecuritySettings, ...settings.security }));
+  const [savedSeo, setSavedSeo] = useState(() => ({ ...initialSEOSettings, ...settings.seo }));
   const [savedPermissions, setSavedPermissions] = useState(initialPermissions);
   const [savedRoles, setSavedRoles] = useState(initialRoles);
   
@@ -906,9 +714,10 @@ export default function SettingsPage() {
   // Modal states
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showPaymentMethodModal, setShowPaymentMethodModal] = useState(false);
-  const [editingPaymentMethod, setEditingPaymentMethod] = useState<CustomPaymentMethod | null>(null);
+  const [editingPaymentMethod, setEditingPaymentMethod] = useState<PaymentMethod | null>(null);
   const [showDeletePaymentConfirm, setShowDeletePaymentConfirm] = useState(false);
   const [deletingPaymentMethodId, setDeletingPaymentMethodId] = useState<string | null>(null);
+  const [paymentMethodActionLoading, setPaymentMethodActionLoading] = useState<string | null>(null);
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [showDeleteRoleConfirm, setShowDeleteRoleConfirm] = useState(false);
@@ -928,6 +737,28 @@ export default function SettingsPage() {
   const hideToast = () => {
     setToast(prev => ({ ...prev, isVisible: false }));
   };
+
+  // Update local state when settings are loaded from API
+  useEffect(() => {
+    // Always merge with defaults to ensure all properties exist
+    setStore({ ...initialStoreSettings, ...settings.store });
+    setSavedStore({ ...initialStoreSettings, ...settings.store });
+    
+    setPayment({ ...initialPaymentSettings, ...settings.payment });
+    setSavedPayment({ ...initialPaymentSettings, ...settings.payment });
+    
+    setShipping({ ...initialShippingSettings, ...settings.shipping });
+    setSavedShipping({ ...initialShippingSettings, ...settings.shipping });
+    
+    setNotifications({ ...initialNotificationSettings, ...settings.notifications });
+    setSavedNotifications({ ...initialNotificationSettings, ...settings.notifications });
+    
+    setSecurity({ ...initialSecuritySettings, ...settings.security });
+    setSavedSecurity({ ...initialSecuritySettings, ...settings.security });
+    
+    setSeo({ ...initialSEOSettings, ...settings.seo });
+    setSavedSeo({ ...initialSEOSettings, ...settings.seo });
+  }, [settings]);
 
   // Check for changes
   useEffect(() => {
@@ -963,41 +794,67 @@ export default function SettingsPage() {
     checkChanges();
   }, [store, payment, shipping, notifications, security, seo, roles, permissions, savedStore, savedPayment, savedShipping, savedNotifications, savedSecurity, savedSeo, savedRoles, savedPermissions]);
 
-  const saveSettings = async () => {
+  // Show loading state
+  if (settingsLoading && Object.keys(settings.store || {}).length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">جاري تحميل الإعدادات...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (settingsError) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-gray-900 mb-2">خطأ في تحميل الإعدادات</h2>
+          <p className="text-gray-600 mb-4">{settingsError}</p>
+          <button
+            onClick={fetchSettings}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            إعادة المحاولة
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const handleSaveSettings = async () => {
     setIsLoading(true);
     try {
-      // Here you would make API calls to save settings
-      console.log('Saving settings:', { store, payment, shipping, notifications, security, seo });
-      
-      // Show what's being saved
-      const changesToSave = {
-        store: JSON.stringify(store) !== JSON.stringify(savedStore),
-        payment: JSON.stringify(payment) !== JSON.stringify(savedPayment),
-        shipping: JSON.stringify(shipping) !== JSON.stringify(savedShipping),
-        notifications: JSON.stringify(notifications) !== JSON.stringify(savedNotifications),
-        security: JSON.stringify(security) !== JSON.stringify(savedSecurity),
-        seo: JSON.stringify(seo) !== JSON.stringify(savedSeo)
+      const settingsToSave = {
+        store,
+        payment,
+        shipping,
+        notifications,
+        security,
+        seo
       };
       
-      console.log('Changes being saved:', changesToSave);
+      const result = await saveSettings(settingsToSave);
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Update saved values to current values after successful save
-      setSavedStore({ ...store });
-      setSavedPayment({ ...payment });
-      setSavedShipping({ ...shipping });
-      setSavedNotifications({ ...notifications });
-      setSavedSecurity({ ...security });
-      setSavedSeo({ ...seo });
-      setSavedRoles([...roles]);
-      setSavedPermissions([...permissions]);
-      
-      showToast('تم حفظ الإعدادات بنجاح!', 'success');
-      setHasChanges(false);
-      
-      console.log('Settings saved successfully. New saved values updated.');
+      if (result.success) {
+        // Update saved values to current values after successful save
+        setSavedStore({ ...store });
+        setSavedPayment({ ...payment });
+        setSavedShipping({ ...shipping });
+        setSavedNotifications({ ...notifications });
+        setSavedSecurity({ ...security });
+        setSavedSeo({ ...seo });
+        setSavedRoles([...roles]);
+        setSavedPermissions([...permissions]);
+        
+        showToast('تم حفظ الإعدادات بنجاح!', 'success');
+        setHasChanges(false);
+      } else {
+        showToast(result.message || 'حدث خطأ أثناء حفظ الإعدادات', 'error');
+      }
     } catch (error) {
       console.error('Error saving settings:', error);
       showToast('حدث خطأ أثناء حفظ الإعدادات', 'error');
@@ -1020,57 +877,57 @@ export default function SettingsPage() {
   };
 
   // Payment method management functions
-  const addPaymentMethod = (newMethod: Omit<CustomPaymentMethod, 'id'>) => {
-    const id = `custom_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const methodWithId: CustomPaymentMethod = { ...newMethod, id };
-    
-    setPayment(prev => ({
-      ...prev,
-      customPaymentMethods: [...prev.customPaymentMethods, methodWithId]
-    }));
-    
-    showToast('تم إضافة طريقة الدفع بنجاح', 'success');
-    setShowPaymentMethodModal(false);
-    setEditingPaymentMethod(null);
-  };
-
-  const updatePaymentMethod = (updatedMethod: CustomPaymentMethod) => {
-    setPayment(prev => ({
-      ...prev,
-      customPaymentMethods: prev.customPaymentMethods.map(method => 
-        method.id === updatedMethod.id ? updatedMethod : method
-      )
-    }));
-    
-    showToast('تم تحديث طريقة الدفع بنجاح', 'success');
-    setShowPaymentMethodModal(false);
-    setEditingPaymentMethod(null);
-  };
-
-  const deletePaymentMethod = () => {
-    if (deletingPaymentMethodId) {
-      setPayment(prev => ({
-        ...prev,
-        customPaymentMethods: prev.customPaymentMethods.filter(
-          method => method.id !== deletingPaymentMethodId
-        )
-      }));
-      
-      showToast('تم حذف طريقة الدفع بنجاح', 'success');
-      setShowDeletePaymentConfirm(false);
-      setDeletingPaymentMethodId(null);
+  const handleAddPaymentMethod = async (method: Omit<PaymentMethod, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const result = await addPaymentMethod(method);
+    if (result.success) {
+      showToast('تم إضافة طريقة الدفع بنجاح', 'success');
+      setShowPaymentMethodModal(false);
+      setEditingPaymentMethod(null);
+    } else {
+      showToast(result.message || 'فشل في إضافة طريقة الدفع', 'error');
     }
+    return result;
   };
 
-  const togglePaymentMethod = (methodId: string) => {
-    setPayment(prev => ({
-      ...prev,
-      customPaymentMethods: prev.customPaymentMethods.map(method => 
-        method.id === methodId 
-          ? { ...method, isEnabled: !method.isEnabled } 
-          : method
-      )
-    }));
+  const handleUpdatePaymentMethod = async (method: Omit<PaymentMethod, 'id' | 'createdAt' | 'updatedAt'>) => {
+    if (!editingPaymentMethod) return { success: false };
+    
+    const result = await updatePaymentMethod(editingPaymentMethod.id, method);
+    if (result.success) {
+      showToast('تم تحديث طريقة الدفع بنجاح', 'success');
+      setShowPaymentMethodModal(false);
+      setEditingPaymentMethod(null);
+    } else {
+      showToast(result.message || 'فشل في تحديث طريقة الدفع', 'error');
+    }
+    return result;
+  };
+
+  const handleDeletePaymentMethod = async () => {
+    if (!deletingPaymentMethodId) return;
+    
+    const result = await deletePaymentMethod(deletingPaymentMethodId);
+    if (result.success) {
+      showToast('تم حذف طريقة الدفع بنجاح', 'success');
+    } else {
+      showToast(result.message || 'فشل في حذف طريقة الدفع', 'error');
+    }
+    
+    setShowDeletePaymentConfirm(false);
+    setDeletingPaymentMethodId(null);
+  };
+
+  const handleTogglePaymentMethod = async (methodId: string) => {
+    setPaymentMethodActionLoading(methodId);
+    
+    const result = await togglePaymentMethod(methodId);
+    if (result.success) {
+      showToast('تم تحديث حالة طريقة الدفع', 'success');
+    } else {
+      showToast(result.message || 'فشل في تحديث حالة طريقة الدفع', 'error');
+    }
+    
+    setPaymentMethodActionLoading(null);
   };
 
   // Role management functions
@@ -1205,8 +1062,8 @@ export default function SettingsPage() {
               </button>
               
               <button
-                onClick={saveSettings}
-                disabled={isLoading || !hasChanges}
+                onClick={handleSaveSettings}
+                disabled={isLoading || !hasChanges || settingsLoading}
                 className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2 space-x-reverse disabled:opacity-50"
               >
                 {isLoading ? (
@@ -1214,7 +1071,7 @@ export default function SettingsPage() {
                 ) : (
                   <Save size={16}/>
                 )}
-                <span>{isLoading ? 'جاري الحفظ...' : 'حفظ التغييرات'}</span>
+                <span>{isLoading || settingsLoading ? 'جاري الحفظ...' : 'حفظ التغييرات'}</span>
               </button>
             </div>
           </div>
@@ -1265,7 +1122,7 @@ export default function SettingsPage() {
                         <label className="block text-sm font-medium text-gray-700 mb-2">اسم المتجر</label>
                         <input
                           type="text"
-                          value={store.name}
+                          value={store.name || ''}
                           onChange={(e) => setStore({...store, name: e.target.value})}
                           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
@@ -1275,7 +1132,7 @@ export default function SettingsPage() {
                         <label className="block text-sm font-medium text-gray-700 mb-2">البريد الإلكتروني</label>
                         <input
                           type="email"
-                          value={store.email}
+                          value={store.email || ''}
                           onChange={(e) => setStore({...store, email: e.target.value})}
                           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
@@ -1285,7 +1142,7 @@ export default function SettingsPage() {
                         <label className="block text-sm font-medium text-gray-700 mb-2">رقم الهاتف</label>
                         <input
                           type="tel"
-                          value={store.phone}
+                          value={store.phone || ''}
                           onChange={(e) => setStore({...store, phone: e.target.value})}
                           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
@@ -1295,7 +1152,7 @@ export default function SettingsPage() {
                         <label className="block text-sm font-medium text-gray-700 mb-2">موقع الويب</label>
                         <input
                           type="url"
-                          value={store.website}
+                          value={store.website || ''}
                           onChange={(e) => setStore({...store, website: e.target.value})}
                           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           placeholder="https://example.com"
@@ -1305,7 +1162,7 @@ export default function SettingsPage() {
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">العملة</label>
                         <select
-                          value={store.currency}
+                          value={store.currency || 'SAR'}
                           onChange={(e) => setStore({...store, currency: e.target.value})}
                           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         >
@@ -1319,7 +1176,7 @@ export default function SettingsPage() {
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">المنطقة الزمنية</label>
                         <select
-                          value={store.timezone}
+                          value={store.timezone || 'Asia/Riyadh'}
                           onChange={(e) => setStore({...store, timezone: e.target.value})}
                           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         >
@@ -1333,7 +1190,7 @@ export default function SettingsPage() {
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">اللغة الافتراضية</label>
                         <select
-                          value={store.language}
+                          value={store.language || 'ar'}
                           onChange={(e) => setStore({...store, language: e.target.value})}
                           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         >
@@ -1347,8 +1204,8 @@ export default function SettingsPage() {
                         <input
                           type="number"
                           step="0.01"
-                          value={store.taxRate}
-                          onChange={(e) => setStore({...store, taxRate: parseFloat(e.target.value)})}
+                          value={store.taxRate || 0}
+                          onChange={(e) => setStore({...store, taxRate: parseFloat(e.target.value) || 0})}
                           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
                       </div>
@@ -1361,7 +1218,7 @@ export default function SettingsPage() {
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">وصف المتجر</label>
                         <textarea
-                          value={store.description}
+                          value={store.description || ''}
                           onChange={(e) => setStore({...store, description: e.target.value})}
                           rows={4}
                           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -1372,7 +1229,7 @@ export default function SettingsPage() {
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">العنوان</label>
                         <textarea
-                          value={store.address}
+                          value={store.address || ''}
                           onChange={(e) => setStore({...store, address: e.target.value})}
                           rows={3}
                           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -1393,7 +1250,7 @@ export default function SettingsPage() {
                         <label className="relative inline-flex items-center cursor-pointer">
                           <input
                             type="checkbox"
-                            checked={store.allowGuestCheckout}
+                            checked={store.allowGuestCheckout || false}
                             onChange={(e) => setStore({...store, allowGuestCheckout: e.target.checked})}
                             className="sr-only peer"
                           />
@@ -1409,7 +1266,7 @@ export default function SettingsPage() {
                         <label className="relative inline-flex items-center cursor-pointer">
                           <input
                             type="checkbox"
-                            checked={store.maintenanceMode}
+                            checked={store.maintenanceMode || false}
                             onChange={(e) => setStore({...store, maintenanceMode: e.target.checked})}
                             className="sr-only peer"
                           />
@@ -1455,277 +1312,189 @@ export default function SettingsPage() {
 
             {/* Payment Settings Tab */}
             {activeTab === 'payment' && (
-              <div className="bg-white rounded-2xl shadow-lg p-6">
-                <h2 className="text-xl font-bold text-gray-900 mb-6">إعدادات طرق الدفع</h2>
+              <div className="space-y-6">
+                {/* Header */}
+                <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl p-6 text-white">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-2xl font-bold mb-2">إدارة طرق الدفع</h2>
+                      <p className="text-blue-100">إدارة وتكوين طرق الدفع المتاحة في متجرك</p>
+                    </div>
+                    <div className="flex items-center space-x-4 space-x-reverse">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold">{paymentMethods.length}</div>
+                        <div className="text-sm text-blue-100">طريقة دفع</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold">{paymentMethods.filter(m => m.isEnabled).length}</div>
+                        <div className="text-sm text-blue-100">مُفعّلة</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
-                <div className="space-y-8">
-                  <div>
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold text-gray-900">طرق الدفع المتاحة</h3>
+                {/* Payment Methods Grid */}
+                <div className="bg-white rounded-2xl shadow-lg p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-lg font-semibold text-gray-900">طرق الدفع المتاحة</h3>
+                    <button
+                      onClick={() => {
+                        setEditingPaymentMethod(null);
+                        setShowPaymentMethodModal(true);
+                      }}
+                      className="btn-primary flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 hover:shadow-lg text-sm font-medium"
+                    >
+                      <Plus size={16} className="ml-2" />
+                      إضافة طريقة دفع
+                    </button>
+                  </div>
+
+                  {/* Loading State */}
+                  {paymentMethodsLoading && paymentMethods.length === 0 && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {Array.from({ length: 6 }).map((_, index) => (
+                        <PaymentMethodSkeleton key={index} />
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Error State */}
+                  {paymentMethodsError && (
+                    <div className="text-center py-12">
+                      <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">خطأ في تحميل طرق الدفع</h3>
+                      <p className="text-gray-600 mb-4">{paymentMethodsError}</p>
                       <button
-                        onClick={() => setShowPaymentMethodModal(true)}
-                        className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                        onClick={() => window.location.reload()}
+                        className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
                       >
-                        <Plus size={16} className="ml-2" />
-                        إضافة طريقة دفع
+                        إعادة المحاولة
                       </button>
                     </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Built-in Payment Methods */}
-                      <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                        <div>
-                          <h4 className="font-medium text-gray-900">البطاقات الائتمانية</h4>
-                          <p className="text-sm text-gray-600">Visa, MasterCard, American Express</p>
-                          <span className="inline-block mt-1 px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
-                            بوابة دفع
-                          </span>
-                        </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={payment.enableCreditCard}
-                            onChange={(e) => setPayment({...payment, enableCreditCard: e.target.checked})}
-                            className="sr-only peer"
-                          />
-                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                        </label>
-                      </div>
+                  )}
 
-                      <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                        <div>
-                          <h4 className="font-medium text-gray-900">PayPal</h4>
-                          <p className="text-sm text-gray-600">الدفع عبر PayPal</p>
-                          <span className="inline-block mt-1 px-2 py-1 text-xs font-medium bg-purple-100 text-purple-800 rounded-full">
-                            محفظة رقمية
-                          </span>
+                  {/* Payment Methods Grid */}
+                  {!paymentMethodsLoading && !paymentMethodsError && (
+                    <>
+                      {paymentMethods.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                          {paymentMethods.map((method) => (
+                            <PaymentMethodCard
+                              key={method.id}
+                              method={method}
+                              onEdit={(method) => {
+                                setEditingPaymentMethod(method);
+                                setShowPaymentMethodModal(true);
+                              }}
+                              onDelete={(id) => {
+                                setDeletingPaymentMethodId(id);
+                                setShowDeletePaymentConfirm(true);
+                              }}
+                              onToggle={handleTogglePaymentMethod}
+                              isLoading={paymentMethodActionLoading === method.id}
+                            />
+                          ))}
                         </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={payment.enablePayPal}
-                            onChange={(e) => setPayment({...payment, enablePayPal: e.target.checked})}
-                            className="sr-only peer"
-                          />
-                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                        </label>
-                      </div>
-
-                      <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                        <div>
-                          <h4 className="font-medium text-gray-900">التحويل البنكي</h4>
-                          <p className="text-sm text-gray-600">الدفع عبر التحويل البنكي</p>
-                          <span className="inline-block mt-1 px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
-                            تحويل بنكي
-                          </span>
-                        </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={payment.enableBankTransfer}
-                            onChange={(e) => setPayment({...payment, enableBankTransfer: e.target.checked})}
-                            className="sr-only peer"
-                          />
-                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                        </label>
-                      </div>
-
-                      <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                        <div>
-                          <h4 className="font-medium text-gray-900">الدفع عند الاستلام</h4>
-                          <p className="text-sm text-gray-600">الدفع النقدي عند التوصيل</p>
-                          <span className="inline-block mt-1 px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full">
-                            نقدي
-                          </span>
-                        </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={payment.enableCashOnDelivery}
-                            onChange={(e) => setPayment({...payment, enableCashOnDelivery: e.target.checked})}
-                            className="sr-only peer"
-                          />
-                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                        </label>
-                      </div>
-
-                      {/* Dynamic Custom Payment Methods */}
-                      {payment.customPaymentMethods.map((method) => (
-                        <div key={method.id} className="p-4 border border-gray-200 rounded-lg">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center space-x-2 space-x-reverse mb-2">
-                                <h4 className="font-medium text-gray-900">{method.name}</h4>
-                                <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${
-                                  method.isEnabled 
-                                    ? 'bg-green-100 text-green-800' 
-                                    : 'bg-gray-100 text-gray-600'
-                                }`}>
-                                  {method.isEnabled ? 'مُفعّل' : 'غير مُفعّل'}
-                                </span>
-                              </div>
-                              
-                              <p className="text-sm text-gray-600 mb-2">{method.description}</p>
-                              
-                              <div className="flex items-center space-x-3 space-x-reverse">
-                                <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${
-                                  method.type === 'gateway' ? 'bg-blue-100 text-blue-800' :
-                                  method.type === 'digital_wallet' ? 'bg-purple-100 text-purple-800' :
-                                  method.type === 'bank_transfer' ? 'bg-green-100 text-green-800' :
-                                  method.type === 'cash' ? 'bg-yellow-100 text-yellow-800' :
-                                  'bg-orange-100 text-orange-800'
-                                }`}>
-                                  {method.type === 'gateway' ? 'بوابة دفع' :
-                                   method.type === 'digital_wallet' ? 'محفظة رقمية' :
-                                   method.type === 'bank_transfer' ? 'تحويل بنكي' :
-                                   method.type === 'cash' ? 'نقدي' : 'عملة رقمية'}
-                                </span>
-                                
-                                {(method.fees.percentage > 0 || method.fees.fixed > 0) && (
-                                  <span className="text-xs text-gray-500">
-                                    رسوم: {method.fees.percentage > 0 && `${method.fees.percentage}%`}
-                                    {method.fees.percentage > 0 && method.fees.fixed > 0 && ' + '}
-                                    {method.fees.fixed > 0 && `${method.fees.fixed} ${store.currency}`}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                            
-                            <div className="flex items-center space-x-2 space-x-reverse">
-                              {/* Toggle Switch */}
-                              <label className="relative inline-flex items-center cursor-pointer">
-                                <input
-                                  type="checkbox"
-                                  checked={method.isEnabled}
-                                  onChange={() => togglePaymentMethod(method.id)}
-                                  className="sr-only peer"
-                                />
-                                <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
-                              </label>
-                              
-                              {/* Edit Button */}
-                              <button
-                                onClick={() => {
-                                  setEditingPaymentMethod(method);
-                                  setShowPaymentMethodModal(true);
-                                }}
-                                className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
-                                title="تعديل"
-                              >
-                                <Edit size={16} />
-                              </button>
-                              
-                              {/* Delete Button */}
-                              <button
-                                onClick={() => {
-                                  setDeletingPaymentMethodId(method.id);
-                                  setShowDeletePaymentConfirm(true);
-                                }}
-                                className="p-2 text-gray-400 hover:text-red-600 transition-colors"
-                                title="حذف"
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                      
-                      {/* Empty State for Custom Payment Methods */}
-                      {payment.customPaymentMethods.length === 0 && (
-                        <div className="md:col-span-2 text-center py-8 border-2 border-dashed border-gray-300 rounded-lg">
-                          <CreditCard className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                          <h3 className="text-sm font-medium text-gray-900 mb-2">لا توجد طرق دفع مخصصة</h3>
-                          <p className="text-sm text-gray-500 mb-4">استخدم زر &quot;إضافة طريقة دفع&quot; لإضافة طرق دفع جديدة</p>
+                      ) : (
+                        <div className="text-center py-12">
+                          <CreditCard className="mx-auto h-16 w-16 text-gray-400 mb-4" />
+                          <h3 className="text-lg font-medium text-gray-900 mb-2">لا توجد طرق دفع</h3>
+                          <p className="text-gray-600 mb-6">ابدأ بإضافة طرق الدفع التي تريد توفيرها لعملائك</p>
+                          <button
+                            onClick={() => {
+                              setEditingPaymentMethod(null);
+                              setShowPaymentMethodModal(true);
+                            }}
+                            className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                          >
+                            إضافة طريقة دفع
+                          </button>
                         </div>
                       )}
-                    </div>
-                  </div>
+                    </>
+                  )}
+                </div>
 
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">إعدادات Stripe</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Statistics Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                  <div className="stats-card bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+                    <div className="flex items-center justify-between">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Public Key</label>
-                        <input
-                          type="text"
-                          value={payment.stripePublicKey}
-                          onChange={(e) => setPayment({...payment, stripePublicKey: e.target.value})}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          placeholder="pk_test_..."
-                        />
+                        <p className="text-sm font-medium text-gray-600">إجمالي طرق الدفع</p>
+                        <p className="text-2xl font-bold text-gray-900">{paymentMethods.length}</p>
                       </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Secret Key</label>
-                        <input
-                          type="password"
-                          value={payment.stripeSecretKey}
-                          onChange={(e) => setPayment({...payment, stripeSecretKey: e.target.value})}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          placeholder="sk_test_..."
-                        />
+                      <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <CreditCard className="w-6 h-6 text-blue-600" />
                       </div>
                     </div>
                   </div>
 
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">إعدادات PayPal</h3>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Client ID</label>
-                      <input
-                        type="text"
-                        value={payment.paypalClientId}
-                        onChange={(e) => setPayment({...payment, paypalClientId: e.target.value})}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="PayPal Client ID"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">حدود الطلبات</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="stats-card bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+                    <div className="flex items-center justify-between">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">الحد الأدنى للطلب ({store.currency})</label>
-                        <input
-                          type="number"
-                          value={payment.minimumOrderAmount}
-                          onChange={(e) => setPayment({...payment, minimumOrderAmount: parseFloat(e.target.value)})}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
+                        <p className="text-sm font-medium text-gray-600">طرق مُفعّلة</p>
+                        <p className="text-2xl font-bold text-green-600">{paymentMethods.filter(m => m.isEnabled).length}</p>
                       </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">الحد الأقصى للطلب ({store.currency})</label>
-                        <input
-                          type="number"
-                          value={payment.maximumOrderAmount}
-                          onChange={(e) => setPayment({...payment, maximumOrderAmount: parseFloat(e.target.value)})}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">مهلة الدفع (دقيقة)</label>
-                        <input
-                          type="number"
-                          value={payment.paymentTimeout}
-                          onChange={(e) => setPayment({...payment, paymentTimeout: parseInt(e.target.value)})}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
+                      <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                        <CheckCircle className="w-6 h-6 text-green-600" />
                       </div>
                     </div>
                   </div>
 
-                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                    <h4 className="font-medium text-blue-900 mb-2">معلومات مهمة</h4>
-                    <ul className="text-sm text-blue-700 space-y-1">
-                      <li>• تأكد من صحة مفاتيح الدفع قبل التفعيل</li>
-                      <li>• اختبر طرق الدفع في بيئة الاختبار أولاً</li>
-                      <li>• راجع رسوم المعاملات لكل طريقة دفع</li>
-                      <li>• فعل SSL للحماية الإضافية</li>
-                    </ul>
+                  <div className="stats-card bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">طرق مُعطّلة</p>
+                        <p className="text-2xl font-bold text-red-600">{paymentMethods.filter(m => !m.isEnabled).length}</p>
+                      </div>
+                      <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                        <X className="w-6 h-6 text-red-600" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="stats-card bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">طرق مخصصة</p>
+                        <p className="text-2xl font-bold text-purple-600">{paymentMethods.filter(m => !m.isBuiltIn).length}</p>
+                      </div>
+                      <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                        <Plus className="w-6 h-6 text-purple-600" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tips and Best Practices */}
+                <div className="bg-white rounded-2xl shadow-lg p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">نصائح وأفضل الممارسات</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                      <h4 className="font-medium text-blue-900 mb-2 flex items-center">
+                        <Shield className="w-5 h-5 ml-2" />
+                        الأمان
+                      </h4>
+                      <ul className="text-sm text-blue-700 space-y-1">
+                        <li>• تأكد من صحة مفاتيح الدفع قبل التفعيل</li>
+                        <li>• استخدم بيئة الاختبار قبل التشغيل الفعلي</li>
+                        <li>• فعّل SSL للحماية الإضافية</li>
+                        <li>• راجع إعدادات الأمان بانتظام</li>
+                      </ul>
+                    </div>
+
+                    <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                      <h4 className="font-medium text-green-900 mb-2 flex items-center">
+                        <CheckCircle className="w-5 h-5 ml-2" />
+                        التحسين
+                      </h4>
+                      <ul className="text-sm text-green-700 space-y-1">
+                        <li>• وفّر خيارات دفع متنوعة للعملاء</li>
+                        <li>• راجع رسوم المعاملات لكل طريقة</li>
+                        <li>• اختبر تجربة الدفع بانتظام</li>
+                        <li>• راقب معدلات نجاح المعاملات</li>
+                      </ul>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -2633,14 +2402,9 @@ export default function SettingsPage() {
           setShowPaymentMethodModal(false);
           setEditingPaymentMethod(null);
         }}
-        onSave={(method) => {
-          if (editingPaymentMethod && 'id' in method) {
-            updatePaymentMethod(method as CustomPaymentMethod);
-          } else {
-            addPaymentMethod(method as Omit<CustomPaymentMethod, 'id'>);
-          }
-        }}
+        onSave={editingPaymentMethod ? handleUpdatePaymentMethod : handleAddPaymentMethod}
         editingMethod={editingPaymentMethod}
+        isLoading={paymentMethodsLoading}
       />
 
       {/* Role Modal */}
@@ -2683,7 +2447,7 @@ export default function SettingsPage() {
           setShowDeletePaymentConfirm(false);
           setDeletingPaymentMethodId(null);
         }}
-        onConfirm={deletePaymentMethod}
+        onConfirm={handleDeletePaymentMethod}
         title="حذف طريقة الدفع"
         message="هل أنت متأكد من حذف طريقة الدفع هذه؟ لا يمكن التراجع عن هذا الإجراء."
         type="danger"
