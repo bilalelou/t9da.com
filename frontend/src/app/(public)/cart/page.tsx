@@ -105,6 +105,7 @@ export default function CartPage() {
         type: 'success' | 'error';
         show: boolean;
     }>({ message: '', type: 'success', show: false });
+    const [freeShippingThreshold, setFreeShippingThreshold] = useState(500);
 
     // دالة عرض الإشعارات
     const showNotification = (message: string, type: 'success' | 'error' = 'error') => {
@@ -114,12 +115,36 @@ export default function CartPage() {
         }, 3000);
     };
 
-    // حفظ المدينة المختارة في localStorage
+    // جلب قيمة الشحن المجاني وحفظ المدينة
     useEffect(() => {
         const savedCity = localStorage.getItem('selectedCity');
         if (savedCity && cities.includes(savedCity)) {
             setSelectedCity(savedCity);
         }
+        
+        // جلب قيمة الشحن المجاني
+        const fetchFreeShippingThreshold = async () => {
+            try {
+                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/public/settings`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    const threshold = result.data?.find(s => s.key === 'shipping.free_shipping_threshold');
+                    if (threshold) {
+                        console.log('✅ تم جلب قيمة الشحن المجاني:', threshold.value);
+                        setFreeShippingThreshold(Number(threshold.value));
+                    } else {
+                        console.log('❌ لم يتم العثور على قيمة الشحن المجاني');
+                    }
+                } else {
+                    console.log('❌ فشل في جلب الإعدادات:', result);
+                }
+            } catch (error) {
+                console.error('خطأ في جلب قيمة الشحن المجاني:', error);
+            }
+        };
+        
+        fetchFreeShippingThreshold();
     }, []);
 
     useEffect(() => {
@@ -130,10 +155,10 @@ export default function CartPage() {
 
     // حساب تكلفة الشحن
     const shippingCost = useMemo(() => {
-        if (subtotal >= 500) return 0; // شحن مجاني للطلبات أكثر من 500 درهم
+        if (subtotal >= freeShippingThreshold) return 0; // شحن مجاني
         if (!selectedCity || selectedCity === '') return null;
         return shippingData[selectedCity]?.cost || 50;
-    }, [subtotal, selectedCity]);
+    }, [subtotal, selectedCity, freeShippingThreshold]);
 
     // حساب خصم الكوبون
     const couponDiscount = useMemo(() => {
@@ -450,7 +475,7 @@ export default function CartPage() {
                                     ))}
                                 </select>
                                 <p className="text-xs text-gray-500 mt-2">
-                                    🚚 شحن مجاني للطلبات أكثر من {formatCurrency(500)}
+                                    🚚 شحن مجاني للطلبات أكثر من {formatCurrency(freeShippingThreshold)}
                                 </p>
                             </div>
 

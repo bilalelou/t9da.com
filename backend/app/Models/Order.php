@@ -15,6 +15,7 @@ class Order extends Model
         'user_id',
         'subtotal',
         'discount',
+        'payment_fees',
         'tax',
         'total',
         'name',
@@ -51,6 +52,7 @@ class Order extends Model
         'subtotal' => 'decimal:2',
         'tax' => 'decimal:2',
         'discount' => 'decimal:2',
+        'payment_fees' => 'decimal:2',
         'total_amount' => 'decimal:2',
     ];
 

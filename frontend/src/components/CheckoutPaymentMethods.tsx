@@ -8,13 +8,15 @@ interface CheckoutPaymentMethodsProps {
   onMethodSelect: (methodId: string) => void;
   orderTotal: number;
   currency?: string;
+  onFeesChange?: (fees: number) => void;
 }
 
 const CheckoutPaymentMethods: React.FC<CheckoutPaymentMethodsProps> = ({
   selectedMethod,
   onMethodSelect,
   orderTotal,
-  currency = 'MAD'
+  currency = 'MAD',
+  onFeesChange
 }) => {
   const { enabledPaymentMethods, loading, error } = useEnabledPaymentMethods();
   
@@ -44,6 +46,19 @@ const CheckoutPaymentMethods: React.FC<CheckoutPaymentMethodsProps> = ({
     const totalFees = percentageFee + method.fees.fixed;
     return totalFees;
   };
+
+  // تحديث رسوم الدفع عند تغيير طريقة الدفع
+  React.useEffect(() => {
+    if (selectedMethod && onFeesChange) {
+      const selectedMethodData = enabledPaymentMethods.find(m => m.id === selectedMethod);
+      if (selectedMethodData) {
+        const fees = calculateFees(selectedMethodData);
+        onFeesChange(fees);
+      }
+    } else if (onFeesChange) {
+      onFeesChange(0);
+    }
+  }, [selectedMethod, enabledPaymentMethods, orderTotal, onFeesChange]);
 
   const isMethodAvailable = (method: PaymentMethod) => {
     // التحقق من حدود المبلغ

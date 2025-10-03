@@ -153,6 +153,9 @@ Route::post('/orders', [OrderController::class, 'store'])->middleware('auth:sanc
 Route::get('/cities/active', [CityController::class, 'active']);
 Route::get('/shipping-costs', [CityController::class, 'getShippingCosts']);
 
+// Public Settings Routes
+Route::get('/public/settings', [SettingController::class, 'publicSettings']);
+
 // Public Free Shipping Routes
 Route::get('/products/free-shipping/public', [ProductController::class, 'freeShippingProducts']);
 
@@ -171,6 +174,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::apiResource('users', UserController::class);
     Route::post('/users/{user}/toggle-active', [UserController::class, 'toggleActive']);
+    Route::apiResource('settings', SettingController::class);
+    Route::post('/settings/update', [SettingController::class, 'updateSetting']);
     Route::apiResource('products', ProductController::class);
     Route::post('/products/bulk-store', [ProductController::class, 'storeBulk']);
 

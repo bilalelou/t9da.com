@@ -103,7 +103,7 @@ class OrderController extends Controller
             'items.*.quantity' => 'required|integer|min:1',
             'shipping_info' => 'required|array',
             'shipping_info.fullName' => 'required|string|max:255',
-            'shipping_info.email' => 'required|email',
+            'shipping_info.email' => 'nullable|email',
             'shipping_info.phone' => 'required|string',
             'shipping_info.address' => 'required|string',
             'shipping_info.city' => 'required|string',
@@ -128,15 +128,29 @@ class OrderController extends Controller
         DB::beginTransaction();
 
         try {
+            // حساب الإجمالي الصحيح
+            $subtotal = $request->order_summary['subtotal'];
+            $shipping = $request->order_summary['shipping'] ?? 0;
+            $discount = $request->order_summary['discount'] ?? 0;
+            $paymentFees = $request->order_summary['payment_fees'] ?? 0;
+            $tax = $request->order_summary['tax'] ?? 0;
+            
+            // حساب الإجمالي: المجموع الفرعي + الشحن + رسوم الدفع + الضريبة - الخصم
+            $calculatedTotal = $subtotal + $shipping + $paymentFees + $tax - $discount;
+            
+            // استخدام الإجمالي المحسوب بدلاً من المرسل من العميل
+            $finalTotal = $calculatedTotal;
+
             // إنشاء الطلب
             $order = Order::create([
                 'user_id' => Auth::id(),
                 'order_number' => 'ORD-' . time() . '-' . rand(1000, 9999),
                 'status' => 'pending',
-                'total' => $request->order_summary['total'],
-                'subtotal' => $request->order_summary['subtotal'],
-                'tax' => $request->order_summary['tax'],
-                'discount' => $request->order_summary['discount'] ?? 0,
+                'total' => $finalTotal,
+                'subtotal' => $subtotal,
+                'tax' => $tax,
+                'discount' => $discount,
+                'payment_fees' => $paymentFees,
 
                 // معلومات الشحن
                 'name' => $request->shipping_info['fullName'],
@@ -148,7 +162,7 @@ class OrderController extends Controller
                 'locality' => $request->shipping_info['city'],
                 'country' => 'Morocco',
                 'payment_method' => $request->shipping_info['paymentMethod'],
-                'total_amount' => $request->order_summary['total'],
+                'total_amount' => $finalTotal,
                 'shipping_name' => $request->shipping_info['fullName'],
                 'shipping_email' => $request->shipping_info['email'],
                 'shipping_phone' => $request->shipping_info['phone'],

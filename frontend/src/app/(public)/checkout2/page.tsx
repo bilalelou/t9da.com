@@ -56,6 +56,7 @@ export default function CheckoutPage() {
 
     // حالات الصفحة
     const [currentStep, setCurrentStep] = useState(1);
+    const [freeShippingThreshold, setFreeShippingThreshold] = useState(500);
     
     // جلب تكاليف الشحن من API
     useEffect(() => {
@@ -79,6 +80,25 @@ export default function CheckoutPage() {
         };
         
         fetchShippingCosts();
+        
+        // جلب قيمة الشحن المجاني
+        const fetchFreeShippingThreshold = async () => {
+            try {
+                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/public/settings`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    const threshold = result.data?.find(s => s.key === 'shipping.free_shipping_threshold');
+                    if (threshold) {
+                        setFreeShippingThreshold(threshold.value);
+                    }
+                }
+            } catch (error) {
+                console.error('خطأ في جلب قيمة الشحن المجاني:', error);
+            }
+        };
+        
+        fetchFreeShippingThreshold();
     }, []);
     const [isLoading, setIsLoading] = useState(false);
     const [errors, setErrors] = useState({});
@@ -114,10 +134,10 @@ export default function CheckoutPage() {
 
     // حساب التكاليف
     const shipping = useMemo(() => {
-        if (subtotal > 500) return 0; // شحن مجاني فوق 500 درهم
+        if (subtotal > freeShippingThreshold) return 0; // شحن مجاني
         if (!shippingAddress.city) return null;
         return shippingCosts[shippingAddress.city] || shippingCosts.default;
-    }, [subtotal, shippingAddress.city]);
+    }, [subtotal, shippingAddress.city, freeShippingThreshold]);
 
     const couponDiscount = appliedCoupon ? (subtotal * appliedCoupon.discount / 100) : 0;
     const total = shipping !== null ? subtotal - couponDiscount + shipping : subtotal - couponDiscount;
@@ -607,7 +627,7 @@ export default function CheckoutPage() {
                                     </span>
                                 </div>
                                 
-                                {subtotal > 500 && shipping === 0 && (
+                                {subtotal > freeShippingThreshold && shipping === 0 && (
                                     <p className="text-xs text-green-600">🎉 تهانينا! حصلت على شحن مجاني</p>
                                 )}
                             </div>

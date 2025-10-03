@@ -23,15 +23,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import CheckoutPaymentMethods from '@/components/CheckoutPaymentMethods';
-
-// تنسيق العملة
-const formatCurrency = (price: number) => {
-    try {
-        return new Intl.NumberFormat('ar-MA', { style: 'currency', currency: 'MAD' }).format(price).replace('MAD', 'د.م.');
-    } catch {
-        return `${price} د.م.`;
-    }
-};
+import { calculateOrderTotal, formatCurrency } from '@/utils/calculateOrderTotal';
 
 
 
@@ -76,7 +68,7 @@ export default function CheckoutPage() {
         fullName: '',
         phone: '',
         email: '',
-        city: '',
+        city: localStorage.getItem('selectedCity') || '',
         address: '',
         postalCode: '',
         notes: ''
@@ -158,10 +150,10 @@ export default function CheckoutPage() {
                             ...prev,
                             fullName: userData.name || prev.fullName,
                             email: userData.email || prev.email,
-                            phone: userData.phone || prev.phone,
+                            phone: userData.mobile || prev.phone, // استخدام mobile بدلاً من phone
                             // إذا كان لديه عنوان محفوظ
                             address: userData.address || prev.address,
-                            city: userData.city || prev.city,
+                            city: userData.city || localStorage.getItem('selectedCity') || prev.city,
                             postalCode: userData.postal_code || prev.postalCode
                         }));
                         console.log('✅ شحن البيانات تم بنجاح');
@@ -182,15 +174,61 @@ export default function CheckoutPage() {
         fetchUserData();
     }, []);
 
+    // قيمة الشحن المجاني
+    const [freeShippingThreshold, setFreeShippingThreshold] = useState(500);
+
+    // جلب قيمة الشحن المجاني
+    useEffect(() => {
+        const fetchFreeShippingThreshold = async () => {
+            try {
+                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/public/settings`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    const threshold = result.data?.find(s => s.key === 'shipping.free_shipping_threshold');
+                    if (threshold) {
+                        setFreeShippingThreshold(threshold.value);
+                    }
+                }
+            } catch (error) {
+                console.error('خطأ في جلب قيمة الشحن المجاني:', error);
+            }
+        };
+        
+        fetchFreeShippingThreshold();
+    }, []);
+
+    // حفظ المدينة عند تغييرها
+    useEffect(() => {
+        if (shippingAddress.city) {
+            localStorage.setItem('selectedCity', shippingAddress.city);
+        }
+    }, [shippingAddress.city]);
+
     // حساب التكاليف
     const shipping = useMemo(() => {
-        if (subtotal > 500) return 0; // شحن مجاني فوق 500 درهم
+        if (subtotal > freeShippingThreshold) return 0; // شحن مجاني
         if (!shippingAddress.city) return null;
         return shippingCosts[shippingAddress.city] || shippingCosts.default;
-    }, [subtotal, shippingAddress.city]);
+    }, [subtotal, shippingAddress.city, freeShippingThreshold]);
 
     const couponDiscount = appliedCoupon ? (subtotal * appliedCoupon.discount / 100) : 0;
-    const total = shipping !== null ? subtotal - couponDiscount + shipping : subtotal - couponDiscount;
+    
+    // حساب رسوم الدفع (سيتم تحديثه من CheckoutPaymentMethods)
+    const [paymentFees, setPaymentFees] = useState(0);
+    
+    // حساب الإجمالي باستخدام utility function
+    const orderCalculation = useMemo(() => {
+        return calculateOrderTotal(
+            subtotal,
+            shipping || 0,
+            couponDiscount,
+            paymentFees,
+            0 // لا توجد ضرائب حالياً
+        );
+    }, [subtotal, shipping, couponDiscount, paymentFees]);
+    
+    const total = orderCalculation.total;
 
     // التحقق من صحة البيانات
     const validateStep = (step: number): boolean => {
@@ -199,13 +237,13 @@ export default function CheckoutPage() {
         if (step === 1) {
             if (!shippingAddress.fullName.trim()) newErrors.fullName = 'الاسم الكامل مطلوب';
             if (!shippingAddress.phone.trim()) newErrors.phone = 'رقم الهاتف مطلوب';
-            if (!shippingAddress.email.trim()) newErrors.email = 'البريد الإلكتروني مطلوب';
+            // إزالة إلزامية البريد الإلكتروني
             if (!shippingAddress.city) newErrors.city = 'المدينة مطلوبة';
             if (!shippingAddress.address.trim()) newErrors.address = 'العنوان مطلوب';
             
-            // التحقق من تنسيق البريد الإلكتروني
+            // التحقق من تنسيق البريد الإلكتروني (فقط إذا تم إدخاله)
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (shippingAddress.email && !emailRegex.test(shippingAddress.email)) {
+            if (shippingAddress.email && shippingAddress.email.trim() && !emailRegex.test(shippingAddress.email)) {
                 newErrors.email = 'تنسيق البريد الإلكتروني غير صحيح';
             }
 
@@ -278,9 +316,9 @@ export default function CheckoutPage() {
                         ...prev,
                         fullName: data.user.name || prev.fullName,
                         email: data.user.email || prev.email,
-                        phone: data.user.phone || prev.phone,
+                        phone: data.user.mobile || prev.phone, // استخدام mobile بدلاً من phone
                         address: data.user.address || prev.address,
-                        city: data.user.city || prev.city,
+                        city: data.user.city || localStorage.getItem('selectedCity') || prev.city,
                         postalCode: data.user.postal_code || prev.postalCode
                     }));
                 }
@@ -313,8 +351,8 @@ export default function CheckoutPage() {
                 },
                 body: JSON.stringify({
                     name: shippingAddress.fullName,
-                    email: shippingAddress.email,
-                    phone: shippingAddress.phone,
+                    email: shippingAddress.email || `guest_${Date.now()}@temp.com`, // بريد مؤقت إذا لم يتم إدخال بريد
+                    mobile: shippingAddress.phone, // استخدام mobile بدلاً من phone
                     password: tempPassword,
                     password_confirmation: tempPassword,
                     // إضافة معلومات إضافية
@@ -423,7 +461,7 @@ export default function CheckoutPage() {
                 })),
                 shipping_info: {
                     fullName: shippingAddress.fullName,
-                    email: shippingAddress.email,
+                    email: shippingAddress.email || '', // بريد فارغ إذا لم يتم إدخاله
                     phone: shippingAddress.phone,
                     address: shippingAddress.address,
                     city: shippingAddress.city,
@@ -433,11 +471,12 @@ export default function CheckoutPage() {
                     paymentMethod: selectedPaymentMethod
                 },
                 order_summary: {
-                    subtotal: subtotal,
-                    shipping: shipping || 0,
-                    tax: 0,
-                    discount: couponDiscount,
-                    total: total
+                    subtotal: orderCalculation.subtotal,
+                    shipping: orderCalculation.shipping,
+                    tax: orderCalculation.tax,
+                    discount: orderCalculation.discount,
+                    payment_fees: orderCalculation.paymentFees,
+                    total: orderCalculation.total
                 }
             };
 
@@ -729,8 +768,9 @@ export default function CheckoutPage() {
                                 <CheckoutPaymentMethods
                                     selectedMethod={selectedPaymentMethod}
                                     onMethodSelect={setSelectedPaymentMethod}
-                                    orderTotal={total}
+                                    orderTotal={subtotal + (shipping || 0) - couponDiscount}
                                     currency="MAD"
+                                    onFeesChange={setPaymentFees}
                                 />
                                 
                                 <div className="flex justify-between">
@@ -777,6 +817,8 @@ export default function CheckoutPage() {
                             appliedCoupon={appliedCoupon}
                             applyCoupon={applyCoupon}
                             removeCoupon={removeCoupon}
+                            freeShippingThreshold={freeShippingThreshold}
+                            paymentFees={paymentFees}
                         />
                     </div>
                 </div>
@@ -863,7 +905,7 @@ const ShippingAddressStep: React.FC<{
 
             <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                    البريد الإلكتروني *
+                    البريد الإلكتروني (اختياري)
                 </label>
                 <div className="relative">
                     <Mail className="absolute right-3 top-3 h-4 w-4 text-gray-400" />
@@ -874,7 +916,7 @@ const ShippingAddressStep: React.FC<{
                         className={`w-full pr-10 pl-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                             errors.email ? 'border-red-500' : 'border-gray-300'
                         }`}
-                        placeholder="example@email.com"
+                        placeholder="example@email.com (اختياري)"
                     />
                 </div>
                 {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email}</p>}
@@ -1032,7 +1074,9 @@ const OrderSummary = ({
     setCouponCode,
     appliedCoupon,
     applyCoupon,
-    removeCoupon
+    removeCoupon,
+    freeShippingThreshold,
+    paymentFees = 0
 }) => (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 sticky top-4">
         <h3 className="text-lg font-medium text-gray-900 mb-4">ملخص الطلب</h3>
@@ -1125,7 +1169,14 @@ const OrderSummary = ({
                 </span>
             </div>
             
-            {subtotal > 500 && shipping === 0 && (
+            {paymentFees > 0 && (
+                <div className="flex justify-between">
+                    <span>رسوم الدفع</span>
+                    <span>{formatCurrency(paymentFees)}</span>
+                </div>
+            )}
+            
+            {subtotal > freeShippingThreshold && shipping === 0 && (
                 <p className="text-xs text-green-600">🎉 تهانينا! حصلت على شحن مجاني</p>
             )}
         </div>
