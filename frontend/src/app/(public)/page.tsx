@@ -3,17 +3,18 @@
 import React, { useState, useEffect, useCallback, createContext, useContext, useMemo, useRef } from 'react';
 import StructuredData from '@/components/SEO/StructuredData';
 import { Metadata } from 'next';
+import Image from 'next/image';
 
-export const metadata: Metadata = {
-  title: 'T9da.com - الصفحة الرئيسية | متجر إلكتروني متكامل في المغرب',
-  description: 'اكتشف أفضل المنتجات في متجر T9da.com الإلكتروني. إلكترونيات، ملابس، منزل ومطبخ، جمال وصحة بأسعار منافسة مع توصيل سريع لجميع المدن المغربية',
-  keywords: 'متجر إلكتروني المغرب, تسوق أونلاين, عروض اليوم, منتجات جديدة, أسعار منافسة, توصيل مجاني',
-  openGraph: {
-    title: 'T9da.com - متجر إلكتروني متكامل في المغرب',
-    description: 'اكتشف أفضل المنتجات بأسعار منافسة مع توصيل سريع',
-    images: ['/images/home-og.jpg'],
-  },
-};
+// export const metadata: Metadata = {
+//   title: 'T9da.com - الصفحة الرئيسية | متجر إلكتروني متكامل في المغرب',
+//   description: 'اكتشف أفضل المنتجات في متجر T9da.com الإلكتروني. إلكترونيات، ملابس، منزل ومطبخ، جمال وصحة بأسعار منافسة مع توصيل سريع لجميع المدن المغربية',
+//   keywords: 'متجر إلكتروني المغرب, تسوق أونلاين, عروض اليوم, منتجات جديدة, أسعار منافسة, توصيل مجاني',
+//   openGraph: {
+//     title: 'T9da.com - متجر إلكتروني متكامل في المغرب',
+//     description: 'اكتشف أفضل المنتجات بأسعار منافسة مع توصيل سريع',
+//     images: ['/images/home-og.jpg'],
+//   },
+// };
 import { Heart, CheckCircle, ChevronLeft, ChevronRight, ShoppingCart, ShieldCheck, Truck, PhoneCall, Mail, Quote, Zap, Star, Tag, Clock, Menu, X, Smartphone, Home, Tv, Monitor, Gamepad2, Sparkles, Shirt, Dumbbell, Car } from 'lucide-react';
 
 // --- ( MOCK PROVIDERS ) ---
@@ -337,7 +338,7 @@ const ProductCard = React.memo(({ product }: { product: Product }) => {
     const hasSale = product.sale_price && product.sale_price < product.regular_price;
     const handleCartClick = (e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); addToCart({ ...product, price: product.sale_price || product.regular_price }, 1); showToast(`تمت إضافة "${product.name}" إلى السلة!`); };
     const handleWishlistClick = (e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); if (isWishlisted) { removeFromWishlist(product.id); showToast(`تمت إزالة "${product.name}" من المفضلة.`); } else { addToWishlist(product); showToast(`تمت إضافة "${product.name}" إلى المفضلة!`); } };
-    return (<a href={`/shop/${product.slug}`} className="cursor-pointer group relative bg-white border-2 border-gray-100 hover:border-yellow-400 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-2 transition-all duration-300 flex flex-col h-full"><div className="overflow-hidden h-64 bg-gray-50 relative"><img src={product.thumbnail || DEFAULT_PRODUCT_IMAGE} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onError={(e) => { e.currentTarget.src = DEFAULT_PRODUCT_IMAGE; }} /><div className="absolute top-3 right-3 flex flex-col gap-2">{hasSale && <div className="bg-red-500 text-white px-3 py-1.5 rounded-full text-xs font-bold shadow-lg">تخفيض</div>}{product.has_free_shipping && <div className="bg-green-500 text-white px-3 py-1.5 rounded-full text-xs font-bold shadow-lg">شحن مجاني</div>}</div><button onClick={handleWishlistClick} className={`absolute top-3 left-3 w-10 h-10 rounded-full flex items-center justify-center backdrop-blur-sm transition-all duration-300 ${isWishlisted ? 'bg-red-500 text-white' : 'bg-white/80 text-gray-700 hover:bg-white hover:text-red-500'}`} title={isWishlisted ? "إزالة من المفضلة" : "إضافة للمفضلة"} ><Heart size={18} className={isWishlisted ? 'fill-current' : ''} /></button></div><div className="p-5 flex flex-col flex-grow"><h3 className="text-base font-bold text-gray-800 truncate group-hover:text-yellow-600 transition-colors" title={product.name}>{product.name}</h3>{product.short_description && <p className="text-sm text-gray-600 mt-2 line-clamp-2">{product.short_description}</p>}{product.rating && product.review_count && <div className="mt-3"><StarRating rating={product.rating} review_count={product.review_count} /></div>}<div className="pt-4 mt-auto flex items-end justify-between"><div className="flex flex-col">{hasSale ? (<><span className="text-xl font-extrabold text-red-600">{formatCurrency(product.sale_price!)}</span><span className="text-sm text-gray-400 line-through">{formatCurrency(product.regular_price)}</span></>) : (<span className="text-xl font-extrabold text-gray-800">{formatCurrency(product.regular_price)}</span>)}</div><button onClick={handleCartClick} className="w-11 h-11 bg-yellow-500 hover:bg-yellow-600 text-white rounded-full flex items-center justify-center transform transition-all duration-300 hover:scale-110 shadow-lg" title="إضافة للسلة" aria-label={`إضافة ${product.name} إلى السلة`}><ShoppingCart size={20}/></button></div></div></a>);
+    return (<a href={`/shop/${product.slug}`} className="cursor-pointer group relative bg-white border-2 border-gray-100 hover:border-yellow-400 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-2 transition-all duration-300 flex flex-col h-full"><div className="overflow-hidden h-64 bg-gray-50 relative"><Image src={product.thumbnail || DEFAULT_PRODUCT_IMAGE} alt={product.name} width={400} height={400} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onError={(e) => { e.currentTarget.src = DEFAULT_PRODUCT_IMAGE; }} /><div className="absolute top-3 right-3 flex flex-col gap-2">{hasSale && <div className="bg-red-500 text-white px-3 py-1.5 rounded-full text-xs font-bold shadow-lg">تخفيض</div>}{product.has_free_shipping && <div className="bg-green-500 text-white px-3 py-1.5 rounded-full text-xs font-bold shadow-lg">شحن مجاني</div>}</div><button onClick={handleWishlistClick} className={`absolute top-3 left-3 w-10 h-10 rounded-full flex items-center justify-center backdrop-blur-sm transition-all duration-300 ${isWishlisted ? 'bg-red-500 text-white' : 'bg-white/80 text-gray-700 hover:bg-white hover:text-red-500'}`} title={isWishlisted ? "إزالة من المفضلة" : "إضافة للمفضلة"} ><Heart size={18} className={isWishlisted ? 'fill-current' : ''} /></button></div><div className="p-5 flex flex-col flex-grow"><h3 className="text-base font-bold text-gray-800 truncate group-hover:text-yellow-600 transition-colors" title={product.name}>{product.name}</h3>{product.short_description && <p className="text-sm text-gray-600 mt-2 line-clamp-2">{product.short_description}</p>}{product.rating && product.review_count && <div className="mt-3"><StarRating rating={product.rating} review_count={product.review_count} /></div>}<div className="pt-4 mt-auto flex items-end justify-between"><div className="flex flex-col">{hasSale ? (<><span className="text-xl font-extrabold text-red-600">{formatCurrency(product.sale_price!)}</span><span className="text-sm text-gray-400 line-through">{formatCurrency(product.regular_price)}</span></>) : (<span className="text-xl font-extrabold text-gray-800">{formatCurrency(product.regular_price)}</span>)}</div><button onClick={handleCartClick} className="w-11 h-11 bg-yellow-500 hover:bg-yellow-600 text-white rounded-full flex items-center justify-center transform transition-all duration-300 hover:scale-110 shadow-lg" title="إضافة للسلة" aria-label={`إضافة ${product.name} إلى السلة`}><ShoppingCart size={20}/></button></div></div></a>);
 });
 ProductCard.displayName = 'ProductCard';
 const HeroSlider = ({ slides }: { slides: Slide[] }) => {
@@ -351,7 +352,7 @@ const HeroSlider = ({ slides }: { slides: Slide[] }) => {
             <div className="flex transition-transform ease-out duration-1000 h-full" style={{ transform: `translateX(-${currentSlide * 100}%)` }}>
                 {slides.map((slide) => (
                     <div key={slide.id} className="w-full h-full flex-shrink-0 relative">
-                        <img src={slide.image_url} alt={slide.title} className="w-full h-full object-cover" />
+                        <Image src={slide.image_url} alt={slide.title} width={1920} height={1080} className="w-full h-full object-cover" />
                         <div className="absolute inset-0 bg-gradient-to-br from-black/60 via-black/40 to-transparent"></div>
                         <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white p-6" dir="rtl">
                             <div className="max-w-4xl space-y-6 animate-fade-in-up">
@@ -476,7 +477,7 @@ const CategorySlider = ({ categories }: { categories: Category[] }) => {
                     <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-800 mb-4 relative inline-block">
                         تسوق حسب الفئات
                         <div className="absolute -bottom-2 right-1/2 transform translate-x-1/2 w-20 h-1.5 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full"></div>
-                        <div className="absolute -bottom-4 right-1/2 transform translate-x-1/2 w-12 h-1 bg-blue-500 rounded-full"></div>
+                        <div className="absolute -bottom-4 right-1/2 transform translate-x-1/2 w-10 h-1 bg-blue-500 rounded-full"></div>
                     </h2>
                     <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto mt-6">اكتشف مجموعة واسعة من المنتجات المصنفة حسب احتياجاتك</p>
                 </div>
@@ -491,9 +492,11 @@ const CategorySlider = ({ categories }: { categories: Category[] }) => {
                                 style={{ animationDelay: `${index * 100}ms` }}
                             >
                                 <div className="w-full aspect-square rounded-3xl overflow-hidden shadow-lg border-2 border-gray-100 group-hover:border-yellow-400 group-hover:shadow-2xl transition-all duration-500 bg-gradient-to-br from-white via-gray-50 to-gray-100 relative">
-                                    <img 
+                                    <Image 
                                         src={category.image} 
                                         alt={category.name} 
+                                        width={200} 
+                                        height={200} 
                                         className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700" 
                                         onError={(e) => { 
                                             const target = e.currentTarget as HTMLImageElement;
@@ -576,12 +579,7 @@ const CategorySliderSkeleton = () => (
     </section>
 );
 
-const PromoBanner = ({ banner }: { banner: PromoBannerData }) => (<section className="py-16 sm:py-20 bg-slate-50"><div className="container mx-auto px-4 sm:px-6 max-w-7xl"><a href={banner.link} className="group relative block rounded-2xl overflow-hidden shadow-xl"><img src={banner.image_url} alt={banner.title} className="w-full h-80 object-cover transform group-hover:scale-105 transition-transform duration-500" /><div className="absolute inset-0 bg-gradient-to-r from-black/70 to-black/20"></div><div className="absolute inset-0 flex flex-col justify-center p-8 md:p-12 text-white"><h2 className="text-3xl md:text-4xl font-extrabold max-w-md">{banner.title}</h2><p className="mt-2 text-lg text-slate-200 max-w-md">{banner.subtitle}</p><div className="mt-8"><span className="inline-block bg-white text-blue-600 font-bold py-3 px-8 rounded-lg group-hover:bg-slate-200 transition-colors">{banner.button_text}</span></div></div></a></div></section>);
-const CountdownTimer = ({ endDate }: { endDate: string }) => {
-    const { days, hours, minutes, seconds } = useCountdown(endDate);
-    const format = (num: number) => num.toString().padStart(2, '0');
-    return (<div className="flex items-center gap-3 sm:gap-6" dir="ltr">{[{label: 'أيام', value: days, color: 'from-blue-500 to-blue-600'}, {label: 'ساعات', value: hours, color: 'from-green-500 to-green-600'}, {label: 'دقائق', value: minutes, color: 'from-yellow-500 to-yellow-600'}, {label: 'ثواني', value: seconds, color: 'from-red-500 to-red-600'}].map(time => (<div key={time.label} className="flex flex-col items-center group"><div className={`text-3xl sm:text-4xl font-black bg-gradient-to-br ${time.color} text-white w-20 h-20 sm:w-24 sm:h-24 rounded-2xl flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform duration-300 border-2 border-white/20`}>{format(time.value)}</div><span className="text-sm sm:text-base text-white font-bold mt-3 group-hover:text-yellow-300 transition-colors">{time.label}</span></div>))}</div>);
-};
+const PromoBanner = ({ banner }: { banner: PromoBannerData }) => (<section className="py-16 sm:py-20 bg-slate-50"><div className="container mx-auto px-4 sm:px-6 max-w-7xl"><a href={banner.link} className="group relative block rounded-2xl overflow-hidden shadow-xl"><Image src={banner.image_url} alt={banner.title} width={800} height={450} className="w-full h-80 object-cover transform group-hover:scale-105 transition-transform duration-500" /><div className="absolute inset-0 bg-gradient-to-r from-black/70 to-black/20"></div><div className="absolute inset-0 flex flex-col justify-center p-8 md:p-12 text-white"><h2 className="text-3xl md:text-4xl font-extrabold max-w-md">{banner.title}</h2><p className="mt-2 text-lg text-slate-200 max-w-md">{banner.subtitle}</p><div className="mt-8"><span className="inline-block bg-white text-blue-600 font-bold py-3 px-8 rounded-lg group-hover:bg-slate-200 transition-colors">{banner.button_text}</span></div></div></a></div></section>);
 // --- ( MAIN HOME PAGE CONTENT ) ---
 function HomePageContent() {
     const fetcher = useCallback(() => api.getHomePageData(), []);

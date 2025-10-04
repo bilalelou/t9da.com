@@ -30,7 +30,6 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   generateEtags: false,
   // Performance optimizations
-  swcMinify: true,
   experimental: {
     optimizeCss: true,
   },

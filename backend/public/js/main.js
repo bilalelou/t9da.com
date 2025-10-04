@@ -27,7 +27,7 @@
         if (imgURL) {
           selectOption.attr(
             "data-content",
-            "<img src='%i'/> %s"
+            "<Image src='%i' alt='Image' /> %s"
               .replace(/%i/, imgURL)
               .replace(/%s/, selectOption.text())
           );
