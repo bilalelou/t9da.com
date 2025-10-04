@@ -68,7 +68,7 @@ export default function CheckoutPage() {
         fullName: '',
         phone: '',
         email: '',
-        city: localStorage.getItem('selectedCity') || '',
+        city: '',
         address: '',
         postalCode: '',
         notes: ''
@@ -120,7 +120,7 @@ export default function CheckoutPage() {
     useEffect(() => {
         const fetchUserData = async () => {
             try {
-                const token = localStorage.getItem('api_token');
+                const token = typeof window !== 'undefined' ? localStorage.getItem('api_token') : null;
                 console.log('🔐 Token found:', !!token);
                 console.log('🔐 Token preview:', token ? `${token.substring(0, 20)}...` : 'No token');
                 
@@ -153,7 +153,7 @@ export default function CheckoutPage() {
                             phone: userData.mobile || prev.phone, // استخدام mobile بدلاً من phone
                             // إذا كان لديه عنوان محفوظ
                             address: userData.address || prev.address,
-                            city: userData.city || localStorage.getItem('selectedCity') || prev.city,
+                            city: userData.city || (typeof window !== 'undefined' ? localStorage.getItem('selectedCity') : '') || prev.city,
                             postalCode: userData.postal_code || prev.postalCode
                         }));
                         console.log('✅ شحن البيانات تم بنجاح');
@@ -198,9 +198,19 @@ export default function CheckoutPage() {
         fetchFreeShippingThreshold();
     }, []);
 
+    // تحميل المدينة المحفوظة عند التحميل الأول
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const savedCity = localStorage.getItem('selectedCity');
+            if (savedCity && !shippingAddress.city) {
+                setShippingAddress(prev => ({ ...prev, city: savedCity }));
+            }
+        }
+    }, []);
+
     // حفظ المدينة عند تغييرها
     useEffect(() => {
-        if (shippingAddress.city) {
+        if (typeof window !== 'undefined' && shippingAddress.city) {
             localStorage.setItem('selectedCity', shippingAddress.city);
         }
     }, [shippingAddress.city]);
@@ -302,9 +312,11 @@ export default function CheckoutPage() {
             const data = await response.json();
 
             if (response.ok && data.token) {
-                localStorage.setItem('api_token', data.token);
-                localStorage.setItem('token', data.token);
-                localStorage.setItem('user', JSON.stringify(data.user));
+                if (typeof window !== 'undefined') {
+                    localStorage.setItem('api_token', data.token);
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                }
                 
                 setIsLoggedIn(true);
                 setShowLoginOption(false);
@@ -318,7 +330,7 @@ export default function CheckoutPage() {
                         email: data.user.email || prev.email,
                         phone: data.user.mobile || prev.phone, // استخدام mobile بدلاً من phone
                         address: data.user.address || prev.address,
-                        city: data.user.city || localStorage.getItem('selectedCity') || prev.city,
+                        city: data.user.city || (typeof window !== 'undefined' ? localStorage.getItem('selectedCity') : '') || prev.city,
                         postalCode: data.user.postal_code || prev.postalCode
                     }));
                 }
@@ -366,9 +378,11 @@ export default function CheckoutPage() {
 
             if (response.ok && data.token) {
                 // حفظ التوكن
-                localStorage.setItem('api_token', data.token);
-                localStorage.setItem('token', data.token);
-                localStorage.setItem('user', JSON.stringify(data.user));
+                if (typeof window !== 'undefined') {
+                    localStorage.setItem('api_token', data.token);
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                }
                 
                 setIsLoggedIn(true);
                 
@@ -394,7 +408,7 @@ export default function CheckoutPage() {
     // اختبار المصادقة
     const testAuth = async () => {
         try {
-            const token = localStorage.getItem('api_token');
+            const token = typeof window !== 'undefined' ? localStorage.getItem('api_token') : null;
             if (!token) {
                 console.log('❌ لا يوجد توكن');
                 return;
@@ -437,7 +451,7 @@ export default function CheckoutPage() {
         
         setIsLoading(true);
         try {
-            let token = localStorage.getItem('api_token');
+            let token = typeof window !== 'undefined' ? localStorage.getItem('api_token') : null;
             
             // إذا لم يكن مسجل دخول ويريد المتابعة كضيف، أنشئ حساباً جديداً
             if (!token && proceedAsGuest) {
@@ -529,9 +543,11 @@ export default function CheckoutPage() {
                 // Handle specific error cases
                 if (response.status === 401) {
                     // Authentication failed
-                    localStorage.removeItem('api_token');
-                    localStorage.removeItem('token');
-                    localStorage.removeItem('user');
+                    if (typeof window !== 'undefined') {
+                        localStorage.removeItem('api_token');
+                        localStorage.removeItem('token');
+                        localStorage.removeItem('user');
+                    }
                     throw new Error('انتهت جلسة تسجيل الدخول. يرجى تسجيل الدخول مرة أخرى');
                 } else if (response.status === 422) {
                     // Validation errors
