@@ -1,318 +1,161 @@
-'use client';
+import { Metadata } from 'next';
+import { notFound } from 'next/navigation';
+import ProductClient, { Product } from './ProductClient';
 
-import React, { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
-import Image from 'next/image';
-import { Loader2, ShoppingCart, Heart, Share2 } from 'lucide-react';
-import StarRating from '@/components/ui/StarRating';
-import ProductReviews from '@/components/reviews/ProductReviews';
+export const revalidate = 3600; // إعادة توليد الصفحة كل ساعة لتحسين SEO والتحديث
 
-interface Product {
-  id: number;
-  name: string;
-  slug: string;
-  description: string;
-  short_description: string;
-  regular_price: number;
-  sale_price: number | null;
-  images: string[];
-  thumbnail: string;
-  stock_status: string;
-  quantity: number;
-  has_variants: boolean;
-  category: {
-    id: number;
-    name: string;
-    slug: string;
-  } | null;
-  brand: {
-    id: number;
-    name: string;
-    slug: string;
-  } | null;
-  variants?: Array<{
-    id: number;
-    price: number;
-    stock_quantity: number;
-    color: { id: number; name: string; hex_code: string } | null;
-    size: { id: number; name: string } | null;
-  }>;
-  average_rating: number;
-  total_reviews: number;
+async function getProduct(slug: string): Promise<Product | null> {
+  try {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    if (!apiUrl) return null;
+    const res = await fetch(`${apiUrl}/api/products/${slug}`, { next: { revalidate } });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data.success && data.product) return data.product as Product;
+    return null;
+  } catch {
+    return null;
+  }
 }
 
-const formatCurrency = (amount: number): string => {
-  if (isNaN(amount)) return 'ليس رقماً د.م.';
-  return `${amount.toFixed(2)} د.م.`;
-};
+// Helper function to generate comprehensive keywords
+function generateKeywords(product: Product): string[] {
+  const baseKeywords = [
+    product.name,
+    product.category?.name || '',
+    product.brand?.name || '',
+    'شراء', 'سعر', 'المغرب', 'تسوق أونلاين',
+    'أفضل', 'عروض', 'تخفيضات', 'جديد', 'حصري'
+  ];
 
-export default function ProductPage() {
-  const params = useParams();
-  const slug = params.slug as string;
+  // Add keywords from description, splitting by common delimiters
+  const descriptionKeywords = (product.short_description || product.description || '')
+    .split(/[\s,.-]+/)
+    .filter(Boolean)
+    .map(keyword => keyword.trim())
+    .filter(keyword => keyword.length > 2); // Filter out very short words
 
-  const [product, setProduct] = useState<Product | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedVariant, setSelectedVariant] = useState<{
-    id: number;
-    price: number;
-    stock_quantity: number;
-    color: { id: number; name: string; hex_code: string } | null;
-    size: { id: number; name: string } | null;
-  } | null>(null);
-  const [quantity, setQuantity] = useState(1);
-  const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const combinedKeywords = [...new Set([...baseKeywords, ...descriptionKeywords])]; // Use Set to remove duplicates
+  return combinedKeywords.filter(Boolean).slice(0, 15); // Limit to 15 keywords for relevance
+}
 
-  useEffect(() => {
-    const fetchProduct = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/products/${slug}`);
-        
-        if (!response.ok) {
-          throw new Error('فشل في تحميل المنتج');
-        }
-
-        const data = await response.json();
-        
-        if (data.success) {
-          setProduct(data.product);
-          // Set default variant if product has variants
-          if (data.product.variants && data.product.variants.length > 0) {
-            setSelectedVariant(data.product.variants[0]);
-          }
-        } else {
-          throw new Error(data.message || 'فشل في تحميل المنتج');
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'حدث خطأ غير متوقع');
-      } finally {
-        setLoading(false);
-      }
+export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+  const product = await getProduct(params.slug);
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://t9da.com';
+  if (!product) {
+    return {
+      title: 'المنتج غير موجود',
+      description: 'المنتج المطلوب غير متوفر أو تم حذفه.',
+      robots: { index: false, follow: false }
     };
-
-    if (slug) {
-      fetchProduct();
-    }
-  }, [slug]);
-
-  const handleAddToCart = () => {
-    if (!product) return;
-
-    // For now, just alert - the cart functionality can be implemented later
-    alert(`تم إضافة ${product.name} إلى السلة!`);
-  };
-
-  const getCurrentPrice = () => {
-    if (selectedVariant) {
-      return selectedVariant.price;
-    }
-    return product?.sale_price || product?.regular_price || 0;
-  };
-
-  const getOriginalPrice = () => {
-    if (selectedVariant) {
-      return null; // Variants don't have sale prices
-    }
-    return product?.sale_price ? product.regular_price : null;
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-      </div>
-    );
   }
 
-  if (error || !product) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">خطأ في تحميل المنتج</h1>
-          <p className="text-gray-600">{error || 'المنتج غير موجود'}</p>
-        </div>
-      </div>
-    );
-  }
+  const canonical = `${siteUrl}/products/${product.slug}`;
+  const price = product.sale_price || product.regular_price;
+  const images = product.images && product.images.length > 0 ? product.images : [product.thumbnail];
+  const mainImage = images[0];
+
+  return {
+    title: `${product.name} | شراء بأفضل سعر في المغرب`,
+    description: product.short_description?.slice(0, 155) || product.description?.slice(0, 155),
+    alternates: { canonical },
+    openGraph: {
+      type: 'website', // Changed to 'website' as 'product' is not a valid type for OpenGraph in Next.js Metadata
+      url: canonical,
+      title: product.name,
+      description: product.short_description || product.description,
+      images: images.map(url => ({ url, width: 800, height: 800, alt: product.name })),
+      siteName: 'T9da.com'
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: product.name,
+      description: product.short_description || product.description,
+      images: [mainImage]
+    },
+    keywords: generateKeywords(product),
+    robots: { index: true, follow: true },
+    other: {
+      'product:price:amount': price?.toString() || '',
+      'product:price:currency': 'MAD'
+    }
+  };
+}
+
+export default async function ProductPage({ params }: { params: { slug: string } }) {
+  const product = await getProduct(params.slug);
+  if (!product) notFound();
+
+  // Structured Data JSON-LD
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://t9da.com';
+  const url = `${siteUrl}/products/${product.slug}`;
+  const images = (product.images && product.images.length > 0 ? product.images : [product.thumbnail]).map(i => i.startsWith('http') ? i : `${siteUrl}${i}`);
+  const offerPrice = product.sale_price || product.regular_price;
+  const productJsonLd = {
+    '@context': 'https://schema.org/',
+    '@type': 'Product',
+    name: product.name,
+    image: images,
+    description: product.short_description || product.description,
+    sku: product.id,
+    brand: product.brand ? { '@type': 'Brand', name: product.brand.name } : undefined,
+    category: product.category?.name,
+    offers: {
+      '@type': 'Offer',
+      priceCurrency: 'MAD',
+      price: offerPrice,
+      availability: product.stock_status === 'instock' ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+      url,
+      seller: {
+        '@type': 'Organization',
+        name: 'T9da.com'
+      }
+    },
+    aggregateRating: product.total_reviews > 0 ? {
+      '@type': 'AggregateRating',
+      ratingValue: product.average_rating,
+      reviewCount: product.total_reviews
+    } : undefined
+  };
+
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'الرئيسية',
+        item: siteUrl
+      },
+      product.category ? {
+        '@type': 'ListItem',
+        position: 2,
+        name: product.category.name,
+        item: `${siteUrl}/categories/${product.category.slug}`
+      } : null,
+      {
+        '@type': 'ListItem',
+        position: product.category ? 3 : 2,
+        name: product.name,
+        item: url
+      }
+    ].filter(Boolean)
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-          {/* Product Details */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 p-8">
-            {/* Images */}
-            <div className="space-y-4">
-              <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
-                <Image
-                  src={product.images && product.images.length > 0 ? product.images[activeImageIndex] : product.thumbnail}
-                  alt={product.name}
-                  width={600}
-                  height={600}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              {product.images && product.images.length > 1 && (
-                <div className="flex gap-2 overflow-x-auto">
-                  {product.images.map((image, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setActiveImageIndex(index)}
-                      className={`flex-shrink-0 w-20 h-20 bg-gray-100 rounded-lg overflow-hidden border-2 ${
-                        activeImageIndex === index ? 'border-blue-500' : 'border-transparent'
-                      }`}
-                    >
-                      <Image
-                        src={image}
-                        alt={`${product.name} ${index + 1}`}
-                        width={80}
-                        height={80}
-                        className="w-full h-full object-cover"
-                      />
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Product Info */}
-            <div className="space-y-6">
-              <div>
-                <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-                  <span>{product.category?.name || 'غير مصنف'}</span>
-                  <span>•</span>
-                  <span>{product.brand?.name || 'غير محدد'}</span>
-                </div>
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">{product.name}</h1>
-                
-                {/* Rating */}
-                <div className="flex items-center gap-2 mb-4">
-                  <StarRating rating={product.average_rating} size="md" showValue />
-                  <span className="text-sm text-gray-600">
-                    ({product.total_reviews} تقييم)
-                  </span>
-                </div>
-
-                <p className="text-gray-600">{product.short_description}</p>
-              </div>
-
-              {/* Price */}
-              <div className="flex items-center gap-3">
-                <span className="text-3xl font-bold text-blue-600">
-                  {formatCurrency(getCurrentPrice())}
-                </span>
-                {getOriginalPrice() && (
-                  <span className="text-xl text-gray-500 line-through">
-                    {formatCurrency(getOriginalPrice()!)}
-                  </span>
-                )}
-              </div>
-
-              {/* Variants */}
-              {product.has_variants && product.variants && product.variants.length > 0 && (
-                <div className="space-y-4">
-                  <h3 className="font-semibold text-gray-900">اختر المواصفات:</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    {product.variants.map((variant) => (
-                      <button
-                        key={variant.id}
-                        onClick={() => setSelectedVariant(variant)}
-                        className={`p-3 border rounded-lg text-sm transition-colors ${
-                          selectedVariant?.id === variant.id
-                            ? 'border-blue-500 bg-blue-50 text-blue-700'
-                            : 'border-gray-300 hover:border-gray-400'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          {variant.color && (
-                            <>
-                              <div
-                                className="w-4 h-4 rounded-full border"
-                                style={{ backgroundColor: variant.color.hex_code }}
-                              />
-                              <span>{variant.color.name}</span>
-                            </>
-                          )}
-                          {variant.color && variant.size && <span>•</span>}
-                          {variant.size && <span>{variant.size.name}</span>}
-                        </div>
-                        <div className="text-xs text-gray-600 mt-1">
-                          {formatCurrency(variant.price)}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Quantity and Add to Cart */}
-              <div className="flex items-center gap-4">
-                <div className="flex items-center border rounded-lg">
-                  <button
-                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    className="px-3 py-2 hover:bg-gray-100 transition-colors"
-                  >
-                    -
-                  </button>
-                  <span className="px-4 py-2 border-x">{quantity}</span>
-                  <button
-                    onClick={() => setQuantity(quantity + 1)}
-                    className="px-3 py-2 hover:bg-gray-100 transition-colors"
-                  >
-                    +
-                  </button>
-                </div>
-
-                <button
-                  onClick={handleAddToCart}
-                  className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  <ShoppingCart className="w-5 h-5" />
-                  إضافة إلى السلة
-                </button>
-
-                <button className="p-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                  <Heart className="w-5 h-5" />
-                </button>
-
-                <button className="p-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                  <Share2 className="w-5 h-5" />
-                </button>
-              </div>
-
-              {/* Stock Status */}
-              <div className="flex items-center gap-2">
-                <div className={`w-3 h-3 rounded-full ${
-                  product.stock_status === 'instock' ? 'bg-green-500' : 'bg-red-500'
-                }`} />
-                <span className="text-sm">
-                  {product.stock_status === 'instock' ? 'متوفر في المخزن' : 'غير متوفر'}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Tabs */}
-          <div className="border-t border-gray-200">
-            <div className="p-8">
-              {/* Description */}
-              <div className="mb-8">
-                <h3 className="text-xl font-semibold text-gray-900 mb-4">وصف المنتج</h3>
-                <div className="prose max-w-none text-gray-700">
-                  {product.description}
-                </div>
-              </div>
-
-              {/* Reviews Section */}
-              <div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-6">التقييمات والمراجعات</h3>
-                <ProductReviews productId={product.id} />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <>
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
+      <ProductClient product={product} />
+    </>
   );
 }
