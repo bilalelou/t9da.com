@@ -25,8 +25,6 @@ import Link from 'next/link';
 import CheckoutPaymentMethods from '@/components/CheckoutPaymentMethods';
 import { calculateOrderTotal, formatCurrency } from '@/utils/calculateOrderTotal';
 
-
-
 // واجهات TypeScript
 interface ShippingAddress {
     fullName: string;
@@ -38,49 +36,21 @@ interface ShippingAddress {
     notes?: string;
 }
 
-
-
 export default function CheckoutPage() {
-    // Ensure this component only runs on the client side
+    // All hooks must be called at the top level
     const [isClient, setIsClient] = useState(false);
-    
-    useEffect(() => {
-        setIsClient(true);
-    }, []);
-    
-    if (!isClient) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50" dir="rtl">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                    <p className="mt-4 text-sm text-gray-600">جاري التحميل...</p>
-                </div>
-            </div>
-        );
-    }
     const { cartItems, clearCart, updateQuantity, removeFromCart, subtotal } = useCart();
     const router = useRouter();
-
-    // Simple toast function (replace with your toast system)
-    const showToast = (message: string, type: 'success' | 'error') => {
-        console.log(`${type === 'success' ? '✅' : '❌'} ${message}`);
-    };
-
-    // حالات الصفحة
     const [currentStep, setCurrentStep] = useState(1);
     const [isLoading, setIsLoading] = useState(false);
     const [isLoadingUser, setIsLoadingUser] = useState(true);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
-    
-    // حالات تسجيل الدخول والضيف
     const [showLoginOption, setShowLoginOption] = useState(true);
     const [proceedAsGuest, setProceedAsGuest] = useState(false);
     const [loginData, setLoginData] = useState({ email: '', password: '' });
     const [loginError, setLoginError] = useState('');
     const [isLoggingIn, setIsLoggingIn] = useState(false);
-
-    // بيانات الشحن
     const [shippingAddress, setShippingAddress] = useState<ShippingAddress>({
         fullName: '',
         phone: '',
@@ -90,26 +60,24 @@ export default function CheckoutPage() {
         postalCode: '',
         notes: ''
     });
-
-    // طريقة الدفع
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('cod');
-
-    // كود الخصم
     const [couponCode, setCouponCode] = useState('');
     const [appliedCoupon, setAppliedCoupon] = useState<{code: string, discount: number} | null>(null);
-    
-    // بيانات المدن وتكاليف الشحن
     const [shippingCosts, setShippingCosts] = useState<Record<string, number>>({});
     const [cities, setCities] = useState<string[]>([]);
+    const [freeShippingThreshold, setFreeShippingThreshold] = useState(500);
+    const [paymentFees, setPaymentFees] = useState(0);
 
-    // التحقق من وجود منتجات في السلة
     useEffect(() => {
-        if (cartItems.length === 0) {
+        setIsClient(true);
+    }, []);
+
+    useEffect(() => {
+        if (isClient && cartItems.length === 0) {
             router.push('/cart');
         }
-    }, [cartItems, router]);
+    }, [cartItems, router, isClient]);
 
-    // جلب تكاليف الشحن من API
     useEffect(() => {
         const fetchShippingCosts = async () => {
             try {
@@ -133,7 +101,6 @@ export default function CheckoutPage() {
         fetchShippingCosts();
     }, []);
 
-    // جلب بيانات المستخدم المسجل دخوله
     useEffect(() => {
         const fetchUserData = async () => {
             try {
@@ -162,13 +129,11 @@ export default function CheckoutPage() {
                         setShowLoginOption(false);
                         setProceedAsGuest(false);
                         
-                        // ملء بيانات الشحن تلقائياً من بيانات المستخدم
                         setShippingAddress(prev => ({
                             ...prev,
                             fullName: userData.name || prev.fullName,
                             email: userData.email || prev.email,
-                            phone: userData.mobile || prev.phone, // استخدام mobile بدلاً من phone
-                            // إذا كان لديه عنوان محفوظ
+                            phone: userData.mobile || prev.phone,
                             address: userData.address || prev.address,
                             city: userData.city || (typeof window !== 'undefined' ? localStorage.getItem('selectedCity') : '') || prev.city,
                             postalCode: userData.postal_code || prev.postalCode
@@ -191,10 +156,6 @@ export default function CheckoutPage() {
         fetchUserData();
     }, []);
 
-    // قيمة الشحن المجاني
-    const [freeShippingThreshold, setFreeShippingThreshold] = useState(500);
-
-    // جلب قيمة الشحن المجاني
     useEffect(() => {
         const fetchFreeShippingThreshold = async () => {
             try {
@@ -215,7 +176,6 @@ export default function CheckoutPage() {
         fetchFreeShippingThreshold();
     }, []);
 
-    // تحميل المدينة المحفوظة عند التحميل الأول
     useEffect(() => {
         if (typeof window !== 'undefined') {
             const savedCity = localStorage.getItem('selectedCity');
@@ -225,14 +185,12 @@ export default function CheckoutPage() {
         }
     }, []);
 
-    // حفظ المدينة عند تغييرها
     useEffect(() => {
         if (typeof window !== 'undefined' && shippingAddress.city) {
             localStorage.setItem('selectedCity', shippingAddress.city);
         }
     }, [shippingAddress.city]);
 
-    // حساب التكاليف
     const shipping = useMemo(() => {
         if (subtotal > freeShippingThreshold) return 0; // شحن مجاني
         if (!shippingAddress.city) return null;
@@ -241,10 +199,6 @@ export default function CheckoutPage() {
 
     const couponDiscount = appliedCoupon ? (subtotal * appliedCoupon.discount / 100) : 0;
     
-    // حساب رسوم الدفع (سيتم تحديثه من CheckoutPaymentMethods)
-    const [paymentFees, setPaymentFees] = useState(0);
-    
-    // حساب الإجمالي باستخدام utility function
     const orderCalculation = useMemo(() => {
         return calculateOrderTotal(
             subtotal,
@@ -257,24 +211,24 @@ export default function CheckoutPage() {
     
     const total = orderCalculation.total;
 
-    // التحقق من صحة البيانات
+    const showToast = (message: string, type: 'success' | 'error') => {
+        console.log(`${type === 'success' ? '✅' : '❌'} ${message}`);
+    };
+
     const validateStep = (step: number): boolean => {
         const newErrors: Record<string, string> = {};
 
         if (step === 1) {
             if (!shippingAddress.fullName.trim()) newErrors.fullName = 'الاسم الكامل مطلوب';
             if (!shippingAddress.phone.trim()) newErrors.phone = 'رقم الهاتف مطلوب';
-            // إزالة إلزامية البريد الإلكتروني
             if (!shippingAddress.city) newErrors.city = 'المدينة مطلوبة';
             if (!shippingAddress.address.trim()) newErrors.address = 'العنوان مطلوب';
             
-            // التحقق من تنسيق البريد الإلكتروني (فقط إذا تم إدخاله)
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             if (shippingAddress.email && shippingAddress.email.trim() && !emailRegex.test(shippingAddress.email)) {
                 newErrors.email = 'تنسيق البريد الإلكتروني غير صحيح';
             }
 
-            // التحقق من رقم الهاتف المغربي
             const cleanPhone = shippingAddress.phone.replace(/[\s\-\.]/g, '');
             const phoneRegex = /^(\+212|0)[5-7]\d{8}$/;
             if (shippingAddress.phone && !phoneRegex.test(cleanPhone)) {
@@ -286,7 +240,6 @@ export default function CheckoutPage() {
         return Object.keys(newErrors).length === 0;
     };
 
-    // تطبيق كود الخصم
     const applyCoupon = () => {
         const validCoupons: Record<string, number> = { 'SAVE10': 10, 'WELCOME20': 20, 'FIRST30': 30 };
         const upperCoupon = couponCode.toUpperCase();
@@ -299,14 +252,12 @@ export default function CheckoutPage() {
         }
     };
 
-    // إزالة كود الخصم
     const removeCoupon = () => {
         setAppliedCoupon(null);
         setCouponCode('');
         showToast('تم إزالة كود الخصم', 'success');
     };
 
-    // تسجيل الدخول
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoginError('');
@@ -339,13 +290,12 @@ export default function CheckoutPage() {
                 setShowLoginOption(false);
                 setProceedAsGuest(false);
                 
-                // ملء بيانات الشحن من بيانات المستخدم
                 if (data.user) {
                     setShippingAddress(prev => ({
                         ...prev,
                         fullName: data.user.name || prev.fullName,
                         email: data.user.email || prev.email,
-                        phone: data.user.mobile || prev.phone, // استخدام mobile بدلاً من phone
+                        phone: data.user.mobile || prev.phone,
                         address: data.user.address || prev.address,
                         city: data.user.city || (typeof window !== 'undefined' ? localStorage.getItem('selectedCity') : '') || prev.city,
                         postalCode: data.user.postal_code || prev.postalCode
@@ -364,12 +314,10 @@ export default function CheckoutPage() {
         }
     };
 
-    // إنشاء مستخدم جديد
     const createGuestUser = async (): Promise<string | null> => {
         try {
             const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
             
-            // إنشاء كلمة مرور تلقائية
             const tempPassword = Math.random().toString(36).slice(-8);
             
             const response = await fetch(`${API_BASE_URL}/register`, {
@@ -380,11 +328,10 @@ export default function CheckoutPage() {
                 },
                 body: JSON.stringify({
                     name: shippingAddress.fullName,
-                    email: shippingAddress.email || `guest_${Date.now()}@temp.com`, // بريد مؤقت إذا لم يتم إدخال بريد
-                    mobile: shippingAddress.phone, // استخدام mobile بدلاً من phone
+                    email: shippingAddress.email || `guest_${Date.now()}@temp.com`,
+                    mobile: shippingAddress.phone,
                     password: tempPassword,
                     password_confirmation: tempPassword,
-                    // إضافة معلومات إضافية
                     city: shippingAddress.city,
                     address: shippingAddress.address,
                     postal_code: shippingAddress.postalCode
@@ -394,7 +341,6 @@ export default function CheckoutPage() {
             const data = await response.json();
 
             if (response.ok && data.token) {
-                // حفظ التوكن
                 if (typeof window !== 'undefined') {
                     localStorage.setItem('api_token', data.token);
                     localStorage.setItem('token', data.token);
@@ -415,14 +361,12 @@ export default function CheckoutPage() {
         }
     };
 
-    // الانتقال للخطوة التالية
     const nextStep = () => {
         if (validateStep(currentStep)) {
             setCurrentStep(currentStep + 1);
         }
     };
 
-    // اختبار المصادقة
     const testAuth = async () => {
         try {
             const token = typeof window !== 'undefined' ? localStorage.getItem('api_token') : null;
@@ -433,7 +377,6 @@ export default function CheckoutPage() {
             
             const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
             
-            // اختبار التوكن بدون middleware
             const debugResponse = await fetch(`${API_BASE_URL}/test-auth-debug`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -443,7 +386,6 @@ export default function CheckoutPage() {
             const debugResult = await debugResponse.json();
             console.log('🔍 نتيجة اختبار التوكن (بدون middleware):', debugResult);
             
-            // اختبار المصادقة مع middleware
             const response = await fetch(`${API_BASE_URL}/test-auth`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -459,18 +401,15 @@ export default function CheckoutPage() {
         }
     };
 
-    // إتمام الطلب
     const completeOrder = async () => {
         if (!validateStep(1)) return;
         
-        // اختبار المصادقة أولاً
         await testAuth();
         
         setIsLoading(true);
         try {
             let token = typeof window !== 'undefined' ? localStorage.getItem('api_token') : null;
             
-            // إذا لم يكن مسجل دخول ويريد المتابعة كضيف، أنشئ حساباً جديداً
             if (!token && proceedAsGuest) {
                 console.log('🔄 إنشاء مستخدم جديد...');
                 token = await createGuestUser();
@@ -484,7 +423,6 @@ export default function CheckoutPage() {
                 return;
             }
 
-            // إعداد بيانات الطلب
             const orderData = {
                 items: cartItems.map(item => ({
                     product_id: item.id,
@@ -492,11 +430,11 @@ export default function CheckoutPage() {
                 })),
                 shipping_info: {
                     fullName: shippingAddress.fullName,
-                    email: shippingAddress.email || '', // بريد فارغ إذا لم يتم إدخاله
+                    email: shippingAddress.email || '',
                     phone: shippingAddress.phone,
                     address: shippingAddress.address,
                     city: shippingAddress.city,
-                    state: shippingAddress.city, // نستخدم نفس المدينة كمحافظة
+                    state: shippingAddress.city,
                     postalCode: shippingAddress.postalCode || '00000',
                     shippingMethod: 'standard',
                     paymentMethod: selectedPaymentMethod
@@ -513,7 +451,6 @@ export default function CheckoutPage() {
 
             console.log('📦 إرسال طلب جديد:', orderData);
 
-            // إرسال الطلب إلى API
             const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
             const response = await fetch(`${API_BASE_URL}/orders`, {
                 method: 'POST',
@@ -540,11 +477,9 @@ export default function CheckoutPage() {
             console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
 
             if (response.ok && result.success) {
-                // مسح السلة وإعادة التوجيه
                 clearCart();
                 showToast(`تم إرسال طلبك بنجاح! رقم الطلب: ${result.data.order_number}`, 'success');
                 
-                // إذا كان مستخدم جديد، أعلمه بأنه تم إنشاء حساب له
                 if (proceedAsGuest) {
                     showToast('تم إنشاء حساب جديد لك! يمكنك الآن متابعة طلباتك من لوحة التحكم', 'success');
                 }
@@ -557,9 +492,7 @@ export default function CheckoutPage() {
                     result: result
                 });
                 
-                // Handle specific error cases
                 if (response.status === 401) {
-                    // Authentication failed
                     if (typeof window !== 'undefined') {
                         localStorage.removeItem('api_token');
                         localStorage.removeItem('token');
@@ -567,7 +500,6 @@ export default function CheckoutPage() {
                     }
                     throw new Error('انتهت جلسة تسجيل الدخول. يرجى تسجيل الدخول مرة أخرى');
                 } else if (response.status === 422) {
-                    // Validation errors
                     const errorMessages = [];
                     if (result.errors) {
                         for (const [field, messages] of Object.entries(result.errors)) {
@@ -593,8 +525,7 @@ export default function CheckoutPage() {
         }
     };
 
-    // إظهار loading أثناء تحميل بيانات المستخدم
-    if (isLoadingUser) {
+    if (!isClient || isLoadingUser) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-50" dir="rtl">
                 <div className="text-center">
@@ -605,7 +536,6 @@ export default function CheckoutPage() {
         );
     }
 
-    // إذا كانت السلة فارغة
     if (cartItems.length === 0) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-50" dir="rtl">
@@ -667,13 +597,11 @@ export default function CheckoutPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Main Content */}
                     <div className="lg:col-span-2">
-                        {/* خيارات تسجيل الدخول أو المتابعة كضيف */}
                         {showLoginOption && !isLoggedIn && (
                             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
                                 <h2 className="text-lg font-medium text-gray-900 mb-4">اختر طريقة المتابعة</h2>
                                 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    {/* تسجيل الدخول */}
                                     <div className="border border-gray-200 rounded-lg p-4">
                                         <h3 className="font-medium text-gray-800 mb-3 flex items-center gap-2">
                                             <User className="w-5 h-5" />
@@ -730,7 +658,6 @@ export default function CheckoutPage() {
                                         </p>
                                     </div>
 
-                                    {/* المتابعة كضيف */}
                                     <div className="border border-gray-200 rounded-lg p-4">
                                         <h3 className="font-medium text-gray-800 mb-3 flex items-center gap-2">
                                             <Shield className="w-5 h-5" />
@@ -760,7 +687,6 @@ export default function CheckoutPage() {
                             </div>
                         )}
 
-                        {/* رسالة للضيف */}
                         {proceedAsGuest && !isLoggedIn && (
                             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
                                 <div className="flex items-start gap-3">
@@ -835,7 +761,6 @@ export default function CheckoutPage() {
                         )}
                     </div>
 
-                    {/* Order Summary Sidebar */}
                     <div className="lg:col-span-1">
                         <OrderSummary 
                             cartItems={cartItems}
@@ -860,7 +785,6 @@ export default function CheckoutPage() {
     );
 }
 
-// مكون خطوة عنوان الشحن
 const ShippingAddressStep: React.FC<{
     shippingAddress: ShippingAddress;
     setShippingAddress: React.Dispatch<React.SetStateAction<ShippingAddress>>;
@@ -873,7 +797,6 @@ const ShippingAddressStep: React.FC<{
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h2 className="text-lg font-medium text-gray-900 mb-6">معلومات الشحن</h2>
         
-        {/* رسالة ترحيبية للمستخدم المسجل دخوله */}
         {isLoggedIn && shippingAddress.fullName && (
             <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
                 <div className="flex items-center">
@@ -885,7 +808,6 @@ const ShippingAddressStep: React.FC<{
             </div>
         )}
 
-        {/* رسالة للضيف */}
         {proceedAsGuest && (
             <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <div className="flex items-center">
@@ -1031,16 +953,12 @@ const ShippingAddressStep: React.FC<{
     </div>
 );
 
-
-
-// مكون خطوة مراجعة الطلب
 const OrderReviewStep = ({ shippingAddress, selectedPaymentMethod, onBack, onComplete, isLoading }) => {
     
     return (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <h2 className="text-lg font-medium text-gray-900 mb-6">مراجعة الطلب</h2>
             
-            {/* معلومات الشحن */}
             <div className="mb-6 pb-6 border-b border-gray-200">
                 <h3 className="text-md font-medium text-gray-900 mb-3">عنوان الشحن</h3>
                 <div className="bg-gray-50 rounded-lg p-4">
@@ -1057,7 +975,6 @@ const OrderReviewStep = ({ shippingAddress, selectedPaymentMethod, onBack, onCom
                 </div>
             </div>
 
-            {/* طريقة الدفع */}
             <div className="mb-6">
                 <h3 className="text-md font-medium text-gray-900 mb-3">طريقة الدفع</h3>
                 <div className="bg-gray-50 rounded-lg p-4">
@@ -1094,7 +1011,6 @@ const OrderReviewStep = ({ shippingAddress, selectedPaymentMethod, onBack, onCom
     );
 };
 
-// مكون ملخص الطلب
 const OrderSummary = ({ 
     cartItems, 
     updateQuantity, 
@@ -1114,7 +1030,6 @@ const OrderSummary = ({
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 sticky top-4">
         <h3 className="text-lg font-medium text-gray-900 mb-4">ملخص الطلب</h3>
         
-        {/* المنتجات */}
         <div className="space-y-3 mb-4 max-h-60 overflow-y-auto">
             {cartItems.map((item) => (
                 <div key={item.id} className="flex items-center space-x-3 space-x-reverse">
@@ -1146,7 +1061,6 @@ const OrderSummary = ({
             ))}
         </div>
 
-        {/* كود الخصم */}
         <div className="mb-4 pb-4 border-b border-gray-200">
             {!appliedCoupon ? (
                 <div className="flex space-x-2 space-x-reverse">
@@ -1181,7 +1095,6 @@ const OrderSummary = ({
             )}
         </div>
 
-        {/* التكاليف */}
         <div className="space-y-2 text-sm">
             <div className="flex justify-between">
                 <span>المجموع الفرعي</span>

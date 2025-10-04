@@ -12,6 +12,7 @@ import {
     X,
     Loader2
 } from 'lucide-react';
+import { useToast } from '@/contexts/Providers';
 
 interface Slider {
     id: number;
@@ -33,6 +34,7 @@ export default function SlidersPage() {
     const [showAddForm, setShowAddForm] = useState(false);
     const [editingSlider, setEditingSlider] = useState<Slider | null>(null);
     const [submitting, setSubmitting] = useState(false);
+    const { showToast } = useToast();
     const [formData, setFormData] = useState({
         title: '',
         description: '',
@@ -49,7 +51,7 @@ export default function SlidersPage() {
             const token = localStorage.getItem('api_token') || localStorage.getItem('token');
             
             if (!token) {
-                alert('يجب تسجيل الدخول أولاً');
+                showToast('يجب تسجيل الدخول أولاً', 'error');
                 setLoading(false);
                 return;
             }
@@ -77,7 +79,7 @@ export default function SlidersPage() {
         } catch (error) {
             console.error('خطأ في جلب الشرائح:', error);
             const errorMessage = error instanceof Error ? error.message : 'فشل في جلب الشرائح من الخادم';
-            alert(errorMessage);
+            showToast(errorMessage, 'error');
             setSliders([]);
         } finally {
             setLoading(false);
@@ -95,7 +97,7 @@ export default function SlidersPage() {
         try {
             const token = localStorage.getItem('api_token') || localStorage.getItem('token');
             if (!token) {
-                alert('يجب تسجيل الدخول أولاً');
+                showToast('يجب تسجيل الدخول أولاً', 'error');
                 setSubmitting(false);
                 return;
             }
@@ -122,7 +124,7 @@ export default function SlidersPage() {
                 throw new Error(data.message || 'فشل في حفظ الشريحة');
             }
 
-            alert(data.message || (editingSlider ? 'تم تحديث الشريحة بنجاح' : 'تم إضافة الشريحة بنجاح'));
+            showToast(data.message || (editingSlider ? 'تم تحديث الشريحة بنجاح' : 'تم إضافة الشريحة بنجاح'), 'success');
             
             // إعادة جلب الشرائح
             await fetchSliders();
@@ -141,7 +143,7 @@ export default function SlidersPage() {
         } catch (err) {
             const error = err as Error;
             console.error('خطأ في حفظ الشريحة:', error);
-            alert(error.message || 'فشل في حفظ الشريحة');
+            showToast(error.message || 'فشل في حفظ الشريحة', 'error');
         } finally {
             setSubmitting(false);
         }
@@ -166,7 +168,7 @@ export default function SlidersPage() {
         try {
             const token = localStorage.getItem('api_token') || localStorage.getItem('token');
             if (!token) {
-                alert('يجب تسجيل الدخول أولاً');
+                showToast('يجب تسجيل الدخول أولاً', 'error');
                 return;
             }
             
@@ -185,12 +187,12 @@ export default function SlidersPage() {
                 throw new Error(data.message || 'فشل في حذف الشريحة');
             }
 
-            alert(data.message || 'تم حذف الشريحة بنجاح');
+            showToast(data.message || 'تم حذف الشريحة بنجاح', 'success');
             await fetchSliders();
         } catch (err) {
             const error = err as Error;
             console.error('خطأ في حذف الشريحة:', error);
-            alert(error.message || 'فشل في حذف الشريحة');
+            showToast(error.message || 'فشل في حذف الشريحة', 'error');
         }
     };
 
@@ -198,7 +200,7 @@ export default function SlidersPage() {
         try {
             const token = localStorage.getItem('api_token') || localStorage.getItem('token');
             if (!token) {
-                alert('يجب تسجيل الدخول أولاً');
+                showToast('يجب تسجيل الدخول أولاً', 'error');
                 return;
             }
             
@@ -221,7 +223,7 @@ export default function SlidersPage() {
         } catch (err) {
             const error = err as Error;
             console.error('خطأ في تغيير الحالة:', error);
-            alert(error.message || 'فشل في تغيير حالة الشريحة');
+            showToast(error.message || 'فشل في تغيير حالة الشريحة', 'error');
         }
     };
 

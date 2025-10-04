@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import Image from 'next/image';
 import { Loader2, ShoppingCart, Heart, Share2 } from 'lucide-react';
 import StarRating from '@/components/ui/StarRating';
 import ProductReviews from '@/components/reviews/ProductReviews';
+import { useToast } from '@/contexts/Providers';
 
 export interface ProductVariant {
   id: number;
@@ -32,6 +33,11 @@ export interface Product {
   variants?: ProductVariant[];
   average_rating: number;
   total_reviews: number;
+  // Add price and originalPrice for cart context compatibility
+  price: number;
+  originalPrice?: number;
+  stock: number;
+  inStock: boolean;
 }
 
 const formatCurrency = (amount: number): string => {
@@ -47,6 +53,7 @@ export const ProductClient: React.FC<ProductClientProps> = ({ product }) => {
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(product.variants?.[0] || null);
   const [quantity, setQuantity] = useState(1);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const { showToast } = useToast(); // Use the toast context
 
   if (!product) {
     return (
@@ -57,7 +64,7 @@ export const ProductClient: React.FC<ProductClientProps> = ({ product }) => {
   }
 
   const handleAddToCart = () => {
-    alert(`تم إضافة ${product.name} إلى السلة!`);
+    showToast(`تم إضافة ${product.name} إلى السلة!`);
   };
 
   const getCurrentPrice = () => {

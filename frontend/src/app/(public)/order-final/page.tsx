@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useCart } from '@/contexts/Providers';
+import { useCart, useToast } from '@/contexts/Providers'; // Import useToast
 import { Pencil, Trash2, ArrowLeft, ShoppingBag, CreditCard, Truck, MapPin, CheckCircle } from 'lucide-react';
 
 // Types
@@ -46,6 +46,7 @@ interface ShippingInfo {
 export default function FinalOrderReviewPage() {
   const router = useRouter();
   const { cartItems, removeFromCart, updateQuantity, subtotal, clearCart } = useCart();
+  const { showToast } = useToast(); // Initialize useToast
   const [orderSummary, setOrderSummary] = useState<OrderSummary>({
     subtotal: 0,
     shipping: 0,
@@ -94,13 +95,13 @@ export default function FinalOrderReviewPage() {
 
   const handleConfirmOrder = () => {
     if (!shippingInfo) {
-      alert('يرجى إدخال معلومات الشحن أولاً');
+      showToast('يرجى إدخال معلومات الشحن أولاً', 'error');
       router.push('/checkout2');
       return;
     }
 
     if (cartItems.length === 0) {
-      alert('السلة فارغة');
+      showToast('السلة فارغة', 'error');
       return;
     }
 
@@ -143,7 +144,7 @@ export default function FinalOrderReviewPage() {
       router.push('/orders/success');
     } catch (error) {
       console.error('خطأ في إرسال الطلب:', error);
-      alert('حدث خطأ في إرسال الطلب. يرجى المحاولة مرة أخرى.');
+      showToast('حدث خطأ في إرسال الطلب. يرجى المحاولة مرة أخرى.', 'error');
     } finally {
       setIsLoading(false);
       setShowConfirmation(false);

@@ -22,7 +22,7 @@ import { Heart, CheckCircle, ChevronLeft, ChevronRight, ShoppingCart, ShieldChec
 // In a real app, you would import these from your actual context files.
 
 const mockCartContext = createContext({
-    addToCart: (product, quantity) => console.log('Added to cart:', product, quantity),
+    addToCart: (product: Product, quantity: number) => {},
 });
 const useCart = () => useContext(mockCartContext);
 
@@ -35,6 +35,7 @@ const useWishlist = () => useContext(mockWishlistContext);
 
 const MockProviders = ({ children }) => {
     const [wishlist, setWishlist] = useState(new Set());
+    const { showToast } = useContext(ToastContext); // Get showToast from the context
     const addToWishlist = (product) => setWishlist(prev => new Set(prev).add(product.id));
     const removeFromWishlist = (productId) => {
         setWishlist(prev => {
@@ -46,7 +47,7 @@ const MockProviders = ({ children }) => {
     const isInWishlist = (productId) => wishlist.has(productId);
 
     return (
-        <mockCartContext.Provider value={{ addToCart: (product, quantity) => alert(`تمت إضافة ${product.name} للسلة`) }}>
+        <mockCartContext.Provider value={{ addToCart: (product, quantity) => showToast(`تمت إضافة ${product.name} للسلة`) }}>
             <mockWishlistContext.Provider value={{ addToWishlist, removeFromWishlist, isInWishlist }}>
                 {children}
             </mockWishlistContext.Provider>

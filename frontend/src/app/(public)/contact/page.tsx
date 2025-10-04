@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { MapPin, Phone, Mail, Clock, Send, MessageCircle, User, MessageSquare } from 'lucide-react';
+import { useToast } from '@/contexts/Providers';
 
 export default function ContactPage() {
     const [formData, setFormData] = useState({
@@ -13,6 +14,7 @@ export default function ContactPage() {
     });
 
     const [submitting, setSubmitting] = useState(false);
+    const { showToast } = useToast();
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -29,7 +31,7 @@ export default function ContactPage() {
         // Simulate form submission
         await new Promise(resolve => setTimeout(resolve, 2000));
         
-        alert('تم إرسال رسالتك بنجاح! سنتواصل معك في أقرب وقت ممكن.');
+        showToast('تم إرسال رسالتك بنجاح! سنتواصل معك في أقرب وقت ممكن.');
         setFormData({
             name: '',
             email: '',

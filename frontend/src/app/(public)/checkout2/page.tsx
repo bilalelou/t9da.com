@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { useCart } from '@/contexts/Providers';
+import { useCart, useToast } from '@/contexts/Providers'; // Import useToast
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { 
@@ -45,14 +45,7 @@ export default function CheckoutPage() {
     const { cartItems, clearCart, updateQuantity, subtotal } = useCart();
     const router = useRouter();
 
-    // Simple toast function
-    const showToast = (message, type) => {
-        if (type === 'success') {
-            alert(`✅ ${message}`);
-        } else {
-            alert(`❌ ${message}`);
-        }
-    };
+    const { showToast } = useToast(); // Initialize useToast
 
     // حالات الصفحة
     const [currentStep, setCurrentStep] = useState(1);
@@ -205,25 +198,7 @@ export default function CheckoutPage() {
         }
     };
 
-    // إذا كانت السلة فارغة
-    if (cartItems.length === 0) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50" dir="rtl">
-                <div className="text-center">
-                    <ShoppingCart className="mx-auto h-12 w-12 text-gray-400" />
-                    <h3 className="mt-2 text-sm font-medium text-gray-900">السلة فارغة</h3>
-                    <p className="mt-1 text-sm text-gray-500">أضف منتجات إلى السلة أولاً</p>
-                    <div className="mt-6">
-                        <Link href="/products" className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
-                            تصفح المنتجات
-                        </Link>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    return (
+    return cartItems.length > 0 ? (
         <div className="min-h-screen bg-gray-50" dir="rtl">
             {/* Header */}
             <div className="bg-white border-b border-gray-200">
@@ -641,6 +616,14 @@ export default function CheckoutPage() {
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    ) : (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50" dir="rtl">
+            <div className="text-center">
+                <ShoppingCart className="mx-auto h-12 w-12 text-gray-400" />
+                <h3 className="mt-2 text-sm font-medium text-gray-900">السلة فارغة</h3>
+                <p className="mt-1 text-sm text-gray-500">يتم توجيهك إلى السلة...</p>
             </div>
         </div>
     );
