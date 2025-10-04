@@ -27,6 +27,7 @@ use App\Http\Controllers\Api\CityController;
 
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\SettingController;
+use App\Http\Controllers\Api\LogController;
 
 Route::post('/login', [LoginController::class, 'login']);
 Route::post('/register', [RegisterController::class, 'store']);
@@ -248,5 +249,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/settings/{key}', [SettingController::class, 'destroy']);
     Route::get('/settings/defaults/all', [SettingController::class, 'getDefaults']);
     Route::post('/settings/initialize/defaults', [SettingController::class, 'initializeDefaults']);
+
+    // Logs Routes (Admin only)
+    Route::middleware('admin')->group(function () {
+        Route::get('/logs', [LogController::class, 'index']);
+        Route::get('/logs/{filename}', [LogController::class, 'show']);
+        Route::get('/logs/search/query', [LogController::class, 'search']);
+        Route::get('/logs/errors/latest', [LogController::class, 'errors']);
+        Route::delete('/logs/{filename}', [LogController::class, 'destroy']);
+        Route::post('/logs/cleanup', [LogController::class, 'cleanup']);
+    });
 });
 

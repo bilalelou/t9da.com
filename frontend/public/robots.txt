@@ -1,9 +1,41 @@
-# *
+# Robots.txt for T9da.com
+
 User-agent: *
 Allow: /
+Disallow: /admin/
+Disallow: /user-dashboard/
+Disallow: /api/
+Disallow: /checkout
+Disallow: /cart
+Disallow: /login
+Disallow: /register
+Disallow: /forgot-password
+Disallow: /*?*
+Disallow: /*.json$
+Disallow: /*_buildManifest.js
+Disallow: /*_ssgManifest.js
+Disallow: /*.js$
+
+# Allow specific bots
+User-agent: Googlebot
+Allow: /
+Disallow: /admin/
+Disallow: /user-dashboard/
+Disallow: /api/
+Disallow: /checkout
+Disallow: /cart
+
+User-agent: Bingbot
+Allow: /
+Disallow: /admin/
+Disallow: /user-dashboard/
+Disallow: /api/
+
+# Sitemap location
+Sitemap: https://t9da.com/sitemap.xml
+
+# Crawl delay
+Crawl-delay: 1
 
 # Host
 Host: https://t9da.com
-
-# Sitemaps
-Sitemap: https://t9da.com/sitemap.xml

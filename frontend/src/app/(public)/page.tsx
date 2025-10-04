@@ -1,6 +1,19 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, createContext, useContext, useMemo, useRef } from 'react';
+import StructuredData from '@/components/SEO/StructuredData';
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'T9da.com - الصفحة الرئيسية | متجر إلكتروني متكامل في المغرب',
+  description: 'اكتشف أفضل المنتجات في متجر T9da.com الإلكتروني. إلكترونيات، ملابس، منزل ومطبخ، جمال وصحة بأسعار منافسة مع توصيل سريع لجميع المدن المغربية',
+  keywords: 'متجر إلكتروني المغرب, تسوق أونلاين, عروض اليوم, منتجات جديدة, أسعار منافسة, توصيل مجاني',
+  openGraph: {
+    title: 'T9da.com - متجر إلكتروني متكامل في المغرب',
+    description: 'اكتشف أفضل المنتجات بأسعار منافسة مع توصيل سريع',
+    images: ['/images/home-og.jpg'],
+  },
+};
 import { Heart, CheckCircle, ChevronLeft, ChevronRight, ShoppingCart, ShieldCheck, Truck, PhoneCall, Mail, Quote, Zap, Star, Tag, Clock, Menu, X, Smartphone, Home, Tv, Monitor, Gamepad2, Sparkles, Shirt, Dumbbell, Car } from 'lucide-react';
 
 // --- ( MOCK PROVIDERS ) ---
@@ -573,9 +586,17 @@ const CountdownTimer = ({ endDate }: { endDate: string }) => {
 function HomePageContent() {
     const fetcher = useCallback(() => api.getHomePageData(), []);
     const { data, loading, error } = useFetchData<HomePageData>(fetcher);
+    
+    // إضافة Schema Markup للصفحة الرئيسية
+    useEffect(() => {
+        // إضافة structured data للموقع والمنظمة
+    }, []);
 
     return (
         <div dir="rtl" className="bg-white text-gray-900 min-h-screen">
+            {/* Schema Markup للموقع والمنظمة */}
+            <StructuredData type="website" />
+            <StructuredData type="organization" />
             {/* Categories Menu Section */}
             <div className="bg-white border-b border-yellow-200 py-6">
                 <div className="container mx-auto px-4 sm:px-6 max-w-7xl flex justify-start">
