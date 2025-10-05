@@ -758,6 +758,8 @@ export default function SettingsPage() {
       const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
       const token = localStorage.getItem('api_token');
       
+      console.log('🔄 جاري جلب إعدادات البنك...');
+      
       const response = await fetch(`${API_BASE_URL}/admin/settings?keys=bank_name,bank_account_number,bank_account_holder`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -765,13 +767,19 @@ export default function SettingsPage() {
         }
       });
 
+      console.log('📡 استجابة الخادم:', response.status, response.statusText);
+
       if (response.ok) {
         const result = await response.json();
+        console.log('📊 بيانات الاستجابة:', result);
+        
         if (result.success && result.data) {
           const settings = result.data.reduce((acc: any, setting: any) => {
             acc[setting.key] = setting.value;
             return acc;
           }, {});
+          
+          console.log('⚙️ الإعدادات المستخرجة:', settings);
           
           const bankData = {
             bank_name: settings.bank_name || '',
@@ -779,12 +787,23 @@ export default function SettingsPage() {
             bank_account_holder: settings.bank_account_holder || ''
           };
           
+          console.log('🏦 بيانات البنك النهائية:', bankData);
+          
           setBankSettings(bankData);
           setSavedBankSettings(bankData);
+          showToast('تم جلب إعدادات البنك بنجاح', 'success');
+        } else {
+          console.warn('⚠️ لا توجد بيانات في الاستجابة');
+          showToast('لا توجد إعدادات بنك محفوظة', 'info');
         }
+      } else {
+        const errorText = await response.text();
+        console.error('❌ خطأ في الاستجابة:', errorText);
+        showToast('فشل في جلب إعدادات البنك', 'error');
       }
     } catch (error) {
-      console.error('Error fetching bank settings:', error);
+      console.error('❌ خطأ في جلب إعدادات البنك:', error);
+      showToast('خطأ في الاتصال بالخادم', 'error');
     } finally {
       setLoadingBankSettings(false);
     }
@@ -797,15 +816,36 @@ export default function SettingsPage() {
       const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
       const token = localStorage.getItem('api_token');
 
+      console.log('💾 جاري حفظ إعدادات البنك:', bankSettings);
+
+      // التحقق من صحة البيانات
+      if (!bankSettings.bank_name.trim()) {
+        showToast('يرجى إدخال اسم البنك', 'error');
+        return;
+      }
+      if (!bankSettings.bank_account_number.trim()) {
+        showToast('يرجى إدخال رقم الحساب البنكي', 'error');
+        return;
+      }
+      if (!bankSettings.bank_account_holder.trim()) {
+        showToast('يرجى إدخال اسم صاحب الحساب', 'error');
+        return;
+      }
+
       // Save each setting
       const settingsToSave = [
-        { key: 'bank_name', value: bankSettings.bank_name },
-        { key: 'bank_account_number', value: bankSettings.bank_account_number },
-        { key: 'bank_account_holder', value: bankSettings.bank_account_holder }
+        { key: 'bank_name', value: bankSettings.bank_name.trim() },
+        { key: 'bank_account_number', value: bankSettings.bank_account_number.trim() },
+        { key: 'bank_account_holder', value: bankSettings.bank_account_holder.trim() }
       ];
 
+      let allSuccess = true;
+      const results = [];
+
       for (const setting of settingsToSave) {
-        await fetch(`${API_BASE_URL}/admin/settings`, {
+        console.log(`💾 حفظ ${setting.key}:`, setting.value);
+        
+        const response = await fetch(`${API_BASE_URL}/admin/settings`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -817,18 +857,75 @@ export default function SettingsPage() {
             value: setting.value,
             type: 'string',
             group: 'payment',
-            description: setting.key === 'bank_name' ? 'اسم البنك' : 
+            description: setting.key === 'bank_name' ? 'اسم البنك للتحويل البنكي' : 
                         setting.key === 'bank_account_number' ? 'رقم الحساب البنكي' : 
-                        'اسم صاحب الحساب'
+                        'اسم صاحب الحساب البنكي'
           })
         });
+
+        const result = await response.json();
+        results.push({ key: setting.key, success: result.success, result });
+        
+        console.log(`📊 نتيجة حفظ ${setting.key}:`, result);
+        
+        if (!result.success) {
+          allSuccess = false;
+          console.error(`❌ فشل في حفظ ${setting.key}:`, result.message);
+        }
       }
 
-      setSavedBankSettings(bankSettings);
-      showToast('تم حفظ إعدادات البنك بنجاح', 'success');
+      if (allSuccess) {
+        setSavedBankSettings({ ...bankSettings });
+        showToast('تم حفظ إعدادات البنك بنجاح', 'success');
+        console.log('✅ تم حفظ جميع إعدادات البنك بنجاح');
+        
+        // إعادة جلب البيانات للتأكد
+        setTimeout(() => {
+          fetchBankSettings();
+        }, 1000);
+      } else {
+        showToast('فشل في حفظ بعض إعدادات البنك', 'error');
+        console.error('❌ فشل في حفظ بعض الإعدادات:', results);
+      }
     } catch (error) {
-      console.error('Error saving bank settings:', error);
-      showToast('فشل في حفظ إعدادات البنك', 'error');
+      console.error('❌ خطأ في حفظ إعدادات البنك:', error);
+      showToast('خطأ في الاتصال بالخادم', 'error');
+    } finally {
+      setLoadingBankSettings(false);
+    }
+  };
+
+  // Initialize Bank Settings
+  const handleInitializeBankSettings = async () => {
+    setLoadingBankSettings(true);
+    try {
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+      const token = localStorage.getItem('api_token');
+      
+      console.log('🔄 جاري تهيئة إعدادات البنك...');
+      
+      const response = await fetch(`${API_BASE_URL}/admin/bank-settings/initialize`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json'
+        }
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        showToast('تم تهيئة إعدادات البنك بنجاح', 'success');
+        // إعادة جلب البيانات
+        setTimeout(() => {
+          fetchBankSettings();
+        }, 1000);
+      } else {
+        showToast(result.message || 'فشل في تهيئة إعدادات البنك', 'error');
+      }
+    } catch (error) {
+      console.error('❌ خطأ في تهيئة إعدادات البنك:', error);
+      showToast('خطأ في الاتصال بالخادم', 'error');
     } finally {
       setLoadingBankSettings(false);
     }
@@ -1528,6 +1625,14 @@ export default function SettingsPage() {
                         <p className="text-sm text-gray-600">معلومات الحساب البنكي للتحويلات المباشرة</p>
                       </div>
                     </div>
+                    <button
+                      onClick={handleInitializeBankSettings}
+                      disabled={loadingBankSettings}
+                      className="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50 flex items-center gap-2"
+                    >
+                      <Plus className="w-4 h-4" />
+                      تهيئة الإعدادات
+                    </button>
                   </div>
 
                   {loadingBankSettings ? (

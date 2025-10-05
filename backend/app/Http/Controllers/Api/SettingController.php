@@ -9,10 +9,24 @@ use Illuminate\Http\JsonResponse;
 
 class SettingController extends Controller
 {
-    public function index(): JsonResponse
+    public function __construct()
+    {
+        // تطبيق middleware المصادقة على جميع الطرق ما عدا publicSettings
+        $this->middleware('auth:sanctum')->except(['publicSettings', 'getBankSettings']);
+    }
+    
+    public function index(Request $request): JsonResponse
     {
         try {
-            $settings = Setting::all();
+            $query = Setting::query();
+            
+            // إذا تم تمرير مفاتيح محددة
+            if ($request->has('keys')) {
+                $keys = explode(',', $request->get('keys'));
+                $query->whereIn('key', $keys);
+            }
+            
+            $settings = $query->get();
             return response()->json([
                 'success' => true,
                 'data' => $settings
@@ -169,9 +183,35 @@ class SettingController extends Controller
                 'account_holder' => 'required|string|max:255'
             ]);
 
-            Setting::updateOrCreate(['key' => 'bank_name'], ['value' => $request->bank_name]);
-            Setting::updateOrCreate(['key' => 'bank_account_number'], ['value' => $request->account_number]);
-            Setting::updateOrCreate(['key' => 'bank_account_holder'], ['value' => $request->account_holder]);
+            Setting::updateOrCreate(
+                ['key' => 'bank_name'], 
+                [
+                    'value' => $request->bank_name,
+                    'type' => 'string',
+                    'group' => 'payment',
+                    'description' => 'اسم البنك للتحويل البنكي'
+                ]
+            );
+            
+            Setting::updateOrCreate(
+                ['key' => 'bank_account_number'], 
+                [
+                    'value' => $request->account_number,
+                    'type' => 'string',
+                    'group' => 'payment',
+                    'description' => 'رقم الحساب البنكي'
+                ]
+            );
+            
+            Setting::updateOrCreate(
+                ['key' => 'bank_account_holder'], 
+                [
+                    'value' => $request->account_holder,
+                    'type' => 'string',
+                    'group' => 'payment',
+                    'description' => 'اسم صاحب الحساب البنكي'
+                ]
+            );
 
             return response()->json([
                 'success' => true,
@@ -181,6 +221,53 @@ class SettingController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'فشل في تحديث إعدادات البنك',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    public function initializeBankSettings(): JsonResponse
+    {
+        try {
+            $bankSettings = [
+                [
+                    'key' => 'bank_name',
+                    'value' => '',
+                    'type' => 'string',
+                    'group' => 'payment',
+                    'description' => 'اسم البنك للتحويل البنكي'
+                ],
+                [
+                    'key' => 'bank_account_number',
+                    'value' => '',
+                    'type' => 'string',
+                    'group' => 'payment',
+                    'description' => 'رقم الحساب البنكي'
+                ],
+                [
+                    'key' => 'bank_account_holder',
+                    'value' => '',
+                    'type' => 'string',
+                    'group' => 'payment',
+                    'description' => 'اسم صاحب الحساب البنكي'
+                ]
+            ];
+
+            foreach ($bankSettings as $setting) {
+                Setting::updateOrCreate(
+                    ['key' => $setting['key']],
+                    $setting
+                );
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'تم تهيئة إعدادات البنك بنجاح'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'فشل في تهيئة إعدادات البنك',
                 'error' => $e->getMessage()
             ], 500);
         }

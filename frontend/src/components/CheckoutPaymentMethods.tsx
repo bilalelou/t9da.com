@@ -42,8 +42,16 @@ const CheckoutPaymentMethods: React.FC<CheckoutPaymentMethodsProps> = ({
   };
 
   const calculateFees = (method: PaymentMethod) => {
+    // حساب الرسوم على المجموع الفرعي فقط (بدون الشحن والرسوم الأخرى)
     const percentageFee = (orderTotal * method.fees.percentage) / 100;
     const totalFees = percentageFee + method.fees.fixed;
+    console.log(`💳 Calculating fees for ${method.name}:`, {
+      orderTotal,
+      percentage: method.fees.percentage,
+      fixed: method.fees.fixed,
+      percentageFee,
+      totalFees
+    });
     return totalFees;
   };
 
@@ -165,7 +173,7 @@ const CheckoutPaymentMethods: React.FC<CheckoutPaymentMethodsProps> = ({
                   <div className="flex items-center justify-between text-xs text-gray-500">
                     <span>وقت المعالجة: {method.processingTime}</span>
                     {fees > 0 && (
-                      <span>المجموع: {totalWithFees.toFixed(2)} {currency}</span>
+                      <span className="text-orange-600 font-medium">رسوم: {fees.toFixed(2)} {currency}</span>
                     )}
                   </div>
                 </div>

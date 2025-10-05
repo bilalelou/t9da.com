@@ -191,6 +191,12 @@ export default function CheckoutPage() {
         }
     }, [shippingAddress.city]);
 
+    // إعادة تعيين رسوم الدفع عند تغيير طريقة الدفع
+    useEffect(() => {
+        console.log('💳 Payment method changed:', selectedPaymentMethod);
+        console.log('💰 Current payment fees:', paymentFees);
+    }, [selectedPaymentMethod, paymentFees]);
+
     const shipping = useMemo(() => {
         if (subtotal > freeShippingThreshold) return 0; // شحن مجاني
         if (!shippingAddress.city) return null;
@@ -200,13 +206,24 @@ export default function CheckoutPage() {
     const couponDiscount = appliedCoupon ? (subtotal * appliedCoupon.discount / 100) : 0;
     
     const orderCalculation = useMemo(() => {
-        return calculateOrderTotal(
+        const calc = calculateOrderTotal(
             subtotal,
             shipping || 0,
             couponDiscount,
             paymentFees,
             0 // لا توجد ضرائب حالياً
         );
+        
+        console.log('💰 Order Calculation:', {
+            subtotal,
+            shipping: shipping || 0,
+            couponDiscount,
+            paymentFees,
+            total: calc.total,
+            breakdown: calc
+        });
+        
+        return calc;
     }, [subtotal, shipping, couponDiscount, paymentFees]);
     
     const total = orderCalculation.total;
@@ -450,6 +467,15 @@ export default function CheckoutPage() {
             };
 
             console.log('📦 إرسال طلب جديد:', orderData);
+            console.log('💳 Payment Method:', selectedPaymentMethod);
+            console.log('💰 Order Total Breakdown:', {
+                subtotal: orderCalculation.subtotal,
+                shipping: orderCalculation.shipping,
+                discount: orderCalculation.discount,
+                paymentFees: orderCalculation.paymentFees,
+                tax: orderCalculation.tax,
+                total: orderCalculation.total
+            });
 
             const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
             const response = await fetch(`${API_BASE_URL}/orders`, {
@@ -475,20 +501,29 @@ export default function CheckoutPage() {
             console.log('📡 استجابة الخادم:', result);
             console.log('📡 Response status:', response.status);
             console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
+            console.log('📦 Order data:', {
+                order_id: result.data?.order_id,
+                invoice_id: result.data?.invoice_id,
+                redirect_to_invoice: result.data?.redirect_to_invoice,
+                payment_method: selectedPaymentMethod
+            });
 
             if (response.ok && result.success) {
-                clearCart();
                 showToast(`تم إرسال طلبك بنجاح! رقم الطلب: ${result.data.order_number}`, 'success');
                 
                 if (proceedAsGuest) {
                     showToast('تم إنشاء حساب جديد لك! يمكنك الآن متابعة طلباتك من لوحة التحكم', 'success');
                 }
                 
+                // تفريغ السلة بعد نجاح الطلب
+                clearCart();
+                
                 // التوجيه إلى صفحة الفاتورة إذا كانت موجودة
                 if (result.data.redirect_to_invoice && result.data.invoice_id) {
                     console.log('🧾 Redirecting to invoice:', result.data.invoice_id);
                     router.push(`/invoice/${result.data.invoice_id}`);
                 } else {
+                    console.log('📋 Redirecting to orders page');
                     router.push(`/user-dashboard/orders`);
                 }
             } else {
@@ -733,7 +768,7 @@ export default function CheckoutPage() {
                                 <CheckoutPaymentMethods
                                     selectedMethod={selectedPaymentMethod}
                                     onMethodSelect={setSelectedPaymentMethod}
-                                    orderTotal={subtotal + (shipping || 0) - couponDiscount}
+                                    orderTotal={orderCalculation.subtotal}
                                     currency="MAD"
                                     onFeesChange={setPaymentFees}
                                 />
@@ -1032,7 +1067,11 @@ const OrderSummary = ({
     removeCoupon,
     freeShippingThreshold,
     paymentFees = 0
-}) => (
+}) => {
+    console.log('📦 OrderSummary - Payment Fees:', paymentFees);
+    console.log('📦 OrderSummary - Total:', total);
+    
+    return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 sticky top-4">
         <h3 className="text-lg font-medium text-gray-900 mb-4">ملخص الطلب</h3>
         
@@ -1140,4 +1179,5 @@ const OrderSummary = ({
             </div>
         </div>
     </div>
-);
+    );
+};
