@@ -405,10 +405,10 @@ const PaymentMethodModal: React.FC<PaymentMethodModalProps> = ({
                     </label>
                     <input
                       type={showSecrets ? 'text' : 'password'}
-                      value={formData.config.apiKey || ''}
+                      value={formData.config?.apiKey || ''}
                       onChange={(e) => setFormData({
                         ...formData,
-                        config: { ...formData.config, apiKey: e.target.value }
+                        config: { ...(formData.config || {}), apiKey: e.target.value }
                       })}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="مفتاح API"
@@ -421,10 +421,10 @@ const PaymentMethodModal: React.FC<PaymentMethodModalProps> = ({
                     </label>
                     <input
                       type={showSecrets ? 'text' : 'password'}
-                      value={formData.config.secretKey || ''}
+                      value={formData.config?.secretKey || ''}
                       onChange={(e) => setFormData({
                         ...formData,
-                        config: { ...formData.config, secretKey: e.target.value }
+                        config: { ...(formData.config || {}), secretKey: e.target.value }
                       })}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="المفتاح السري"
@@ -437,10 +437,10 @@ const PaymentMethodModal: React.FC<PaymentMethodModalProps> = ({
                     </label>
                     <input
                       type="text"
-                      value={formData.config.merchantId || ''}
+                      value={formData.config?.merchantId || ''}
                       onChange={(e) => setFormData({
                         ...formData,
-                        config: { ...formData.config, merchantId: e.target.value }
+                        config: { ...(formData.config || {}), merchantId: e.target.value }
                       })}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="معرف التاجر"
@@ -453,10 +453,10 @@ const PaymentMethodModal: React.FC<PaymentMethodModalProps> = ({
                     </label>
                     <input
                       type="url"
-                      value={formData.config.webhookUrl || ''}
+                      value={formData.config?.webhookUrl || ''}
                       onChange={(e) => setFormData({
                         ...formData,
-                        config: { ...formData.config, webhookUrl: e.target.value }
+                        config: { ...(formData.config || {}), webhookUrl: e.target.value }
                       })}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="https://example.com/webhook"

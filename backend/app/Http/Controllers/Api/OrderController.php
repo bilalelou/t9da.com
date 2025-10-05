@@ -4,11 +4,14 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Models\Transaction;
 use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\Coupon;
 use App\Models\ShippingFee;
 use App\Models\City;
+use App\Models\Invoice;
+use App\Models\Setting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -26,11 +29,11 @@ class OrderController extends Controller
         try {
             $perPage = $request->get('per_page', 20); // عدد العناصر لكل صفحة
             $page = $request->get('page', 1); // رقم الصفحة
-            
+
             // تحديد الحد الأقصى لعدد العناصر لكل صفحة
             $perPage = min($perPage, 100);
-            
-            $orders = Order::with('user:id,name') // جلب بيانات المستخدم (العميل) مع الطلب
+
+            $orders = Order::with(['user:id,name', 'invoice']) // جلب بيانات المستخدم والفاتورة
                 ->latest()
                 ->paginate($perPage, ['*'], 'page', $page);
 
@@ -39,20 +42,48 @@ class OrderController extends Controller
                 // تحويل delivered إلى completed للتوافق مع Frontend
                 $status = $order->status === 'delivered' ? 'completed' : $order->status;
 
-                return [
+                $orderData = [
                     'id' => $order->id,
-                    'order_number' => $order->order_number ?? "#" . $order->id, // استخدم رقم الطلب إن وجد
+                    'order_number' => $order->order_number ?? "#" . $order->id,
                     'customer_name' => $order->user->name ?? 'عميل غير مسجل',
-                    'total_amount' => (float)($order->total_amount ?? $order->total ?? 0), // استخدم total_amount أو total
-                    'status' => $status, // استخدم الحالة المحولة
+                    'total_amount' => (float)($order->total_amount ?? $order->total ?? 0),
+                    'status' => $status,
                     'created_at' => $order->created_at,
-                    // إضافة معلومات إضافية للعرض التفصيلي
                     'name' => $order->name,
                     'phone' => $order->phone,
                     'address' => $order->address,
                     'city' => $order->city,
                     'notes' => $order->notes,
+                    'payment_method' => $order->payment_method,
+                    'payment_status' => $order->payment_status ?? 'pending',
                 ];
+
+                // إضافة معلومات الفاتورة إذا كانت موجودة
+                if ($order->invoice) {
+                    $orderData['invoice'] = [
+                        'id' => $order->invoice->id,
+                        'invoice_code' => $order->invoice->invoice_code,
+                        'status' => $order->invoice->status,
+                        'amount' => $order->invoice->amount,
+                        'bank_name' => $order->invoice->bank_name,
+                        'account_number' => $order->invoice->account_number,
+                        'payment_proof' => $order->invoice->payment_proof,
+                        'created_at' => $order->invoice->created_at,
+                    ];
+                    $orderData['has_invoice'] = true;
+                    $orderData['invoice_url'] = "/invoices/" . $order->invoice->id;
+                } else {
+                    $orderData['invoice'] = null;
+                    $orderData['has_invoice'] = false;
+                    $orderData['invoice_url'] = null;
+                }
+
+                // إضافة رقم الفاتورة من الطلب إذا لم تكن هناك فاتورة منفصلة
+                if (!$order->invoice && $order->invoice_code) {
+                    $orderData['invoice_code'] = $order->invoice_code;
+                }
+
+                return $orderData;
             });
 
             return response()->json([
@@ -110,7 +141,7 @@ class OrderController extends Controller
             'shipping_info.state' => 'required|string',
             'shipping_info.postalCode' => 'required|string',
             'shipping_info.shippingMethod' => 'required|string',
-            'shipping_info.paymentMethod' => 'required|string',
+            'shipping_info.paymentMethod' => 'required|string|in:cod,card,paypal,bank,bank_transfer,transfer',
             'order_summary' => 'required|array',
             'order_summary.total' => 'required|numeric|min:0',
         ]);
@@ -134,10 +165,10 @@ class OrderController extends Controller
             $discount = $request->order_summary['discount'] ?? 0;
             $paymentFees = $request->order_summary['payment_fees'] ?? 0;
             $tax = $request->order_summary['tax'] ?? 0;
-            
+
             // حساب الإجمالي: المجموع الفرعي + الشحن + رسوم الدفع + الضريبة - الخصم
             $calculatedTotal = $subtotal + $shipping + $paymentFees + $tax - $discount;
-            
+
             // استخدام الإجمالي المحسوب بدلاً من المرسل من العميل
             $finalTotal = $calculatedTotal;
 
@@ -145,12 +176,21 @@ class OrderController extends Controller
             $order = Order::create([
                 'user_id' => Auth::id(),
                 'order_number' => 'ORD-' . time() . '-' . rand(1000, 9999),
+                'invoice_code' => strtoupper('INV-' . substr(md5(uniqid((string)Auth::id(), true)), 0, 8)),
                 'status' => 'pending',
                 'total' => $finalTotal,
                 'subtotal' => $subtotal,
                 'tax' => $tax,
                 'discount' => $discount,
                 'payment_fees' => $paymentFees,
+                'type' => 'online',
+                'is_shipping_different' => false,
+                'tax_amount' => $tax,
+                'shipping_amount' => $shipping,
+                'discount_amount' => $discount,
+                'currency' => 'MAD',
+                'shipping_cost' => $shipping,
+                'total_price' => $finalTotal,
 
                 // معلومات الشحن
                 'name' => $request->shipping_info['fullName'],
@@ -164,7 +204,7 @@ class OrderController extends Controller
                 'payment_method' => $request->shipping_info['paymentMethod'],
                 'total_amount' => $finalTotal,
                 'shipping_name' => $request->shipping_info['fullName'],
-                'shipping_email' => $request->shipping_info['email'],
+                'shipping_email' => $request->shipping_info['email'] ?? '',
                 'shipping_phone' => $request->shipping_info['phone'],
                 'shipping_address' => $request->shipping_info['address'],
                 'shipping_city' => $request->shipping_info['city'],
@@ -209,15 +249,68 @@ class OrderController extends Controller
                 ]);
             }
 
+            // إنشاء معاملة إذا كان الدفع تحويل بنكي
+            $paymentMethod = $request->shipping_info['paymentMethod'] ?? 'cod';
+            $invoice = null;
+            
+            Log::info('Payment method check', [
+                'payment_method' => $paymentMethod,
+                'is_bank_payment' => in_array($paymentMethod, ['bank', 'bank_transfer', 'transfer'])
+            ]);
+            
+            if (in_array($paymentMethod, ['bank', 'bank_transfer', 'transfer'])) {
+                Log::info('Creating bank transaction and invoice');
+                
+                Transaction::create([
+                    'user_id' => Auth::id(),
+                    'order_id' => $order->id,
+                    'mode' => 'bank',
+                    'status' => 'pending',
+                ]);
+                
+                // إنشاء فاتورة للدفع البنكي
+                $bankSettings = Setting::whereIn('key', ['bank_name', 'bank_account_number'])->get()->keyBy('key');
+                
+                Log::info('Bank settings', [
+                    'bank_name' => $bankSettings['bank_name']->value ?? 'البنك الأهلي المغربي',
+                    'account_number' => $bankSettings['bank_account_number']->value ?? '1234567890123456'
+                ]);
+                
+                $invoice = Invoice::create([
+                    'invoice_code' => $order->invoice_code,
+                    'order_id' => $order->id,
+                    'amount' => $finalTotal,
+                    'bank_name' => $bankSettings['bank_name']->value ?? 'البنك الأهلي المغربي',
+                    'account_number' => $bankSettings['bank_account_number']->value ?? '1234567890123456',
+                    'status' => 'pending'
+                ]);
+                
+                Log::info('Invoice created', ['invoice_id' => $invoice->id]);
+            }
+
             DB::commit();
+
+            $responseData = [
+                'order_id' => $order->id,
+                'order_number' => $order->order_number,
+                'invoice_code' => $order->invoice_code,
+            ];
+            
+            // إضافة معرف الفاتورة إذا تم إنشاؤها
+            if ($invoice) {
+                $responseData['invoice_id'] = $invoice->id;
+                $responseData['redirect_to_invoice'] = true;
+                Log::info('Invoice added to response', ['invoice_id' => $invoice->id]);
+            } else {
+                Log::info('No invoice created for payment method', ['payment_method' => $paymentMethod]);
+            }
+            
+            Log::info('Final response data', $responseData);
 
             return response()->json([
                 'success' => true,
                 'message' => 'تم إنشاء الطلب بنجاح',
-                'data' => [
-                    'order_id' => $order->id,
-                    'order_number' => $order->order_number,
-                ]
+                'data' => $responseData
             ], 201);
 
         } catch (Exception $e) {
@@ -411,12 +504,31 @@ class OrderController extends Controller
     public function show($id)
     {
         try {
-            $order = Order::with(['orderItems.product', 'user'])
+            $order = Order::with(['orderItems.product', 'user', 'invoice'])
                 ->findOrFail($id);
+
+            // تنسيق بيانات الطلب
+            $orderData = $order->toArray();
+            
+            // تحويل delivered إلى completed للتوافق مع Frontend
+            if ($orderData['status'] === 'delivered') {
+                $orderData['status'] = 'completed';
+            }
+
+            // إضافة معلومات إضافية للفاتورة
+            if ($order->invoice) {
+                $orderData['has_invoice'] = true;
+                $orderData['invoice_url'] = "/invoices/" . $order->invoice->id;
+                $orderData['can_upload_proof'] = $order->invoice->status === 'pending';
+            } else {
+                $orderData['has_invoice'] = false;
+                $orderData['invoice_url'] = null;
+                $orderData['can_upload_proof'] = false;
+            }
 
             return response()->json([
                 'success' => true,
-                'data' => $order
+                'data' => $orderData
             ]);
 
         } catch (Exception $e) {
@@ -478,6 +590,42 @@ class OrderController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'حدث خطأ في تحديث حالة الطلب'
+            ], 500);
+        }
+    }
+
+    /**
+     * الحصول على فاتورة الطلب
+     */
+    public function getOrderInvoice($id)
+    {
+        try {
+            $order = Order::with('invoice')->findOrFail($id);
+
+            if (!$order->invoice) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'لا توجد فاتورة لهذا الطلب'
+                ], 404);
+            }
+
+            $invoiceData = $order->invoice->toArray();
+            $invoiceData['payment_proof_url'] = $order->invoice->payment_proof ? 
+                asset('storage/' . $order->invoice->payment_proof) : null;
+            $invoiceData['can_upload_proof'] = $order->invoice->status === 'pending';
+            $invoiceData['order_number'] = $order->order_number;
+            $invoiceData['customer_name'] = $order->name;
+
+            return response()->json([
+                'success' => true,
+                'invoice' => $invoiceData
+            ]);
+
+        } catch (Exception $e) {
+            Log::error('خطأ في جلب فاتورة الطلب: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'حدث خطأ في جلب الفاتورة'
             ], 500);
         }
     }
