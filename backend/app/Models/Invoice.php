@@ -35,7 +35,7 @@ class Invoice extends Model
         do {
             $code = 'INV-' . strtoupper(uniqid());
         } while (self::where('invoice_code', $code)->exists());
-        
+
         return $code;
     }
 
@@ -45,7 +45,7 @@ class Invoice extends Model
         do {
             $code = strtolower(substr(md5(uniqid(mt_rand(), true)), 0, 7));
         } while (self::where('payment_reference', $code)->exists());
-        
+
         return $code;
     }
 }
