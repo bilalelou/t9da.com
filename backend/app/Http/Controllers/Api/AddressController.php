@@ -2,73 +2,174 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
-use App\Models\Address; // تأكد من وجود هذا الموديل
-use Illuminate\Http\Request;
+use App\Http\Requests\StoreAddressRequest;
+use App\Http\Requests\UpdateAddressRequest;
+use App\Models\Address;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
 
-class AddressController extends Controller
+class AddressController extends BaseApiController
 {
-    public function index()
+
+    private const MESSAGE_UNAUTHORIZED = 'غير مصرح به';
+    private const MESSAGE_FETCH_ERROR = 'حدث خطأ في جلب العناوين';
+    private const MESSAGE_CREATE_SUCCESS = 'تم إضافة العنوان بنجاح';
+    private const MESSAGE_CREATE_ERROR = 'حدث خطأ في إضافة العنوان';
+    private const MESSAGE_UPDATE_SUCCESS = 'تم تحديث العنوان بنجاح';
+    private const MESSAGE_UPDATE_ERROR = 'حدث خطأ في تحديث العن��ان';
+    private const MESSAGE_DELETE_SUCCESS = 'تم حذف العنوان بنجاح';
+    private const MESSAGE_DELETE_ERROR = 'حدث خطأ في حذف العنوان';
+
+    /**
+     * Display a listing of user's addresses.
+     *
+     * @return JsonResponse
+     */
+    public function index(): JsonResponse
     {
-        $addresses = Auth::user()->addresses()->get();
-        return response()->json(['data' => $addresses]);
+        try {
+            $addresses = Auth::user()->addresses()->get();
+
+            return $this->successResponse($addresses);
+        } catch (\Exception $e) {
+            Log::error('Error fetching addresses: ' . $e->getMessage(), [
+                'user_id' => Auth::id(),
+                'exception' => $e,
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponse(self::MESSAGE_FETCH_ERROR, self::HTTP_INTERNAL_ERROR);
+        }
     }
 
-    public function store(Request $request)
+    /**
+     * Store a newly created address in storage.
+     *
+     * @param StoreAddressRequest $request
+     * @return JsonResponse
+     */
+    public function store(StoreAddressRequest $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
-            'address' => 'required|string|max:255',
-            'city' => 'required|string|max:255',
-            'phone' => 'required|string|max:20',
-            'type' => 'required|in:home,work,other',
-            'is_default' => 'boolean',
-        ]);
+        try {
+            $data = $request->validated();
 
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
+            // If this is the default address, unset other default addresses
+            if ($data['is_default'] ?? false) {
+                $this->unsetDefaultAddresses();
+            }
+
+            $address = Auth::user()->addresses()->create($data);
+
+            return $this->successResponse(
+                $address,
+                self::MESSAGE_CREATE_SUCCESS,
+                self::HTTP_CREATED
+            );
+        } catch (\Exception $e) {
+            Log::error('Error creating address: ' . $e->getMessage(), [
+                'user_id' => Auth::id(),
+                'request_data' => $request->validated(),
+                'exception' => $e,
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponse(self::MESSAGE_CREATE_ERROR, self::HTTP_INTERNAL_ERROR);
         }
-
-        $data = $validator->validated();
-
-        // إذا كان هذا هو العنوان الافتراضي، قم بإلغاء تحديد العناوين الأخرى
-        if ($data['is_default'] ?? false) {
-            Auth::user()->addresses()->update(['is_default' => false]);
-        }
-
-        $address = Auth::user()->addresses()->create($data);
-        return response()->json($address, 201);
     }
 
-    public function update(Request $request, Address $address)
+    /**
+     * Update the specified address in storage.
+     *
+     * @param UpdateAddressRequest $request
+     * @param Address $address
+     * @return JsonResponse
+     */
+    public function update(UpdateAddressRequest $request, Address $address): JsonResponse
     {
-        // تأكد من أن المستخدم يملك هذا العنوان
-        if ($address->user_id !== Auth::id()) {
-            return response()->json(['message' => 'غير مصرح به'], 403);
+        try {
+            // Check if user owns this address
+            if (!$this->userOwnsAddress($address)) {
+                return $this->errorResponse(self::MESSAGE_UNAUTHORIZED, self::HTTP_FORBIDDEN);
+            }
+
+            $data = $request->validated();
+
+            // If this is the default address, unset other default addresses
+            if ($data['is_default'] ?? false) {
+                $this->unsetDefaultAddresses($address->id);
+            }
+
+            $address->update($data);
+
+            return $this->successResponse($address, self::MESSAGE_UPDATE_SUCCESS);
+        } catch (\Exception $e) {
+            Log::error('Error updating address: ' . $e->getMessage(), [
+                'user_id' => Auth::id(),
+                'address_id' => $address->id,
+                'request_data' => $request->validated(),
+                'exception' => $e,
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponse(self::MESSAGE_UPDATE_ERROR, self::HTTP_INTERNAL_ERROR);
         }
-
-        // (نفس قواعد التحقق من دالة store)
-        $validator = Validator::make($request->all(), [ /* ... */ ]);
-        if ($validator->fails()) return response()->json(['errors' => $validator->errors()], 422);
-
-        $data = $validator->validated();
-        if ($data['is_default'] ?? false) {
-            Auth::user()->addresses()->where('id', '!=', $address->id)->update(['is_default' => false]);
-        }
-
-        $address->update($data);
-        return response()->json($address);
     }
 
-    public function destroy(Address $address)
+    /**
+     * Remove the specified address from storage.
+     *
+     * @param Address $address
+     * @return JsonResponse
+     */
+    public function destroy(Address $address): JsonResponse
     {
-        if ($address->user_id !== Auth::id()) {
-            return response()->json(['message' => 'غير مصرح به'], 403);
+        try {
+            // Check if user owns this address
+            if (!$this->userOwnsAddress($address)) {
+                return $this->errorResponse(self::MESSAGE_UNAUTHORIZED, self::HTTP_FORBIDDEN);
+            }
+
+            $address->delete();
+
+            return $this->successResponse(null, self::MESSAGE_DELETE_SUCCESS, self::HTTP_NO_CONTENT);
+        } catch (\Exception $e) {
+            Log::error('Error deleting address: ' . $e->getMessage(), [
+                'user_id' => Auth::id(),
+                'address_id' => $address->id,
+                'exception' => $e,
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponse(self::MESSAGE_DELETE_ERROR, self::HTTP_INTERNAL_ERROR);
+        }
+    }
+
+    /**
+     * Check if the authenticated user owns the address.
+     *
+     * @param Address $address
+     * @return bool
+     */
+    private function userOwnsAddress(Address $address): bool
+    {
+        return $address->user_id === Auth::id();
+    }
+
+    /**
+     * Unset default flag for all user's addresses except the specified one.
+     *
+     * @param int|null $exceptId
+     * @return void
+     */
+    private function unsetDefaultAddresses(?int $exceptId = null): void
+    {
+        $query = Auth::user()->addresses();
+
+        if ($exceptId !== null) {
+            $query->where('id', '!=', $exceptId);
         }
 
-        $address->delete();
-        return response()->json(null, 204);
+        $query->update(['is_default' => false]);
     }
 }

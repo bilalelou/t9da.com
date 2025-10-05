@@ -2,19 +2,14 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreSizeRequest;
 use App\Http\Requests\UpdateSizeRequest;
 use App\Models\Size;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
 
-class SizeController extends Controller
+class SizeController extends BaseApiController
 {
-    private const HTTP_OK = 200;
-    private const HTTP_CREATED = 201;
-    private const HTTP_BAD_REQUEST = 400;
-    private const HTTP_INTERNAL_ERROR = 500;
 
     private const MESSAGE_FETCH_ERROR = 'حدث خطأ في جلب الأحجام';
     private const MESSAGE_CREATE_SUCCESS = 'تم إضافة الحجم بنجاح';
@@ -148,48 +143,5 @@ class SizeController extends Controller
     private function hasDependentProducts(Size $size): bool
     {
         return $size->productVariants()->count() > 0;
-    }
-
-    /**
-     * Return a success JSON response.
-     *
-     * @param mixed $data
-     * @param string|null $message
-     * @param int $statusCode
-     * @return JsonResponse
-     */
-    private function successResponse(
-        $data = null,
-        ?string $message = null,
-        int $statusCode = self::HTTP_OK
-    ): JsonResponse {
-        $response = ['success' => true];
-
-        if ($message !== null) {
-            $response['message'] = $message;
-        }
-
-        if ($data !== null) {
-            $response['data'] = $data;
-        }
-
-        return response()->json($response, $statusCode);
-    }
-
-    /**
-     * Return an error JSON response.
-     *
-     * @param string $message
-     * @param int $statusCode
-     * @return JsonResponse
-     */
-    private function errorResponse(
-        string $message,
-        int $statusCode = self::HTTP_INTERNAL_ERROR
-    ): JsonResponse {
-        return response()->json([
-            'success' => false,
-            'message' => $message
-        ], $statusCode);
     }
 }

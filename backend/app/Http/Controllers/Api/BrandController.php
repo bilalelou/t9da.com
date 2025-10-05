@@ -2,127 +2,298 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreBrandRequest;
+use App\Http\Requests\UpdateBrandRequest;
 use App\Models\Brand;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
-use Exception;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
-class BrandController extends Controller
+class BrandController extends BaseApiController
 {
-    public function index()
+
+    private const STORAGE_PATH_NEW = 'uploads/brands/';
+    private const STORAGE_PATH_OLD = 'logos/';
+    private const PLACEHOLDER_URL = 'https://placehold.co/128x128/f0f0f0/cccccc?text=';
+
+    private const MESSAGE_FETCH_ERROR = 'حدث خطأ في جلب الماركات';
+    private const MESSAGE_CREATE_SUCCESS = 'تمت إضافة الماركة بنجاح';
+    private const MESSAGE_CREATE_ERROR = 'حدث خطأ في إضافة الماركة';
+    private const MESSAGE_UPDATE_SUCCESS = 'تم تحد��ث الماركة بنجاح';
+    private const MESSAGE_UPDATE_ERROR = 'حدث خطأ في تحديث الماركة';
+    private const MESSAGE_DELETE_SUCCESS = 'تم حذف الماركة بنجاح';
+    private const MESSAGE_DELETE_ERROR = 'حدث خطأ في حذف الماركة';
+    private const MESSAGE_DELETE_CONSTRAINT = 'لا يمكن حذف الماركة لأنها مرتبطة بمنتجات';
+
+    /**
+     * Display a listing of brands with product count.
+     *
+     * @return JsonResponse
+     */
+    public function index(): JsonResponse
     {
         try {
-            Log::info("🏷️ طلب جلب الماركات");
-            Log::info("🔐 معلومات المصادقة:");
-            Log::info("  - User authenticated: " . (auth()->check() ? 'نعم' : 'لا'));
-            Log::info("  - User ID: " . (auth()->id() ?? 'غير موجود'));
-            Log::info("  - Token: " . (request()->bearerToken() ? 'موجود' : 'غير موجود'));
+            $this->logAuthenticationInfo();
 
-            $brands = Brand::withCount('products')->latest()->get()->map(function($brand){
-                // Backward compatibility: if file exists in old logos/ path use it, else use new uploads/brands
-                if ($brand->image) {
-                    $newPath = 'storage/uploads/brands/' . $brand->image;
-                    $oldPath = 'storage/logos/' . $brand->image;
-                    $brand->logo = asset(file_exists(public_path($newPath)) ? $newPath : $oldPath);
-                } else {
-                    $brand->logo = 'https://placehold.co/128x128/f0f0f0/cccccc?text=' . ($brand->name[0] ?? 'B');
-                }
-                return $brand;
-            });
+            $brands = Brand::withCount('products')
+                ->latest()
+                ->get()
+                ->map(function ($brand) {
+                    return $this->formatBrandWithLogo($brand);
+                });
 
-            Log::info("🏷️ عدد الماركات: " . $brands->count());
-            Log::info("🏷️ الماركات: " . json_encode($brands));
+            Log::info('Brands fetched successfully', [
+                'count' => $brands->count()
+            ]);
 
-            return response()->json(['data' => $brands]);
-        } catch (Exception $e) {
-            Log::error('❌ خطأ في جلب الماركات: ' . $e->getMessage());
-            Log::error('❌ Stack trace: ' . $e->getTraceAsString());
-            return response()->json(['success' => false, 'message' => 'حدث خطأ في الخادم.'], 500);
+            return $this->successResponse($brands);
+        } catch (\Exception $e) {
+            Log::error('Error fetching brands: ' . $e->getMessage(), [
+                'exception' => $e,
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponse(self::MESSAGE_FETCH_ERROR, self::HTTP_INTERNAL_ERROR);
         }
     }
 
-    public function store(Request $request)
+    /**
+     * Store a newly created brand in storage.
+     *
+     * @param StoreBrandRequest $request
+     * @return JsonResponse
+     */
+    public function store(StoreBrandRequest $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255|unique:brands,name',
-            'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:1024',
-        ]);
+        try {
+            $data = $request->validated();
+            $data['slug'] = Str::slug($data['name']);
 
-        if ($validator->fails()) {
-            return response()->json(['message' => 'Validation errors', 'errors' => $validator->errors()], 422);
-        }
-
-        $data = $validator->validated();
-        $data['slug'] = Str::slug($data['name']);
-
-        if ($request->hasFile('logo')) {
-            $logoName = time() . '.' . $request->logo->extension();
-            // استخدم قرص public صراحةً حتى لو كانت قيمة FILESYSTEM_DISK ليست public
-            $request->logo->storeAs('uploads/brands', $logoName, 'public');
-            $data['image'] = $logoName;
-        }
-
-        Brand::create($data);
-        return response()->json(['message' => 'تمت إضافة الماركة بنجاح!'], 201);
-    }
-
-    public function show(Brand $brand)
-    {
-        // Add logo URL (prefers new path, falls back to old)
-        if ($brand->image) {
-            $newPath = 'storage/uploads/brands/' . $brand->image;
-            $oldPath = 'storage/logos/' . $brand->image;
-            $brand->logo = asset(file_exists(public_path($newPath)) ? $newPath : $oldPath);
-        } else {
-            $brand->logo = null;
-        }
-
-        return response()->json(['data' => $brand]);
-    }
-
-    public function update(Request $request, Brand $brand)
-    {
-        $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255|unique:brands,name,' . $brand->id,
-            'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:1024',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['message' => 'Validation errors', 'errors' => $validator->errors()], 422);
-        }
-
-        $data = $validator->validated();
-
-        if ($request->hasFile('logo')) {
-            if ($brand->image) {
-                // Try deleting from both possible locations
-                Storage::disk('public')->delete('uploads/brands/' . $brand->image);
-                Storage::disk('public')->delete('logos/' . $brand->image);
+            if ($request->hasFile('logo')) {
+                $data['image'] = $this->uploadLogo($request->file('logo'));
             }
-            $logoName = time() . '.' . $request->logo->extension();
-            $request->logo->storeAs('uploads/brands', $logoName, 'public');
-            $data['image'] = $logoName;
-        }
 
-        $brand->update($data);
-        return response()->json(['message' => 'تم تحديث الماركة بنجاح!']);
+            $brand = Brand::create($data);
+
+            Log::info('Brand created successfully', [
+                'brand_id' => $brand->id,
+                'brand_name' => $brand->name
+            ]);
+
+            return $this->successResponse(
+                $brand,
+                self::MESSAGE_CREATE_SUCCESS,
+                self::HTTP_CREATED
+            );
+        } catch (\Exception $e) {
+            Log::error('Error creating brand: ' . $e->getMessage(), [
+                'request_data' => $request->validated(),
+                'exception' => $e,
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponse(self::MESSAGE_CREATE_ERROR, self::HTTP_INTERNAL_ERROR);
+        }
     }
 
-    public function destroy(Brand $brand)
+    /**
+     * Display the specified brand.
+     *
+     * @param Brand $brand
+     * @return JsonResponse
+     */
+    public function show(Brand $brand): JsonResponse
     {
-        if ($brand->products()->count() > 0) {
-            return response()->json(['message' => 'لا يمكن حذف الماركة لأنها مرتبطة بمنتجات.'], 409);
+        try {
+            $brand = $this->formatBrandWithLogo($brand);
+
+            return $this->successResponse($brand);
+        } catch (\Exception $e) {
+            Log::error('Error showing brand: ' . $e->getMessage(), [
+                'brand_id' => $brand->id,
+                'exception' => $e,
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponse(self::MESSAGE_FETCH_ERROR, self::HTTP_INTERNAL_ERROR);
+        }
+    }
+
+    /**
+     * Update the specified brand in storage.
+     *
+     * @param UpdateBrandRequest $request
+     * @param Brand $brand
+     * @return JsonResponse
+     */
+    public function update(UpdateBrandRequest $request, Brand $brand): JsonResponse
+    {
+        try {
+            $data = $request->validated();
+
+            if ($request->hasFile('logo')) {
+                // Delete old logo if exists
+                if ($brand->image) {
+                    $this->deleteLogo($brand->image);
+                }
+
+                $data['image'] = $this->uploadLogo($request->file('logo'));
+            }
+
+            $brand->update($data);
+
+            Log::info('Brand updated successfully', [
+                'brand_id' => $brand->id,
+                'brand_name' => $brand->name
+            ]);
+
+            return $this->successResponse($brand, self::MESSAGE_UPDATE_SUCCESS);
+        } catch (\Exception $e) {
+            Log::error('Error updating brand: ' . $e->getMessage(), [
+                'brand_id' => $brand->id,
+                'request_data' => $request->validated(),
+                'exception' => $e,
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponse(self::MESSAGE_UPDATE_ERROR, self::HTTP_INTERNAL_ERROR);
+        }
+    }
+
+    /**
+     * Remove the specified brand from storage.
+     *
+     * @param Brand $brand
+     * @return JsonResponse
+     */
+    public function destroy(Brand $brand): JsonResponse
+    {
+        try {
+            if ($this->hasDependentProducts($brand)) {
+                return $this->errorResponse(
+                    self::MESSAGE_DELETE_CONSTRAINT,
+                    self::HTTP_CONFLICT
+                );
+            }
+
+            if ($brand->image) {
+                $this->deleteLogo($brand->image);
+            }
+
+            $brand->delete();
+
+            Log::info('Brand deleted successfully', [
+                'brand_id' => $brand->id,
+                'brand_name' => $brand->name
+            ]);
+
+            return $this->successResponse(null, self::MESSAGE_DELETE_SUCCESS);
+        } catch (\Exception $e) {
+            Log::error('Error deleting brand: ' . $e->getMessage(), [
+                'brand_id' => $brand->id,
+                'exception' => $e,
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->errorResponse(self::MESSAGE_DELETE_ERROR, self::HTTP_INTERNAL_ERROR);
+        }
+    }
+
+    /**
+     * Upload brand logo and return filename.
+     *
+     * @param \Illuminate\Http\UploadedFile $file
+     * @return string
+     */
+    private function uploadLogo($file): string
+    {
+        $logoName = time() . '.' . $file->extension();
+        $file->storeAs(self::STORAGE_PATH_NEW, $logoName, 'public');
+
+        return $logoName;
+    }
+
+    /**
+     * Delete brand logo from storage.
+     *
+     * @param string $filename
+     * @return void
+     */
+    private function deleteLogo(string $filename): void
+    {
+        // Try deleting from both possible locations
+        Storage::disk('public')->delete(self::STORAGE_PATH_NEW . $filename);
+        Storage::disk('public')->delete(self::STORAGE_PATH_OLD . $filename);
+    }
+
+    /**
+     * Format brand with logo URL.
+     *
+     * @param Brand $brand
+     * @return Brand
+     */
+    private function formatBrandWithLogo(Brand $brand): Brand
+    {
+        if ($brand->image) {
+            $brand->logo = $this->getLogoUrl($brand->image);
+        } else {
+            $brand->logo = $this->getPlaceholderUrl($brand->name);
         }
 
-        if ($brand->image) {
-            Storage::disk('public')->delete('uploads/brands/' . $brand->image);
-            Storage::disk('public')->delete('logos/' . $brand->image); // old path
-        }
-        $brand->delete();
-        return response()->json(['message' => 'تم حذف الماركة بنجاح.']);
+        return $brand;
+    }
+
+    /**
+     * Get logo URL (prefers new path, falls back to old).
+     *
+     * @param string $filename
+     * @return string
+     */
+    private function getLogoUrl(string $filename): string
+    {
+        $newPath = 'storage/' . self::STORAGE_PATH_NEW . $filename;
+        $oldPath = 'storage/' . self::STORAGE_PATH_OLD . $filename;
+
+        return asset(
+            file_exists(public_path($newPath)) ? $newPath : $oldPath
+        );
+    }
+
+    /**
+     * Get placeholder URL for brand without logo.
+     *
+     * @param string $name
+     * @return string
+     */
+    private function getPlaceholderUrl(string $name): string
+    {
+        $initial = $name[0] ?? 'B';
+        return self::PLACEHOLDER_URL . $initial;
+    }
+
+    /**
+     * Check if brand has dependent products.
+     *
+     * @param Brand $brand
+     * @return bool
+     */
+    private function hasDependentProducts(Brand $brand): bool
+    {
+        return $brand->products()->count() > 0;
+    }
+
+    /**
+     * Log authentication information for debugging.
+     *
+     * @return void
+     */
+    private function logAuthenticationInfo(): void
+    {
+        Log::info('Brand request authentication info', [
+            'authenticated' => auth()->check(),
+            'user_id' => auth()->id(),
+            'has_token' => request()->bearerToken() !== null
+        ]);
     }
 }

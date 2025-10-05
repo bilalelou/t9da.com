@@ -73,10 +73,12 @@ export default function CheckoutPage() {
     }, []);
 
     useEffect(() => {
-        if (isClient && cartItems.length === 0) {
+        // تجنب إعادة التوجيه إلى /cart إذا كان المستخدم في عملية إتمام طلب
+        if (isClient && cartItems.length === 0 && !isLoading) {
+            console.log('⚠️ السلة فارغة - إعادة توجيه إلى /cart');
             router.push('/cart');
         }
-    }, [cartItems, router, isClient]);
+    }, [cartItems, router, isClient, isLoading]);
 
     useEffect(() => {
         const fetchShippingCosts = async () => {
@@ -515,17 +517,39 @@ export default function CheckoutPage() {
                     showToast('تم إنشاء حساب جديد لك! يمكنك الآن متابعة طلباتك من لوحة التحكم', 'success');
                 }
                 
-                // تفريغ السلة بعد نجاح الطلب
+                console.log('🎯 تحديد وجهة التوجيه:', {
+                    redirect_to_invoice: result.data.redirect_to_invoice,
+                    invoice_id: result.data.invoice_id,
+                    payment_method: selectedPaymentMethod,
+                    order_id: result.data.order_id
+                });
+                
+                // تحديد وجهة التوجيه قبل تفريغ السلة
+                let redirectUrl = '/user-dashboard/orders';
+                
+                if (result.data.redirect_to_invoice && result.data.invoice_id) {
+                    redirectUrl = `/invoice/${result.data.invoice_id}`;
+                    console.log('🧾 سيتم التوجيه إلى الفاتورة:', redirectUrl);
+                } else if (result.data.order_id) {
+                    // إذا لم تكن هناك فاتورة، توجه إلى تفاصيل الطلب
+                    redirectUrl = `/user-dashboard/orders`;
+                    console.log('📋 سيتم التوجيه إلى صفحة الطلبات:', redirectUrl);
+                }
+                
+                // تفريغ السلة بعد تحديد وجهة التوجيه
                 clearCart();
                 
-                // التوجيه إلى صفحة الفاتورة إذا كانت موجودة
-                if (result.data.redirect_to_invoice && result.data.invoice_id) {
-                    console.log('🧾 Redirecting to invoice:', result.data.invoice_id);
-                    router.push(`/invoice/${result.data.invoice_id}`);
-                } else {
-                    console.log('📋 Redirecting to orders page');
-                    router.push(`/user-dashboard/orders`);
-                }
+                // التوجيه مع تأخير قصير للتأكد من تفريغ السلة
+                setTimeout(() => {
+                    console.log('🚀 التوجيه إلى:', redirectUrl);
+                    try {
+                        router.push(redirectUrl);
+                    } catch (routerError) {
+                        console.error('❌ خطأ في التوجيه:', routerError);
+                        // في حالة فشل التوجيه، توجه إلى صفحة الطلبات
+                        window.location.href = '/user-dashboard/orders';
+                    }
+                }, 500);
             } else {
                 console.error('❌ فشل الاستجابة:', {
                     status: response.status,
