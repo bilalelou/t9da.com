@@ -3,19 +3,13 @@
 use App\Http\Controllers\Admin\ShippingFeeController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\CartController;
-use App\Http\Controllers\HomeController;
-use App\Http\Controllers\ShopController;
 use App\Http\Controllers\UserController;
-use App\Http\Controllers\WishlistController;
 use App\Http\Middleware\AuthAdmin;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 Auth::routes();
 
-Route::get('/', [HomeController::class, 'index'])->name('home.index');
-Route::get('/shop', [ShopController::class, 'index'])->name('shop.index');
-Route::get('/shop/{product_slug}',[ShopController::class,'product_details'])->name("shop.product.details");
 Route::get('/cart',[CartController::class,'index'])->name('cart.index');
 Route::post('/cart/add', [CartController::class, 'addToCart'])->name('cart.add');
 Route::put('/cart/increase-qunatity/{rowId}',[CartController::class,'increase_item_quantity'])->name('cart.increase.qty');
@@ -28,21 +22,6 @@ Route::post('/place-order',[CartController::class,'place_an_order'])->name('cart
 Route::get('/order-confirmation',[CartController::class,'confirmation'])->name('cart.confirmation');
 Route::delete('/cart/coupon/remove', [CartController::class, 'remove_coupon'])->name('cart.coupon.remove');
 
-
-
-Route::post('/wishlist/add',[WishlistController::class,'add_to_wishlist'])->name('wishlist.add');
-Route::get('/wishlist',[WishlistController::class,'index'])->name('wishlist.index');
-Route::delete('/wishlist/remove/{rowId}',[WishlistController::class,'remove_from_wishlist'])->name('wishlist.remove');
-Route::delete('/wishlist/clear',[WishlistController::class,'empty_wishlist'])->name('wishlist.empty');
-Route::post('/wishlist/move-to-cart/{rowId}',[WishlistController::class,'move_to_cart'])->name('wishlist.move.to.cart');
-                        //contact route//
-Route::get('/contact-us',[HomeController::class,'contact'])->name('home.contact');
-Route::post('/contact/store',[HomeController::class,'contact_store'])->name('home.contact.store');
-                        //about route//
-Route::get('/about-us',[HomeController::class,'about'])->name('home.about');
-
-                        //search route//
-Route::get('/search',[HomeController::class,'search'])->name('home.search');
 
 Route::middleware(['auth'])->group(function(){
     Route::get('/account-dashboard',[UserController::class,'index'])->name('user.index');
