@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { Save, RotateCcw, Store, CreditCard, Truck, Bell, Users, Shield, Search, CheckCircle, AlertCircle, X, Info, Plus, Edit, Trash2, Loader2 } from 'lucide-react';
+import { Save, RotateCcw, Store, CreditCard, Truck, Bell, Users, Shield, Search, CheckCircle, AlertCircle, X, Info, Plus, Edit, Trash2, Loader2, Building2 } from 'lucide-react';
 import { useSettings } from '@/hooks/useSettings';
 import { usePaymentMethods, PaymentMethod } from '@/hooks/usePaymentMethods';
 import PaymentMethodCard from '@/components/PaymentMethodCard';
@@ -698,6 +698,19 @@ export default function SettingsPage() {
   const [permissions, setPermissions] = useState(initialPermissions);
   const [roles, setRoles] = useState(initialRoles);
   
+  // Bank Settings State
+  const [bankSettings, setBankSettings] = useState({
+    bank_name: '',
+    bank_account_number: '',
+    bank_account_holder: ''
+  });
+  const [savedBankSettings, setSavedBankSettings] = useState({
+    bank_name: '',
+    bank_account_number: '',
+    bank_account_holder: ''
+  });
+  const [loadingBankSettings, setLoadingBankSettings] = useState(false);
+  
   // Saved versions for comparison with default values
   const [savedStore, setSavedStore] = useState(() => ({ ...initialStoreSettings, ...settings.store }));
   const [savedPayment, setSavedPayment] = useState(() => ({ ...initialPaymentSettings, ...settings.payment }));
@@ -737,6 +750,94 @@ export default function SettingsPage() {
   const hideToast = () => {
     setToast(prev => ({ ...prev, isVisible: false }));
   };
+
+  // Fetch Bank Settings
+  const fetchBankSettings = async () => {
+    setLoadingBankSettings(true);
+    try {
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+      const token = localStorage.getItem('api_token');
+      
+      const response = await fetch(`${API_BASE_URL}/admin/settings?keys=bank_name,bank_account_number,bank_account_holder`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          const settings = result.data.reduce((acc: any, setting: any) => {
+            acc[setting.key] = setting.value;
+            return acc;
+          }, {});
+          
+          const bankData = {
+            bank_name: settings.bank_name || '',
+            bank_account_number: settings.bank_account_number || '',
+            bank_account_holder: settings.bank_account_holder || ''
+          };
+          
+          setBankSettings(bankData);
+          setSavedBankSettings(bankData);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching bank settings:', error);
+    } finally {
+      setLoadingBankSettings(false);
+    }
+  };
+
+  // Save Bank Settings
+  const handleSaveBankSettings = async () => {
+    setLoadingBankSettings(true);
+    try {
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+      const token = localStorage.getItem('api_token');
+
+      // Save each setting
+      const settingsToSave = [
+        { key: 'bank_name', value: bankSettings.bank_name },
+        { key: 'bank_account_number', value: bankSettings.bank_account_number },
+        { key: 'bank_account_holder', value: bankSettings.bank_account_holder }
+      ];
+
+      for (const setting of settingsToSave) {
+        await fetch(`${API_BASE_URL}/admin/settings`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({
+            key: setting.key,
+            value: setting.value,
+            type: 'string',
+            group: 'payment',
+            description: setting.key === 'bank_name' ? 'اسم البنك' : 
+                        setting.key === 'bank_account_number' ? 'رقم الحساب البنكي' : 
+                        'اسم صاحب الحساب'
+          })
+        });
+      }
+
+      setSavedBankSettings(bankSettings);
+      showToast('تم حفظ إعدادات البنك بنجاح', 'success');
+    } catch (error) {
+      console.error('Error saving bank settings:', error);
+      showToast('فشل في حفظ إعدادات البنك', 'error');
+    } finally {
+      setLoadingBankSettings(false);
+    }
+  };
+
+  // Load bank settings on mount
+  useEffect(() => {
+    fetchBankSettings();
+  }, []);
 
   // Update local state when settings are loaded from API
   useEffect(() => {
@@ -1412,6 +1513,136 @@ export default function SettingsPage() {
                         </div>
                       )}
                     </>
+                  )}
+                </div>
+
+                {/* Bank Settings Section */}
+                <div className="bg-white rounded-2xl shadow-lg p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                        <Building2 className="w-6 h-6 text-green-600" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900">إعدادات الحساب البنكي</h3>
+                        <p className="text-sm text-gray-600">معلومات الحساب البنكي للتحويلات المباشرة</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {loadingBankSettings ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Bank Name */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            اسم البنك <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={bankSettings.bank_name}
+                            onChange={(e) => setBankSettings({ ...bankSettings, bank_name: e.target.value })}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="مثال: البنك الأهلي المغربي"
+                          />
+                        </div>
+
+                        {/* Account Holder */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            اسم صاحب الحساب <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={bankSettings.bank_account_holder}
+                            onChange={(e) => setBankSettings({ ...bankSettings, bank_account_holder: e.target.value })}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="مثال: شركة التقنية الحديثة"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Account Number */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          رقم الحساب البنكي <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={bankSettings.bank_account_number}
+                          onChange={(e) => setBankSettings({ ...bankSettings, bank_account_number: e.target.value })}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-lg"
+                          placeholder="مثال: 1234567890123456"
+                          dir="ltr"
+                        />
+                        <p className="text-sm text-gray-500 mt-1">
+                          سيتم عرض هذا الرقم في الفواتير للعملاء الذين يختارون التحويل البنكي
+                        </p>
+                      </div>
+
+                      {/* Preview */}
+                      {(bankSettings.bank_name || bankSettings.bank_account_number || bankSettings.bank_account_holder) && (
+                        <div className="bg-gradient-to-br from-blue-50 to-green-50 border border-blue-200 rounded-lg p-4">
+                          <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                            <Info className="w-4 h-4 text-blue-600" />
+                            معاينة المعلومات البنكية
+                          </h4>
+                          <div className="space-y-2 text-sm">
+                            {bankSettings.bank_name && (
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">اسم البنك:</span>
+                                <span className="font-semibold text-gray-900">{bankSettings.bank_name}</span>
+                              </div>
+                            )}
+                            {bankSettings.bank_account_holder && (
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">صاحب الحساب:</span>
+                                <span className="font-semibold text-gray-900">{bankSettings.bank_account_holder}</span>
+                              </div>
+                            )}
+                            {bankSettings.bank_account_number && (
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">رقم الحساب:</span>
+                                <span className="font-mono font-semibold text-gray-900 text-base" dir="ltr">{bankSettings.bank_account_number}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Save Button */}
+                      {JSON.stringify(bankSettings) !== JSON.stringify(savedBankSettings) && (
+                        <div className="flex items-center justify-end gap-3 pt-4 border-t">
+                          <button
+                            onClick={() => setBankSettings(savedBankSettings)}
+                            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                          >
+                            إلغاء
+                          </button>
+                          <button
+                            onClick={handleSaveBankSettings}
+                            disabled={loadingBankSettings}
+                            className="px-6 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+                          >
+                            {loadingBankSettings ? (
+                              <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                جاري الحفظ...
+                              </>
+                            ) : (
+                              <>
+                                <Save className="w-4 h-4" />
+                                حفظ إعدادات البنك
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
 

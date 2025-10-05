@@ -19,8 +19,8 @@ return new class extends Migration
             $table->string('video_url'); // رابط الفيديو (يمكن أن يكون مخزن محلياً أو YouTube/Vimeo)
             $table->string('video_type')->default('file'); // file, youtube, vimeo
             $table->string('thumbnail')->nullable(); // صورة مصغرة للفيديو
-            $table->integer('duration')->nullable(); // مدة الفيديو بالثواني
-            $table->string('file_size')->nullable(); // حجم الملف
+            $table->unsignedInteger('duration')->nullable(); // مدة الفيديو بالثواني
+            $table->unsignedBigInteger('file_size')->nullable(); // حجم الملف بالبايت
             $table->string('resolution')->nullable(); // جودة الفيديو (1080p, 720p, etc.)
             $table->integer('sort_order')->default(0); // ترتيب الفيديوهات
             $table->boolean('is_featured')->default(false); // فيديو مميز

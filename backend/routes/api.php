@@ -24,10 +24,14 @@ use App\Http\Controllers\Api\SizeController;
 use App\Http\Controllers\Api\ProductVariantController;
 use App\Http\Controllers\ProductReviewController;
 use App\Http\Controllers\Api\CityController;
+use App\Http\Controllers\Api\InvoiceController;
 
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\SettingController;
 use App\Http\Controllers\Api\LogController;
+use Illuminate\Support\Facades\Route as RouteFacade;
+use Illuminate\Support\Facades\Storage;
+use App\Models\Order;
 
 Route::post('/login', [LoginController::class, 'login']);
 Route::post('/register', [RegisterController::class, 'store']);
@@ -156,9 +160,15 @@ Route::get('/shipping-costs', [CityController::class, 'getShippingCosts']);
 
 // Public Settings Routes
 Route::get('/public/settings', [SettingController::class, 'publicSettings']);
+Route::get('/public/bank-settings', [SettingController::class, 'getBankSettings']);
 
 // Public Free Shipping Routes
 Route::get('/products/free-shipping/public', [ProductController::class, 'freeShippingProducts']);
+
+// Public Invoice Routes
+Route::get('/invoices/{invoice}', [InvoiceController::class, 'show']);
+Route::post('/invoices', [InvoiceController::class, 'store'])->middleware('auth:sanctum');
+Route::post('/invoices/{invoice}/upload-proof', [InvoiceController::class, 'uploadProof'])->middleware('auth:sanctum');
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [LoginController::class, 'logout']);
@@ -211,7 +221,45 @@ Route::middleware('auth:sanctum')->group(function () {
     // Orders Routes (للقراءة والتحديث فقط)
     Route::get('/orders', [OrderController::class, 'index']);
     Route::get('/orders/{order}', [OrderController::class, 'show']);
+    Route::get('/orders/{order}/invoice', [OrderController::class, 'getOrderInvoice']);
     Route::put('/orders/{order}/status', [OrderController::class, 'updateStatus']);
+
+    // Upload bank transfer receipt for an order
+    Route::post('/orders/{order}/invoice-receipt', function (Request $request, Order $order) {
+        $request->validate([
+            'receipt' => 'required|file|mimes:jpg,jpeg,png,webp,pdf|max:5120',
+        ]);
+
+        if ($order->user_id !== $request->user()->id) {
+            return response()->json(['success' => false, 'message' => 'غير مصرح'], 403);
+        }
+
+        $path = $request->file('receipt')->store('invoices', 'public');
+        $order->invoice_receipt_path = $path;
+        $order->save();
+
+        return response()->json(['success' => true, 'message' => 'تم رفع الإيصال', 'data' => ['path' => $path]]);
+    });
+
+    // Admin verify payment (approve/decline) for bank payments
+    Route::put('/orders/{order}/payment-verify', function (Request $request, Order $order) {
+        if (!$request->user()->hasRole('admin')) {
+            return response()->json(['success' => false, 'message' => 'غير مصرح'], 403);
+        }
+        $request->validate([
+            'status' => 'required|in:approved,declined',
+        ]);
+        $order->payment_status = $request->status === 'approved' ? 'paid' : 'pending';
+        if ($order->transaction) {
+            $order->transaction->status = $request->status;
+            $order->transaction->save();
+        }
+        if ($request->status === 'approved') {
+            $order->status = 'confirmed';
+        }
+        $order->save();
+        return response()->json(['success' => true, 'message' => 'تم تحديث حالة الدفع', 'data' => $order]);
+    });
 
     Route::get('/analytics', [AnalyticsController::class, 'index']);
     Route::apiResource('coupons', CouponController::class);
@@ -249,6 +297,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/settings/{key}', [SettingController::class, 'destroy']);
     Route::get('/settings/defaults/all', [SettingController::class, 'getDefaults']);
     Route::post('/settings/initialize/defaults', [SettingController::class, 'initializeDefaults']);
+
+    // Bank Settings Routes (Admin)
+    Route::get('/admin/bank-settings', [SettingController::class, 'getBankSettings']);
+    Route::post('/admin/bank-settings', [SettingController::class, 'updateBankSettings']);
+
+    // Invoice Management Routes (Admin)
+    Route::get('/admin/invoices', [InvoiceController::class, 'index']);
+    Route::put('/admin/invoices/{invoice}/status', [InvoiceController::class, 'updateStatus']);
 
     // Logs Routes (Admin only)
     Route::middleware('admin')->group(function () {

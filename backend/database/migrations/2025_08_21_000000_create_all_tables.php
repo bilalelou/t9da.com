@@ -453,29 +453,7 @@ return new class extends Migration
             });
         }
 
-        // --- 14. create_settings_table ---
-        if (!Schema::hasTable('settings')) {
-            Schema::create('settings', function (Blueprint $table) {
-                $table->id();
-                $table->string('key')->unique();
-                $table->text('value')->nullable();
-                $table->string('type', 50)->default('string');
-                $table->string('group', 100)->default('general');
-                $table->timestamps();
-            });
-        } else {
-            Schema::table('settings', function (Blueprint $table) {
-                if (!Schema::hasColumn('settings', 'value')) {
-                    $table->text('value')->nullable();
-                }
-                if (!Schema::hasColumn('settings', 'type')) {
-                    $table->string('type', 50)->default('string');
-                }
-                if (!Schema::hasColumn('settings', 'group')) {
-                    $table->string('group', 100)->default('general');
-                }
-            });
-        }
+
     }
 
     /**
@@ -486,7 +464,7 @@ return new class extends Migration
     public function down()
     {
         // Drop tables in reverse order of creation to respect foreign keys
-        Schema::dropIfExists('settings');
+
         Schema::dropIfExists('reviews');
         Schema::dropIfExists('coupons');
         Schema::dropIfExists('wishlists');

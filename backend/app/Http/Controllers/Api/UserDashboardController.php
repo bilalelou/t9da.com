@@ -35,6 +35,7 @@ class UserDashboardController extends Controller
 
             // جلب كل الطلبات مع نظام الصفحات
             $orders = Order::where('user_id', $user->id)
+                ->with('invoice') // جلب الفاتورة المرتبطة
                 ->withCount('items')
                 ->latest()
                 ->paginate(10);
@@ -57,13 +58,32 @@ class UserDashboardController extends Controller
                 // إرسال بيانات الطلبات مع معلومات نظام الصفحات
                 'orders' => [
                     'data' => $orders->getCollection()->map(function($order){
-                        return [
+                        $orderData = [
                             'id' => $order->id,
                             'total' => $order->total,
                             'status' => $order->status,
                             'created_at' => $order->created_at,
                             'items_count' => $order->items_count,
+                            'has_invoice' => false,
+                            'invoice' => null,
                         ];
+
+                        // إضافة معلومات الفاتورة إذا كانت موجودة
+                        if ($order->invoice) {
+                            $orderData['has_invoice'] = true;
+                            $orderData['invoice'] = [
+                                'id' => $order->invoice->id,
+                                'invoice_code' => $order->invoice->invoice_code,
+                                'status' => $order->invoice->status,
+                                'amount' => $order->invoice->amount,
+                                'bank_name' => $order->invoice->bank_name,
+                                'account_number' => $order->invoice->account_number,
+                                'payment_proof' => $order->invoice->payment_proof,
+                                'created_at' => $order->invoice->created_at,
+                            ];
+                        }
+
+                        return $orderData;
                     }),
                     'pagination' => [
                         'total' => $orders->total(),

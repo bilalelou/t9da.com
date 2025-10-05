@@ -3,15 +3,29 @@
 import React, { useState, useEffect, useCallback, createContext, useContext } from 'react';
 
 // Icons
-import { LoaderCircle, CheckCircle, Package, ChevronLeft, ChevronRight, Clock, Truck, XCircle, X, Eye } from 'lucide-react';
+import { LoaderCircle, CheckCircle, Package, ChevronLeft, ChevronRight, Clock, Truck, XCircle, X, Eye, FileText } from 'lucide-react';
 
 // --- Interfaces ---
+interface Invoice {
+    id: number;
+    invoice_code: string;
+    status: 'pending' | 'paid' | 'rejected';
+    amount: number;
+    bank_name: string;
+    account_number: string;
+    payment_proof: string | null;
+    created_at: string;
+}
+
 interface Order {
     id: number;
     total: number;
     status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
     created_at: string;
     items_count: number;
+    has_invoice?: boolean;
+    invoice_url?: string;
+    invoice?: Invoice;
 }
 
 interface OrderItem {
@@ -47,7 +61,7 @@ interface PaginationInfo {
 const ToastContext = createContext<{ showToast: (message: string, type?: 'success' | 'error') => void }>({ showToast: () => {} });
 const useToast = () => useContext(ToastContext);
 
-const ToastProvider = ({ children }) => {
+const ToastProvider = ({ children }: { children: React.ReactNode }) => {
     const [toast, setToast] = useState({ message: '', visible: false, type: 'success' as 'success' | 'error' });
     const showToast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
         setToast({ message, visible: true, type });
@@ -66,7 +80,7 @@ const ToastProvider = ({ children }) => {
     );
 };
 
-const AppProviders = ({ children }) => (
+const AppProviders = ({ children }: { children: React.ReactNode }) => (
     <ToastProvider>
         {children}
     </ToastProvider>
@@ -372,6 +386,24 @@ function MyOrdersPage() {
                                 <p className="text-sm text-gray-600 mb-1">إجمالي المبلغ</p>
                                 <p className="text-lg font-semibold text-gray-900">{formatCurrency(order.total)}</p>
                             </div>
+                            {order.has_invoice && order.invoice && (
+                                <div className={`rounded-lg p-4 ${
+                                    order.invoice.status === 'paid' ? 'bg-green-50' : 
+                                    order.invoice.status === 'rejected' ? 'bg-red-50' : 
+                                    'bg-yellow-50'
+                                }`}>
+                                    <p className="text-sm text-gray-600 mb-1">حالة الدفع</p>
+                                    <p className={`text-sm font-semibold ${
+                                        order.invoice.status === 'paid' ? 'text-green-700' : 
+                                        order.invoice.status === 'rejected' ? 'text-red-700' : 
+                                        'text-yellow-700'
+                                    }`}>
+                                        {order.invoice.status === 'paid' ? '✓ تم الدفع' : 
+                                         order.invoice.status === 'rejected' ? '✗ مرفوض' : 
+                                         '⏳ في انتظار الدفع'}
+                                    </p>
+                                </div>
+                            )}
                         </div>
                         <div className="flex flex-wrap gap-3">
                             <button 
@@ -381,6 +413,25 @@ function MyOrdersPage() {
                                 <Eye size={16} />
                                 عرض التفاصيل
                             </button>
+                            {order.has_invoice && order.invoice && (
+                                <a
+                                    href={`/invoice/${order.invoice.id}`}
+                                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-semibold flex items-center gap-2"
+                                >
+                                    <FileText size={16} />
+                                    عرض الفاتورة
+                                    {order.invoice.status === 'pending' && (
+                                        <span className="bg-yellow-400 text-yellow-900 px-2 py-0.5 rounded-full text-xs">
+                                            في انتظار الدفع
+                                        </span>
+                                    )}
+                                    {order.invoice.status === 'paid' && (
+                                        <span className="bg-white text-green-700 px-2 py-0.5 rounded-full text-xs">
+                                            تم الدفع
+                                        </span>
+                                    )}
+                                </a>
+                            )}
                         </div>
                     </div>
                 );

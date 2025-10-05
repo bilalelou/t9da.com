@@ -63,7 +63,7 @@ class SettingController extends Controller
     {
         try {
             $setting = Setting::where('key', $key)->first();
-            
+
             if (!$setting) {
                 return response()->json([
                     'success' => false,
@@ -115,7 +115,10 @@ class SettingController extends Controller
             $publicSettings = Setting::whereIn('key', [
                 'shipping.free_shipping_threshold',
                 'store.currency',
-                'store.name'
+                'store.name',
+                'bank_name',
+                'bank_account_number',
+                'bank_account_holder',
             ])->get();
 
             return response()->json([
@@ -126,6 +129,58 @@ class SettingController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'فشل في جلب الإعدادات',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getBankSettings(): JsonResponse
+    {
+        try {
+            $bankSettings = Setting::whereIn('key', [
+                'bank_name',
+                'bank_account_number', 
+                'bank_account_holder'
+            ])->get()->keyBy('key');
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'bank_name' => $bankSettings['bank_name']->value ?? '',
+                    'account_number' => $bankSettings['bank_account_number']->value ?? '',
+                    'account_holder' => $bankSettings['bank_account_holder']->value ?? ''
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'فشل في جلب إعدادات البنك',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function updateBankSettings(Request $request): JsonResponse
+    {
+        try {
+            $request->validate([
+                'bank_name' => 'required|string|max:255',
+                'account_number' => 'required|string|max:255',
+                'account_holder' => 'required|string|max:255'
+            ]);
+
+            Setting::updateOrCreate(['key' => 'bank_name'], ['value' => $request->bank_name]);
+            Setting::updateOrCreate(['key' => 'bank_account_number'], ['value' => $request->account_number]);
+            Setting::updateOrCreate(['key' => 'bank_account_holder'], ['value' => $request->account_holder]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'تم تحديث إعدادات البنك بنجاح'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'فشل في تحديث إعدادات البنك',
                 'error' => $e->getMessage()
             ], 500);
         }

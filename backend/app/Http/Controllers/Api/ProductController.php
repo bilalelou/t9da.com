@@ -98,6 +98,17 @@ class ProductController extends Controller
 
             $data['stock_status'] = ($data['quantity'] ?? 0) > 0 ? 'instock' : 'outofstock';
 
+            // If template file uploaded, read content into HTML field
+            if ($request->hasFile('detail_template_file')) {
+                $data['detail_template_html'] = file_get_contents($request->file('detail_template_file')->getRealPath());
+            }
+
+            // Normalize template data if provided as JSON string (e.g., from form-data)
+            if (isset($data['detail_template_data']) && is_string($data['detail_template_data'])) {
+                $decoded = json_decode($data['detail_template_data'], true);
+                $data['detail_template_data'] = json_last_error() === JSON_ERROR_NONE ? $decoded : null;
+            }
+
             $product = Product::create($data);
 
             // Handle videos
@@ -232,6 +243,17 @@ class ProductController extends Controller
             $data['images'] = json_encode(array_values($finalGallery));
             $data['stock_status'] = ($data['quantity'] ?? $product->quantity) > 0 ? 'instock' : 'outofstock';
 
+            // If template file uploaded, read content into HTML field
+            if ($request->hasFile('detail_template_file')) {
+                $data['detail_template_html'] = file_get_contents($request->file('detail_template_file')->getRealPath());
+            }
+
+            // Normalize template data if provided as JSON string
+            if (isset($data['detail_template_data']) && is_string($data['detail_template_data'])) {
+                $decoded = json_decode($data['detail_template_data'], true);
+                $data['detail_template_data'] = json_last_error() === JSON_ERROR_NONE ? $decoded : null;
+            }
+
             $product->update($data);
 
             return response()->json(['success' => true, 'message' => 'تم تحديث المنتج بنجاح!']);
@@ -263,6 +285,11 @@ class ProductController extends Controller
                 'existing_images' => 'nullable|json',
                 'has_free_shipping' => 'nullable|in:true,false,1,0',
                 'free_shipping_note' => 'nullable|string|max:500',
+                // Template fields (optional for update)
+                'detail_template_key' => 'nullable|string|max:100',
+                'detail_template_data' => 'nullable|array',
+                'detail_template_html' => 'nullable|string',
+                'detail_template_file' => 'nullable|file|mimetypes:text/html,text/plain,application/octet-stream|max:5120',
             ];
         } else {
             // قواعد التحقق الخاصة بإنشاء منتج جديد (أكثر صرامة)
@@ -280,6 +307,11 @@ class ProductController extends Controller
                 'images.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:5120', // 5MB
                 'has_free_shipping' => 'nullable|in:true,false,1,0',
                 'free_shipping_note' => 'nullable|string|max:500',
+                // Template fields (optional for create)
+                'detail_template_key' => 'nullable|string|max:100',
+                'detail_template_data' => 'nullable|array',
+                'detail_template_html' => 'nullable|string',
+                'detail_template_file' => 'nullable|file|mimetypes:text/html,text/plain,application/octet-stream|max:5120',
             ];
         }
 
@@ -351,6 +383,10 @@ class ProductController extends Controller
             'images' => array_map(fn($img) => asset('storage/uploads/' . $img), $gallery),
             'has_free_shipping' => (bool)$product->has_free_shipping,
             'free_shipping_note' => $product->free_shipping_note,
+            // Template fields for admin UI
+            'detail_template_key' => $product->detail_template_key,
+            'detail_template_data' => $product->detail_template_data,
+            'detail_template_html' => $product->detail_template_html,
         ];
 
         Log::info("📋 البيانات الأساسية: " . json_encode($data));
@@ -973,7 +1009,9 @@ class ProductController extends Controller
             'short_description' => $shortDesc,
             'has_free_shipping' => (bool)$product->has_free_shipping,
             'rating' => 4.5,
-            'review_count' => rand(10, 200)
+            'review_count' => rand(10, 200),
+            // Expose template key so frontend can decide which layout to render
+            'detail_template_key' => $product->detail_template_key
         ];
     }
 }

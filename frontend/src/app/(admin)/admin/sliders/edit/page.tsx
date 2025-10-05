@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Eye, Save, Image as ImageIcon } from 'lucide-react';
+import { useToast } from '@/contexts/Providers';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -20,6 +21,7 @@ export default function SliderFormPage() {
     const searchParams = useSearchParams();
     const sliderId = searchParams.get('id');
     const isEdit = !!sliderId;
+    const { showToast } = useToast();
 
     const [formData, setFormData] = useState<SliderForm>({
         title: '',
@@ -39,7 +41,7 @@ export default function SliderFormPage() {
         try {
             const token = localStorage.getItem('api_token') || localStorage.getItem('token');
             if (!token) {
-                alert('يجب تسجيل الدخول أولاً');
+                showToast('يجب تسجيل الدخول أولاً', 'error');
                 router.push('/login');
                 return;
             }
@@ -67,7 +69,7 @@ export default function SliderFormPage() {
             });
         } catch (error) {
             console.error('خطأ في جلب الشريحة:', error);
-            alert('فشل في جلب بيانات الشريحة');
+            showToast('فشل في جلب بيانات الشريحة', 'error');
         } finally {
             setLoading(false);
         }
@@ -86,7 +88,7 @@ export default function SliderFormPage() {
         try {
             const token = localStorage.getItem('api_token') || localStorage.getItem('token');
             if (!token) {
-                alert('يجب تسجيل الدخول أولاً');
+                showToast('يجب تسجيل الدخول أولاً', 'error');
                 router.push('/login');
                 return;
             }
@@ -113,12 +115,12 @@ export default function SliderFormPage() {
                 throw new Error(data.message || 'فشل في حفظ الشريحة');
             }
 
-            alert(data.message || (isEdit ? 'تم تحديث الشريحة بنجاح' : 'تم إضافة الشريحة بنجاح'));
+            showToast(data.message || (isEdit ? 'تم تحديث الشريحة بنجاح' : 'تم إضافة الشريحة بنجاح'), 'success');
             router.push('/admin/sliders');
         } catch (error) {
             console.error('خطأ في حفظ الشريحة:', error);
             const errorMessage = error instanceof Error ? error.message : 'فشل في حفظ الشريحة';
-            alert(errorMessage);
+            showToast(errorMessage, 'error');
         } finally {
             setSubmitting(false);
         }

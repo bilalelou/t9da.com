@@ -484,7 +484,13 @@ export default function CheckoutPage() {
                     showToast('تم إنشاء حساب جديد لك! يمكنك الآن متابعة طلباتك من لوحة التحكم', 'success');
                 }
                 
-                router.push(`/user-dashboard/orders`);
+                // التوجيه إلى صفحة الفاتورة إذا كانت موجودة
+                if (result.data.redirect_to_invoice && result.data.invoice_id) {
+                    console.log('🧾 Redirecting to invoice:', result.data.invoice_id);
+                    router.push(`/invoice/${result.data.invoice_id}`);
+                } else {
+                    router.push(`/user-dashboard/orders`);
+                }
             } else {
                 console.error('❌ فشل الاستجابة:', {
                     status: response.status,

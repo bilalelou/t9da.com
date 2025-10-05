@@ -35,6 +35,8 @@ class Order extends Model
         'payment_method',
         'total_amount',
         'order_number',
+        'invoice_code',
+        'invoice_receipt_path',
         'shipping_name',
         'shipping_email',
         'shipping_phone',
@@ -74,6 +76,11 @@ class Order extends Model
     public function items(): HasMany
     {
         return $this->hasMany(OrderItem::class);
+    }
+
+    public function invoice()
+    {
+        return $this->hasOne(Invoice::class);
     }
 
     // نطاقات (Scopes)

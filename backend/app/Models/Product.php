@@ -33,6 +33,10 @@ class Product extends Model
         'brand_id',
         'has_free_shipping',
         'free_shipping_note',
+        // Per-product detail template fields
+        'detail_template_key',
+        'detail_template_data',
+        'detail_template_html',
     ];
 
     protected $casts = [
@@ -42,6 +46,8 @@ class Product extends Model
         'has_variants' => 'boolean',
         'quantity' => 'integer',
         'has_free_shipping' => 'boolean',
+        // Cast template data to array (stored as JSON in DB)
+        'detail_template_data' => 'array',
     ];
 
     /**
