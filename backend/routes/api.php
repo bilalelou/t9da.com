@@ -290,6 +290,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/products/{product}/toggle-free-shipping', [ProductController::class, 'toggleFreeShipping']);
 
     // Settings Routes
+    Route::get('/admin/settings', [SettingController::class, 'index']);
+    Route::post('/admin/settings', [SettingController::class, 'store']);
+    Route::get('/admin/settings/{key}', [SettingController::class, 'show']);
+    Route::put('/admin/settings/{key}', [SettingController::class, 'updateSetting']);
+    Route::delete('/admin/settings/{key}', [SettingController::class, 'destroy']);
+    
+    // Legacy settings routes for backward compatibility
     Route::get('/settings', [SettingController::class, 'index']);
     Route::post('/settings', [SettingController::class, 'store']);
     Route::get('/settings/{key}', [SettingController::class, 'show']);
@@ -301,6 +308,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Bank Settings Routes (Admin)
     Route::get('/admin/bank-settings', [SettingController::class, 'getBankSettings']);
     Route::post('/admin/bank-settings', [SettingController::class, 'updateBankSettings']);
+    Route::post('/admin/bank-settings/initialize', [SettingController::class, 'initializeBankSettings']);
 
     // Invoice Management Routes (Admin)
     Route::get('/admin/invoices', [InvoiceController::class, 'index']);

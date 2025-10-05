@@ -252,40 +252,41 @@ class OrderController extends Controller
             // إنشاء معاملة إذا كان الدفع تحويل بنكي
             $paymentMethod = $request->shipping_info['paymentMethod'] ?? 'cod';
             $invoice = null;
-            
+
             Log::info('Payment method check', [
                 'payment_method' => $paymentMethod,
                 'is_bank_payment' => in_array($paymentMethod, ['bank', 'bank_transfer', 'transfer'])
             ]);
-            
+
             if (in_array($paymentMethod, ['bank', 'bank_transfer', 'transfer'])) {
                 Log::info('Creating bank transaction and invoice');
-                
+
                 Transaction::create([
                     'user_id' => Auth::id(),
                     'order_id' => $order->id,
                     'mode' => 'bank',
                     'status' => 'pending',
                 ]);
-                
+
                 // إنشاء فاتورة للدفع البنكي
                 $bankSettings = Setting::whereIn('key', ['bank_name', 'bank_account_number'])->get()->keyBy('key');
-                
+
                 Log::info('Bank settings', [
                     'bank_name' => $bankSettings['bank_name']->value ?? 'البنك الأهلي المغربي',
                     'account_number' => $bankSettings['bank_account_number']->value ?? '1234567890123456'
                 ]);
-                
+
                 $invoice = Invoice::create([
                     'invoice_code' => $order->invoice_code,
                     'order_id' => $order->id,
                     'amount' => $finalTotal,
                     'bank_name' => $bankSettings['bank_name']->value ?? 'البنك الأهلي المغربي',
                     'account_number' => $bankSettings['bank_account_number']->value ?? '1234567890123456',
+                    'payment_reference' => Invoice::generatePaymentReference(),
                     'status' => 'pending'
                 ]);
-                
-                Log::info('Invoice created', ['invoice_id' => $invoice->id]);
+
+                Log::info('Invoice created', ['invoice_id' => $invoice->id, 'payment_reference' => $invoice->payment_reference]);
             }
 
             DB::commit();
@@ -295,7 +296,7 @@ class OrderController extends Controller
                 'order_number' => $order->order_number,
                 'invoice_code' => $order->invoice_code,
             ];
-            
+
             // إضافة معرف الفاتورة إذا تم إنشاؤها
             if ($invoice) {
                 $responseData['invoice_id'] = $invoice->id;
@@ -304,7 +305,7 @@ class OrderController extends Controller
             } else {
                 Log::info('No invoice created for payment method', ['payment_method' => $paymentMethod]);
             }
-            
+
             Log::info('Final response data', $responseData);
 
             return response()->json([
@@ -509,7 +510,7 @@ class OrderController extends Controller
 
             // تنسيق بيانات الطلب
             $orderData = $order->toArray();
-            
+
             // تحويل delivered إلى completed للتوافق مع Frontend
             if ($orderData['status'] === 'delivered') {
                 $orderData['status'] = 'completed';
@@ -610,7 +611,7 @@ class OrderController extends Controller
             }
 
             $invoiceData = $order->invoice->toArray();
-            $invoiceData['payment_proof_url'] = $order->invoice->payment_proof ? 
+            $invoiceData['payment_proof_url'] = $order->invoice->payment_proof ?
                 asset('storage/' . $order->invoice->payment_proof) : null;
             $invoiceData['can_upload_proof'] = $order->invoice->status === 'pending';
             $invoiceData['order_number'] = $order->order_number;

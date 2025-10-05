@@ -24,6 +24,7 @@ interface Invoice {
     amount: number;
     bank_name: string;
     account_number: string;
+    payment_reference?: string; // رمز الدفع
     status: 'pending' | 'paid' | 'rejected';
     payment_proof: string | null;
     payment_proof_url: string | null;
@@ -271,6 +272,47 @@ export default function InvoicePage() {
                                 <span className="text-3xl font-bold text-blue-600">{formatCurrency(invoice.amount)}</span>
                             </div>
                         </div>
+
+                        {/* Payment Reference Code */}
+                        {invoice.payment_reference && (
+                            <div className="bg-gradient-to-br from-yellow-50 to-orange-50 border-2 border-yellow-400 rounded-lg p-6">
+                                <div className="flex items-start gap-3">
+                                    <div className="flex-shrink-0 w-10 h-10 bg-yellow-400 rounded-full flex items-center justify-center">
+                                        <AlertCircle className="w-6 h-6 text-yellow-900" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <h3 className="text-lg font-bold text-yellow-900 mb-2">
+                                            رمز الدفع الخاص بك
+                                        </h3>
+                                        <div className="bg-white border-2 border-yellow-400 rounded-lg p-4 mb-3">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-3xl font-mono font-bold text-gray-900 tracking-wider">
+                                                    {invoice.payment_reference}
+                                                </span>
+                                                <button
+                                                    onClick={() => {
+                                                        navigator.clipboard.writeText(invoice.payment_reference);
+                                                        alert('تم نسخ رمز الدفع!');
+                                                    }}
+                                                    className="px-4 py-2 bg-yellow-400 text-yellow-900 rounded-lg hover:bg-yellow-500 transition-colors font-semibold flex items-center gap-2"
+                                                >
+                                                    <FileText className="w-4 h-4" />
+                                                    نسخ
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div className="bg-yellow-100 border border-yellow-300 rounded-lg p-3">
+                                            <p className="text-sm font-bold text-yellow-900 mb-1">
+                                                ⚠️ مهم جدًا:
+                                            </p>
+                                            <p className="text-sm text-yellow-800">
+                                                أدخل هذا الرمز في حقل <strong>الملاحظات</strong> أو <strong>المرجع</strong> عند إجراء التحويل البنكي. هذا الرمز يساعدنا على تتبع دفعتك بسرعة.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Bank Details */}
                         <div className="border border-gray-200 rounded-lg p-6">

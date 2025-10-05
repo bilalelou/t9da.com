@@ -17,7 +17,8 @@ class Invoice extends Model
         'account_number',
         'payment_proof',
         'status',
-        'admin_notes'
+        'admin_notes',
+        'payment_reference' // رمز الدفع
     ];
 
     protected $casts = [
@@ -34,6 +35,16 @@ class Invoice extends Model
         do {
             $code = 'INV-' . strtoupper(uniqid());
         } while (self::where('invoice_code', $code)->exists());
+        
+        return $code;
+    }
+
+    public static function generatePaymentReference()
+    {
+        // توليد رمز دفع فريد من 7 أحرف وأرقام
+        do {
+            $code = strtolower(substr(md5(uniqid(mt_rand(), true)), 0, 7));
+        } while (self::where('payment_reference', $code)->exists());
         
         return $code;
     }
