@@ -295,18 +295,30 @@ class OrderController extends Controller
                 'order_id' => $order->id,
                 'order_number' => $order->order_number,
                 'invoice_code' => $order->invoice_code,
+                'payment_method' => $paymentMethod,
+                'redirect_to_invoice' => false,
+                'invoice_id' => null
             ];
 
             // إضافة معرف الفاتورة إذا تم إنشاؤها
             if ($invoice) {
                 $responseData['invoice_id'] = $invoice->id;
                 $responseData['redirect_to_invoice'] = true;
-                Log::info('Invoice added to response', ['invoice_id' => $invoice->id]);
+                $responseData['invoice_url'] = '/invoice/' . $invoice->id;
+                Log::info('Invoice created - adding to response', [
+                    'invoice_id' => $invoice->id,
+                    'payment_method' => $paymentMethod,
+                    'redirect_to_invoice' => true
+                ]);
             } else {
-                Log::info('No invoice created for payment method', ['payment_method' => $paymentMethod]);
+                $responseData['redirect_to_invoice'] = false;
+                Log::info('No invoice needed for payment method', [
+                    'payment_method' => $paymentMethod,
+                    'redirect_to_invoice' => false
+                ]);
             }
 
-            Log::info('Final response data', $responseData);
+            Log::info('Final response data being sent', $responseData);
 
             return response()->json([
                 'success' => true,
